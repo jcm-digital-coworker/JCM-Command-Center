@@ -17,7 +17,8 @@ export type AppTab =
   | "shipping"
   | "qa"
   | "documents"
-  | "risk";
+  | "risk"
+  | "warRoomContext";
 
 export type DepartmentFilter = Department | "All";
 

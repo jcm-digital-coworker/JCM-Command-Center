@@ -35,6 +35,7 @@ import CoatingDepartmentPage from './pages/departments/CoatingDepartmentPage';
 import AssemblyDepartmentPage from './pages/departments/AssemblyDepartmentPage';
 import ShippingDepartmentPage from './pages/departments/ShippingDepartmentPage';
 import QADepartmentPage from './pages/departments/QADepartmentPage';
+import WarRoomContextPage from './pages/WarRoomContextPage';
 
 type DetailTab = 'overview' | 'events' | 'patterns' | 'notes';
 
@@ -542,6 +543,12 @@ export default function App() {
           >
             QA / Safety
           </button>
+          <button
+            onClick={() => setTab('warRoomContext')}
+            style={getModeButtonStyle(tab === 'warRoomContext', theme)}
+          >
+            War Room
+          </button>
         </div>
 
         <button
@@ -672,6 +679,8 @@ export default function App() {
       {tab === 'risk' && (
         <RiskPage risks={filteredRisks} roleView={roleView} theme={theme} />
       )}
+
+      {tab === 'warRoomContext' && <WarRoomContextPage theme={theme} />}
     </div>
   );
 }
@@ -695,6 +704,7 @@ function getCommandLabel(tab: AppTab): string {
     qa: 'QA',
     documents: 'Documents',
     risk: 'QA / Safety',
+    warRoomContext: 'War Room Context',
   };
   return labels[tab];
 }
