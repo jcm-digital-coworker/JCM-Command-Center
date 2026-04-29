@@ -109,7 +109,7 @@ export function OrderCard({ order, theme = 'dark' }: DepartmentPageProps & { ord
       </div>
     </div>
   );
-export function CrewGuidancePanel({ department, orders, theme = 'dark' }: DepartmentPageProps & { department: Department; orders: ProductionOrder[] }) {
+function CrewGuidancePanel({ department, orders, theme = 'dark' }: DepartmentPageProps & { department: Department; orders: ProductionOrder[] }) {
   const recommendations = getCrewGuidanceForDepartment(department, orders, workers);
 
   return (
