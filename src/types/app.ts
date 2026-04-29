@@ -17,3 +17,11 @@ export type AppTab =
   | 'documents'
   | 'risk'
   | 'warRoomContext';
+
+export type RoleView =
+  | 'operator'
+  | 'lead'
+  | 'supervisor'
+  | 'management'
+  | 'maintenance'
+  | 'qa';

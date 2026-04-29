@@ -1,31 +1,46 @@
 import type { Department } from './machine';
+import type { WorkerSkill } from './worker';
 
-export type OrderType = 'STANDARD' | 'EXPEDITE' | 'ENGINEERED';
+export type ProductionOrderStatus =
+  | 'READY'
+  | 'IN_PROGRESS'
+  | 'BLOCKED'
+  | 'HOLD'
+  | 'DONE'
+  | 'COMPLETE'
+  | 'ready'
+  | 'running'
+  | 'blocked'
+  | 'hold'
+  | 'complete';
 
-export type ProductFamily =
-  | 'REPAIR_FITTING'
-  | 'COUPLING'
-  | 'SERVICE_SADDLE'
-  | 'TAPPING_SLEEVE'
-  | 'RESTRAINER'
-  | 'PIPE_FABRICATION'
-  | 'ENGINEERED_FITTING';
+export type FlowStatus = 'runnable' | 'blocked' | 'RUNNABLE' | 'BLOCKED';
 
-export type ProductLane =
-  | 'SERVICE_SADDLE'
-  | 'CLAMP'
-  | 'PATCH_CLAMP'
-  | 'COUPLING'
-  | 'TAPPING_SLEEVE'
-  | 'ENGINEERED_FITTING'
-  | 'PIPE_FABRICATION'
-  | 'OTHER';
+export type MaterialStatus =
+  | 'RECEIVED'
+  | 'PARTIAL'
+  | 'NOT_RECEIVED'
+  | 'STAGED'
+  | 'MISSING'
+  | 'UNKNOWN';
 
-export type MaterialStatus = 'NOT_RECEIVED' | 'PARTIAL' | 'RECEIVED';
+export type QaStatus =
+  | 'NOT_REQUIRED'
+  | 'PENDING'
+  | 'PASSED'
+  | 'FAILED'
+  | 'HOLD'
+  | 'RELEASED'
+  | 'UNKNOWN';
 
-export type OrderStatus = 'WAITING' | 'READY' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE';
-
-export type QaStatus = 'NOT_REQUIRED' | 'PENDING' | 'PASSED' | 'FAILED' | 'HOLD';
+export type FlowBlockerType =
+  | 'material'
+  | 'upstream'
+  | 'process'
+  | 'quality'
+  | 'labor'
+  | 'machine'
+  | 'unknown';
 
 export type BlockedReason =
   | 'WAITING_ON_MATERIAL'
@@ -43,31 +58,38 @@ export type BlockedReason =
   | 'QUALITY_HOLD'
   | 'UNKNOWN';
 
-export type DependencyStatus = 'AVAILABLE' | 'DOWN' | 'UNKNOWN';
+export type FlowBlocker = {
+  type: FlowBlockerType;
+  message: string;
+};
 
 export type OrderDependency = {
-  name: string;
-  type: 'DEPARTMENT' | 'MACHINE' | 'WORK_CELL' | 'PERSON' | 'BUILDING' | 'PROCESS_ZONE';
-  status: DependencyStatus;
+  id: string;
+  label: string;
+  department?: Department;
   required: boolean;
+  status: 'READY' | 'DOWN' | 'UNKNOWN';
+  blockedReason?: BlockedReason;
 };
 
 export type ProductionOrder = {
+  id: string;
   orderNumber: string;
-  orderType: OrderType;
-  customer: string;
-  quantity: number;
-  projectedShipDate: string;
-  assemblyPartNumber: string;
-  componentPartNumbers?: string[];
-  productFamily: ProductFamily;
-  productLane?: ProductLane;
-  materialStatus: MaterialStatus;
-  status: OrderStatus;
+  productFamily: string;
   currentDepartment: Department;
-  requiredDepartments: Department[];
-  dependencies: OrderDependency[];
-  blockedReason?: BlockedReason;
-  qaStatus: QaStatus;
-  notes?: string[];
+  nextDepartment?: Department;
+  status: ProductionOrderStatus;
+  flowStatus: FlowStatus;
+  requiredSkills: WorkerSkill[];
+  blockers: FlowBlocker[];
+  priority: 'normal' | 'hot' | 'critical' | 'NORMAL' | 'HOT' | 'CRITICAL';
+
+  materialStatus?: MaterialStatus;
+  qaStatus?: QaStatus;
+  projectedShipDate?: string;
+  assemblyPartNumber?: string;
+  customer?: string;
+  quantity?: number;
+  requiredDepartments?: Department[];
+  dependencies?: OrderDependency[];
 };

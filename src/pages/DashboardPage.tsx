@@ -44,7 +44,9 @@ export default function DashboardPage({
   const materialIssues = openOrders.filter((order) => order.materialStatus !== 'RECEIVED');
   const qaHolds = openOrders.filter((order) => order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED');
   const runnableOrders = openOrders.filter((order) => order.status === 'READY' || order.status === 'IN_PROGRESS');
-  const dueSoonOrders = [...openOrders].sort((a, b) => a.projectedShipDate.localeCompare(b.projectedShipDate)).slice(0, 4);
+  const dueSoonOrders = [...openOrders]
+  .sort((a, b) => (a.projectedShipDate ?? '').localeCompare(b.projectedShipDate ?? ''))
+  .slice(0, 4);
   const plantCriticals = blockedOrders.length + materialIssues.length + qaHolds.length + alerts.length;
 
   const toggleSection = (section: string) => {

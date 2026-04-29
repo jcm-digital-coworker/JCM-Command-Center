@@ -1,18 +1,10 @@
 import type { Department } from '../../types/machine';
-import type { BlockedReason, ProductionOrder } from '../../types/productionOrder';
+import type { FlowBlockerType, ProductionOrder } from '../../types/productionOrder';
 import type { Worker, WorkerSkill } from '../../types/worker';
 
 export type CrewGuidanceLevel = 'info' | 'warning' | 'critical';
 
-export type CrewGuidanceBlockerType =
-  | 'material'
-  | 'upstream'
-  | 'process'
-  | 'quality'
-  | 'labor'
-  | 'asset'
-  | 'engineering'
-  | 'unknown';
+export type CrewGuidanceBlockerType = FlowBlockerType;
 
 export type CrewGuidanceItem = {
   id: string;
@@ -53,4 +45,4 @@ export type CrewGuidanceWorkerGroup = {
   missingSkills: WorkerSkill[];
 };
 
-export type BlockedReasonMap = Record<BlockedReason, CrewGuidanceBlockerType>;
+export type BlockedReasonMap = Record<string, CrewGuidanceBlockerType>;

@@ -1,27 +1,38 @@
 import type { Department } from './machine';
 
-export type WorkerSkill =
-  | 'MATERIAL_HANDLING'
-  | 'RECEIVING'
-  | 'MACHINE_OPERATION'
-  | 'FAB_WELDING'
-  | 'FAB_FITTING'
-  | 'COATING'
-  | 'ASSEMBLY'
-  | 'SHIPPING'
-  | 'QA_INSPECTION'
-  | 'MAINTENANCE'
-  | 'LEADERSHIP';
+export type WorkerAvailability = 'available' | 'assigned' | 'unavailable';
 
-export type WorkerStatus = 'AVAILABLE' | 'ASSIGNED' | 'BREAK' | 'OFFLINE';
+export type WorkerRole =
+  | 'operator'
+  | 'lead'
+  | 'supervisor'
+  | 'material_handler'
+  | 'receiver'
+  | 'welder'
+  | 'fitter'
+  | 'assembler'
+  | 'shipping'
+  | 'maintenance'
+  | 'qa_support';
+
+export type WorkerSkill =
+  | 'receiving'
+  | 'material_handling'
+  | 'machine_operation'
+  | 'welding'
+  | 'fitting'
+  | 'assembly'
+  | 'shipping'
+  | 'maintenance'
+  | 'quality_check'
+  | 'leadership';
 
 export type Worker = {
   id: string;
   name: string;
-  role: string;
-  primaryDepartment: Department;
-  secondaryDepartments?: Department[];
+  homeDepartment: Department;
+  currentDepartment: Department;
+  availability: WorkerAvailability;
+  roles: WorkerRole[];
   skills: WorkerSkill[];
-  status: WorkerStatus;
-  assignedOrderNumber?: string;
 };
