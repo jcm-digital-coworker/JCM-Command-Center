@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { plantDepartmentOrder } from '../data/workCenters';
+import { getAssignmentOptionsForPerson, getCoworkerNameOptionsForDepartment, getRoleOptionsForDepartment, getStationOptionsForDepartment } from '../data/structuredSelections';
 import { seedCoverage } from '../data/coverage';
 import type { RoleView, DepartmentFilter } from '../types/app';
 import { isSupervisorRole } from '../data/workRoles';
@@ -25,15 +26,23 @@ interface CoveragePageProps {
 type ThemeMode = 'dark' | 'light';
 type CoverageView = 'hub' | 'signin' | 'available' | 'assigned' | 'break' | 'offline';
 
-const blankDraft: CoverageDraft = { name: '', department: 'Receiving', role: 'Machine Operator', station: '', shift: 'Day' };
+const blankDraft: CoverageDraft = {
+  name: '',
+  department: 'Receiving',
+  role: getRoleOptionsForDepartment('Receiving')[0],
+  station: getStationOptionsForDepartment('Receiving')[0],
+  shift: 'Day',
+};
 
 export default function CoveragePage({ roleView, departmentFilter, theme = 'dark', initialView = 'hub' }: CoveragePageProps) {
   const selectedDepartment = departmentFilter === 'All' ? undefined : (departmentFilter as Department);
-  const isSupervisorView = isSupervisorRole(roleView);
   const [people, setPeople] = useState<CoveragePerson[]>(() => loadCoverage());
+  const isSupervisorView = isSupervisorRole(roleView);
   const [view, setView] = useState<CoverageView>(initialView);
   const [draft, setDraft] = useState<CoverageDraft>({ ...blankDraft, department: selectedDepartment ?? 'Receiving' });
-  const [assignmentText, setAssignmentText] = useState('');
+  const signedInNames = people.filter((person) => person.status !== 'OFFLINE').map((person) => person.name);
+  const coworkerNameOptions = getCoworkerNameOptionsForDepartment(draft.department, signedInNames);
+  const [assignmentByPersonId, setAssignmentByPersonId] = useState<Record<string, string>>({});
 
   useEffect(() => {
     localStorage.setItem(COVERAGE_STORAGE_KEY, JSON.stringify(people));
@@ -44,17 +53,42 @@ export default function CoveragePage({ roleView, departmentFilter, theme = 'dark
   }, [initialView]);
 
   useEffect(() => {
-    if (selectedDepartment) setDraft((current) => ({ ...current, department: selectedDepartment }));
+    if (selectedDepartment) {
+      setDraft((current) => ({
+        ...current,
+        department: selectedDepartment,
+        role: getRoleOptionsForDepartment(selectedDepartment)[0],
+        station: getStationOptionsForDepartment(selectedDepartment)[0],
+      }));
+    }
   }, [selectedDepartment]);
 
   const summary = useMemo(() => getCoverageSummary(people, selectedDepartment), [people, selectedDepartment]);
   const visiblePeople = useMemo(() => filterPeople(people, view, selectedDepartment), [people, view, selectedDepartment]);
 
   function addPerson() {
-    if (!draft.name.trim() || !draft.station.trim()) return;
-    setPeople((current) => [createCoveragePerson(draft), ...current]);
-    setDraft({ ...blankDraft, department: selectedDepartment ?? draft.department });
+    const selectedName = draft.name || coworkerNameOptions[0] || '';
+    if (!selectedName.trim() || selectedName === 'No unassigned co-workers available' || !draft.role.trim() || !draft.station.trim()) return;
+    const selectedDraft = { ...draft, name: selectedName };
+    setPeople((current) => [createCoveragePerson(selectedDraft), ...current]);
+    const nextDepartment = selectedDepartment ?? draft.department;
+    setDraft({
+      ...blankDraft,
+      name: '',
+      department: nextDepartment,
+      role: getRoleOptionsForDepartment(nextDepartment)[0],
+      station: getStationOptionsForDepartment(nextDepartment)[0],
+    });
     setView('available');
+  }
+
+  function updateDraftDepartment(department: Department) {
+    setDraft({
+      ...draft,
+      department,
+      role: getRoleOptionsForDepartment(department)[0],
+      station: getStationOptionsForDepartment(department)[0],
+    });
   }
 
   function updatePerson(nextPerson: CoveragePerson) {
@@ -105,10 +139,10 @@ export default function CoveragePage({ roleView, departmentFilter, theme = 'dark
             <button onClick={() => setView('hub')} style={getGhostButtonStyle(theme)}>BACK TO COVERAGE</button>
           </div>
           <div style={getFormGridStyle()}>
-            <Field label="Name" value={draft.name} onChange={(value) => setDraft({ ...draft, name: value })} theme={theme} />
-            <SelectField label="Department" value={draft.department} options={plantDepartmentOrder} onChange={(value) => setDraft({ ...draft, department: value as Department })} disabled={Boolean(selectedDepartment)} theme={theme} />
-            <Field label="Role" value={draft.role} onChange={(value) => setDraft({ ...draft, role: value })} theme={theme} />
-            <Field label="Station" value={draft.station} onChange={(value) => setDraft({ ...draft, station: value })} theme={theme} />
+            <SelectField label="Co-worker" value={draft.name || coworkerNameOptions[0] || ""} options={coworkerNameOptions} onChange={(value) => setDraft({ ...draft, name: value })} theme={theme} />
+            <SelectField label="Department" value={draft.department} options={plantDepartmentOrder} onChange={(value) => updateDraftDepartment(value as Department)} disabled={Boolean(selectedDepartment)} theme={theme} />
+            <SelectField label="Role" value={draft.role} options={getRoleOptionsForDepartment(draft.department)} onChange={(value) => setDraft({ ...draft, role: value })} theme={theme} />
+            <SelectField label="Station" value={draft.station} options={getStationOptionsForDepartment(draft.department)} onChange={(value) => setDraft({ ...draft, station: value })} theme={theme} />
             <SelectField label="Shift" value={draft.shift} options={['Day', 'Night', 'Weekend']} onChange={(value) => setDraft({ ...draft, shift: value as ShiftName })} theme={theme} />
           </div>
           <button onClick={addPerson} style={getPrimaryButtonStyle(theme)}>SIGN INTO STATION</button>
@@ -148,8 +182,23 @@ export default function CoveragePage({ roleView, departmentFilter, theme = 'dark
                   <button onClick={() => updatePerson(signOutCoveragePerson(person))} style={getDangerButtonStyle()}>SIGN OUT</button>
                 </div>
                 <div style={assignRowStyle}>
-                  <input value={assignmentText} onChange={(event) => setAssignmentText(event.target.value)} placeholder="Assign task or station" style={getInputStyle(theme)} />
-                  <button onClick={() => updatePerson(assignCoveragePerson(person, assignmentText))} style={getPrimaryButtonStyle(theme)}>ASSIGN</button>
+                  <select
+                    value={assignmentByPersonId[person.id] ?? getAssignmentOptionsForPerson(person)[0] ?? ''}
+                    onChange={(event) => setAssignmentByPersonId((current) => ({ ...current, [person.id]: event.target.value }))}
+                    style={getInputStyle(theme)}
+                  >
+                    {getAssignmentOptionsForPerson(person).map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => updatePerson(assignCoveragePerson(person, assignmentByPersonId[person.id] ?? getAssignmentOptionsForPerson(person)[0] ?? ''))}
+                    style={getPrimaryButtonStyle(theme)}
+                  >
+                    ASSIGN
+                  </button>
                 </div>
               </article>
             ))}
@@ -182,7 +231,6 @@ function filterPeople(people: CoveragePerson[], view: CoverageView, department?:
 
 function getViewTitle(view: CoverageView) { if (view === 'available') return 'Available people'; if (view === 'assigned') return 'Assigned people'; if (view === 'break') return 'People on break'; if (view === 'offline') return 'Signed out'; return 'Coverage'; }
 function StatusButton({ label, value, tone, active, onClick, theme }: { label: string; value: number; tone: string; active: boolean; onClick: () => void; theme: ThemeMode }) { return <button onClick={onClick} style={getMetricButtonStyle(theme, tone, active)}><div style={getMetricValueStyle(theme)}>{value}</div><div style={getMetricLabelStyle(theme)}>{label}</div></button>; }
-function Field({ label, value, onChange, theme }: { label: string; value: string; onChange: (value: string) => void; theme: ThemeMode }) { return <label style={fieldWrapStyle}><span style={getFieldLabelStyle(theme)}>{label}</span><input value={value} onChange={(event) => onChange(event.target.value)} style={getInputStyle(theme)} /></label>; }
 function SelectField({ label, value, options, onChange, disabled, theme }: { label: string; value: string; options: string[]; onChange: (value: string) => void; disabled?: boolean; theme: ThemeMode }) { return <label style={fieldWrapStyle}><span style={getFieldLabelStyle(theme)}>{label}</span><select disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} style={getInputStyle(theme)}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>; }
 function Info({ label, value, theme }: { label: string; value: string; theme: ThemeMode }) { return <div style={getInfoStyle(theme)}><div style={getInfoLabelStyle(theme)}>{label}</div><div style={getInfoValueStyle(theme)}>{value}</div></div>; }
 
