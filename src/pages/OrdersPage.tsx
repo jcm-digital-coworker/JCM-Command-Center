@@ -16,8 +16,8 @@ type OrdersPageProps = {
 
 export default function OrdersPage({ theme = 'dark' }: OrdersPageProps) {
   const blockedCount = productionOrders.filter((order) => getOrderBlockReason(order)).length;
-  const readyCount = productionOrders.filter((order) => order.status === 'READY').length;
-  const engineeredCount = productionOrders.filter((order) => order.orderType === 'ENGINEERED').length;
+  const readyCount = productionOrders.filter((order) => String(order.status).toLowerCase() === 'ready').length;
+  const engineeredCount = productionOrders.filter((order) => order.orderType === 'ENGINEERED' || order.productFamily === 'ENGINEERED_FITTING').length;
 
   return (
     <div style={pageStyle}>
@@ -83,21 +83,21 @@ function OrderCard({ order, theme }: { order: ProductionOrder; theme: 'dark' | '
       </div>
 
       <div style={detailGridStyle}>
-        <Info label="Type" value={order.orderType} theme={theme} />
+        <Info label="Type" value={order.orderType ?? 'STANDARD'} theme={theme} />
         <Info label="Family" value={formatStatus(order.productFamily)} theme={theme} />
         <Info label="Lane" value={formatStatus(getOrderLane(order))} theme={theme} />
-        <Info label="Assembly Part" value={order.assemblyPartNumber} theme={theme} />
-        <Info label="Qty" value={String(order.quantity)} theme={theme} />
-        <Info label="Ship Date" value={order.projectedShipDate} theme={theme} />
-        <Info label="Material" value={formatMaterialStatus(order.materialStatus)} theme={theme} />
+        <Info label="Assembly Part" value={order.assemblyPartNumber ?? 'Not assigned'} theme={theme} />
+        <Info label="Qty" value={String(order.quantity ?? 'TBD')} theme={theme} />
+        <Info label="Ship Date" value={order.projectedShipDate ?? 'TBD'} theme={theme} />
+        <Info label="Material" value={formatMaterialStatus(order.materialStatus ?? 'UNKNOWN')} theme={theme} />
         <Info label="Current Area" value={order.currentDepartment} theme={theme} />
-        <Info label="QA" value={formatStatus(order.qaStatus)} theme={theme} />
+        <Info label="QA" value={formatStatus(order.qaStatus ?? 'UNKNOWN')} theme={theme} />
       </div>
 
-      {(flow?.departments.length ?? order.requiredDepartments.length) > 0 && (
+      {(flow?.departments.length ?? order.requiredDepartments?.length ?? 0) > 0 && (
         <div style={{ marginTop: 12 }}>
           <div style={smallLabelStyle(theme)}>ROUTE</div>
-          <div style={routeStyle(theme)}>{(flow?.departments ?? order.requiredDepartments).join('  ->  ')}</div>
+          <div style={routeStyle(theme)}>{(flow?.departments ?? order.requiredDepartments ?? []).join('  ->  ')}</div>
         </div>
       )}
 

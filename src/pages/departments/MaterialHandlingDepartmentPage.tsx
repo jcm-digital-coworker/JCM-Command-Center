@@ -1,12 +1,12 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function MaterialHandlingDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
   const assets = getDepartmentAssets(plantAssets, 'Material Handling');
-  const orders = productionOrders.filter((order) => order.requiredDepartments.includes('Material Handling'));
-  const blocked = orders.filter((order) => order.status === 'BLOCKED');
+  const orders = getDepartmentOrders(productionOrders, 'Material Handling');
+  const blocked = orders.filter((order) => String(order.status).toLowerCase() === 'blocked');
 
   return (
     <PageShell

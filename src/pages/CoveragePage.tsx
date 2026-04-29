@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { plantDepartmentOrder } from '../data/workCenters';
 import { getAssignmentOptionsForPerson, getCoworkerNameOptionsForDepartment, getRoleOptionsForDepartment, getStationOptionsForDepartment } from '../data/structuredSelections';
 import { seedCoverage } from '../data/coverage';
-import type { RoleView } from '../types/app';
+import type { RoleView, DepartmentFilter } from '../types/app';
 import { isSupervisorRole } from '../data/workRoles';
 import type { Department } from '../types/machine';
 import type { CoverageDraft, CoveragePerson, CoverageStatus, ShiftName } from '../types/coverage';
@@ -24,7 +24,6 @@ interface CoveragePageProps {
 }
 
 type ThemeMode = 'dark' | 'light';
-type DepartmentFilter = Department | 'All';
 type CoverageView = 'hub' | 'signin' | 'available' | 'assigned' | 'break' | 'offline';
 
 const blankDraft: CoverageDraft = {

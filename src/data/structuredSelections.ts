@@ -62,7 +62,7 @@ export function getAssignmentOptionsForPerson(person: CoveragePerson): string[] 
   const orderOptions = productionOrders
     .filter((order) => {
       if (order.status === 'DONE') return false;
-      return order.currentDepartment === person.department || order.requiredDepartments.includes(person.department);
+      return order.currentDepartment === person.department || (order.requiredDepartments ?? []).includes(person.department);
     })
     .map((order) => `${order.orderNumber} - ${order.assemblyPartNumber} (${order.currentDepartment})`);
 

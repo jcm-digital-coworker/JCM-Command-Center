@@ -1,12 +1,12 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function FabDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
   const cells = getDepartmentAssets(plantAssets, 'Fab');
-  const orders = productionOrders.filter((order) => order.currentDepartment === 'Fab' || order.requiredDepartments.includes('Fab'));
-  const engineered = orders.filter((order) => order.orderType === 'ENGINEERED');
+  const orders = getDepartmentOrders(productionOrders, 'Fab');
+  const engineered = orders.filter((order) => order.orderType === 'ENGINEERED' || order.productFamily === 'ENGINEERED_FITTING');
 
   return (
     <PageShell

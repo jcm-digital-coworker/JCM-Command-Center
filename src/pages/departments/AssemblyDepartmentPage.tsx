@@ -1,5 +1,5 @@
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentOrders, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 const assemblyCells = [
@@ -11,8 +11,8 @@ const assemblyCells = [
 ];
 
 export default function AssemblyDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
-  const orders = productionOrders.filter((order) => order.currentDepartment === 'Assembly' || order.requiredDepartments.includes('Assembly'));
-  const ready = orders.filter((order) => order.status === 'READY' || order.status === 'IN_PROGRESS');
+  const orders = getDepartmentOrders(productionOrders, 'Assembly');
+  const ready = orders.filter((order) => ['ready', 'in_progress', 'running'].includes(String(order.status).toLowerCase()));
 
   return (
     <PageShell

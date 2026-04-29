@@ -1,11 +1,11 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function ShippingDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
   const lanes = getDepartmentAssets(plantAssets, 'Shipping');
-  const orders = productionOrders.filter((order) => order.currentDepartment === 'Shipping' || order.requiredDepartments.includes('Shipping'));
+  const orders = getDepartmentOrders(productionOrders, 'Shipping');
   const readyToShip = orders.filter((order) => order.status === 'DONE' && order.qaStatus === 'PASSED');
   const waiting = orders.filter((order) => order.status !== 'DONE' || order.qaStatus !== 'PASSED');
 

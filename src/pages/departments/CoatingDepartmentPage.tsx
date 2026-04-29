@@ -1,11 +1,11 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function CoatingDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
   const zones = getDepartmentAssets(plantAssets, 'Coating');
-  const orders = productionOrders.filter((order) => order.currentDepartment === 'Coating' || order.requiredDepartments.includes('Coating'));
+  const orders = getDepartmentOrders(productionOrders, 'Coating');
   const holds = orders.filter((order) => order.blockedReason === 'WAITING_ON_COATING' || order.qaStatus === 'HOLD');
 
   return (

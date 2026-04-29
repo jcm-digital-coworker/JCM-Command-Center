@@ -16,6 +16,18 @@ export type ProductionOrderStatus =
 
 export type FlowStatus = 'runnable' | 'blocked' | 'RUNNABLE' | 'BLOCKED';
 
+export type ProductLane =
+  | 'SERVICE_SADDLE'
+  | 'CLAMP'
+  | 'PATCH_CLAMP'
+  | 'COUPLING'
+  | 'TAPPING_SLEEVE'
+  | 'ENGINEERED_FITTING'
+  | 'PIPE_FABRICATION'
+  | 'OTHER';
+
+export type ProductionOrderType = 'STANDARD' | 'ENGINEERED' | 'REPAIR' | 'SERVICE' | 'UNKNOWN';
+
 export type MaterialStatus =
   | 'RECEIVED'
   | 'PARTIAL'
@@ -83,6 +95,11 @@ export type ProductionOrder = {
   requiredSkills: WorkerSkill[];
   blockers: FlowBlocker[];
   priority: 'normal' | 'hot' | 'critical' | 'NORMAL' | 'HOT' | 'CRITICAL';
+
+  productLane?: ProductLane;
+  orderType?: ProductionOrderType;
+  blockedReason?: BlockedReason;
+  notes?: string[];
 
   materialStatus?: MaterialStatus;
   qaStatus?: QaStatus;

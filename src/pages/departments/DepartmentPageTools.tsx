@@ -14,13 +14,14 @@ export function getDepartmentAssets(assets: PlantAsset[], department: Department
 }
 
 export function getDepartmentOrders(orders: ProductionOrder[], department: Department) {
-  return orders.filter((order) =>
-    order.currentDepartment === department || order.requiredDepartments.includes(department),
-  );
+  return orders.filter((order) => {
+    const requiredDepartments = Array.isArray(order.requiredDepartments) ? order.requiredDepartments : [];
+    return order.currentDepartment === department || requiredDepartments.includes(department);
+  });
 }
 
 export function getBlockedOrders(orders: ProductionOrder[]) {
-  return orders.filter((order) => order.status === 'BLOCKED');
+  return orders.filter((order) => String(order.status).toLowerCase() === 'blocked');
 }
 
 export function kindLabel(kind: PlantAssetKind) {
@@ -36,8 +37,8 @@ export function kindLabel(kind: PlantAssetKind) {
   return labels[kind];
 }
 
-export function statusLabel(value: string) {
-  return value.replace(/_/g, ' ');
+export function statusLabel(value: string | undefined) {
+  return String(value ?? 'UNKNOWN').replace(/_/g, ' ');
 }
 
 export function PageShell({
@@ -98,13 +99,13 @@ export function OrderCard({ order, theme = 'dark' }: DepartmentPageProps & { ord
         <strong style={cardTitleStyle(theme)}>{order.orderNumber}</strong>
         <span style={pillStyle(order.status, theme)}>{statusLabel(order.status)}</span>
       </div>
-      <div style={metaStyle(theme)}>{order.customer} • {order.productFamily.replace(/_/g, ' ')}</div>
+      <div style={metaStyle(theme)}>{order.customer ?? 'Customer not set'} • {statusLabel(order.productFamily)}</div>
       <p style={bodyStyle(theme)}>
-        Part {order.assemblyPartNumber} • Qty {order.quantity} • Ship {order.projectedShipDate}
+        Part {order.assemblyPartNumber ?? 'Not assigned'} • Qty {order.quantity ?? 'TBD'} • Ship {order.projectedShipDate ?? 'TBD'}
       </p>
       <div style={chipRowStyle}>
-        <span style={chipStyle(theme)}>Material: {statusLabel(order.materialStatus)}</span>
-        <span style={chipStyle(theme)}>QA: {statusLabel(order.qaStatus)}</span>
+        <span style={chipStyle(theme)}>Material: {statusLabel(order.materialStatus ?? 'UNKNOWN')}</span>
+        <span style={chipStyle(theme)}>QA: {statusLabel(order.qaStatus ?? 'UNKNOWN')}</span>
         {order.blockedReason && <span style={chipStyle(theme)}>Block: {statusLabel(order.blockedReason)}</span>}
       </div>
     </div>
