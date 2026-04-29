@@ -1,208 +1,170 @@
 import type { CSSProperties } from 'react';
-import { warRoomContext } from '../data/warRoomContext';
+import {
+  warRoomContextBlocks,
+  warRoomContextSections,
+} from '../data/warRoomContext';
+import { darkTheme, lightTheme, type ThemeColors } from '../theme/theme';
 
-type ThemeName = 'dark' | 'light';
+type WarRoomContextPageProps = {
+  theme: 'dark' | 'light';
+};
 
-interface WarRoomContextPageProps {
-  theme?: ThemeName;
-}
-
-export default function WarRoomContextPage({ theme = 'dark' }: WarRoomContextPageProps) {
-  const colors = getColors(theme);
+export default function WarRoomContextPage({
+  theme,
+}: WarRoomContextPageProps) {
+  const colors = theme === 'dark' ? darkTheme : lightTheme;
 
   return (
-    <main style={{ ...pageStyle, background: colors.background, color: colors.text }}>
-      <section style={{ ...heroStyle, background: colors.card, borderColor: colors.border }}>
-        <div>
-          <p style={{ ...eyebrowStyle, color: colors.muted }}>WAR ROOM CONTEXT</p>
-          <h1 style={titleStyle}>Mission Memory</h1>
-          <p style={{ ...subtitleStyle, color: colors.muted }}>
-            Compressed operating context for clean handoffs, fresh chats, and controlled Code Tent work.
-          </p>
-        </div>
-        <div style={{ ...statusPillStyle, borderColor: colors.accent, color: colors.accent }}>
-          {warRoomContext.status.toUpperCase()}
-        </div>
+    <main style={getPageStyle(colors)}>
+      <section style={getHeaderStyle(colors)}>
+        <p style={getEyebrowStyle(colors)}>Command Continuity</p>
+        <h1 style={getTitleStyle(colors)}>War Room Context</h1>
+        <p style={getSubtitleStyle(colors)}>
+          Copy-ready mission context for moving cleanly between War Room and
+          Code Tent without changing doctrine or duplicating project structure.
+        </p>
       </section>
 
-      <section style={summaryGridStyle}>
-        <SummaryCard label="Current Mission" value={warRoomContext.currentMission} theme={theme} />
-        <SummaryCard label="Last Completed" value={warRoomContext.lastCompleted} theme={theme} />
-        <SummaryCard label="Next Target" value={warRoomContext.nextTarget} theme={theme} />
-        <SummaryCard label="Updated" value={warRoomContext.updatedAt} theme={theme} />
-      </section>
-
-      <section style={twoColumnStyle}>
-        <ListCard title="Core Doctrine" items={warRoomContext.doctrine} theme={theme} />
-        <ListCard title="Known Failure Modes" items={warRoomContext.knownFailureModes} theme={theme} danger />
-      </section>
-
-      <section style={sectionGridStyle}>
-        {warRoomContext.systemState.map((section) => (
-          <ListCard key={section.title} title={section.title} items={section.items} theme={theme} />
+      <section style={gridStyle}>
+        {warRoomContextSections.map((section) => (
+          <article key={section.title} style={getCardStyle(colors)}>
+            <h2 style={getCardTitleStyle(colors)}>{section.title}</h2>
+            <ul style={listStyle}>
+              {section.items.map((item) => (
+                <li key={item} style={getListItemStyle(colors)}>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </article>
         ))}
       </section>
 
-      <section style={twoColumnStyle}>
-        <ListCard title="Update Triggers" items={warRoomContext.updateTriggers} theme={theme} />
-        <ListCard title="Code Tent Handoff Rules" items={warRoomContext.codeTentHandoffRules} theme={theme} />
+      <section style={blockStackStyle}>
+        {warRoomContextBlocks.map((block) => (
+          <article key={block.id} style={getCardStyle(colors)}>
+            <h2 style={getCardTitleStyle(colors)}>{block.title}</h2>
+            <pre style={getPreStyle(colors)}>{block.body}</pre>
+          </article>
+        ))}
       </section>
-
-      <ListCard title="Active Risks" items={warRoomContext.activeRisks} theme={theme} danger />
     </main>
   );
 }
 
-function SummaryCard({ label, value, theme }: { label: string; value: string; theme: ThemeName }) {
-  const colors = getColors(theme);
-  return (
-    <article style={{ ...cardStyle, background: colors.card, borderColor: colors.border }}>
-      <p style={{ ...eyebrowStyle, color: colors.muted }}>{label}</p>
-      <p style={{ ...summaryValueStyle, color: colors.text }}>{value}</p>
-    </article>
-  );
-}
-
-function ListCard({ title, items, theme, danger = false }: { title: string; items: string[]; theme: ThemeName; danger?: boolean }) {
-  const colors = getColors(theme);
-  return (
-    <article style={{ ...cardStyle, background: colors.card, borderColor: colors.border }}>
-      <h2 style={{ ...cardTitleStyle, color: danger ? colors.danger : colors.text }}>{title}</h2>
-      <ul style={listStyle}>
-        {items.map((item) => (
-          <li key={item} style={{ ...listItemStyle, color: colors.text }}>
-            <span style={{ ...bulletStyle, background: danger ? colors.danger : colors.accent }} />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </article>
-  );
-}
-
-function getColors(theme: ThemeName) {
+function getPageStyle(colors: ThemeColors): CSSProperties {
   return {
-    background: theme === 'dark' ? '#0f172a' : '#f8fafc',
-    card: theme === 'dark' ? '#1e293b' : '#ffffff',
-    border: theme === 'dark' ? '#334155' : '#e2e8f0',
-    text: theme === 'dark' ? '#e2e8f0' : '#0f172a',
-    muted: theme === 'dark' ? '#94a3b8' : '#64748b',
-    accent: '#f97316',
-    danger: '#ef4444',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
+    color: colors.text,
   };
 }
 
-const pageStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 18,
-};
+function getHeaderStyle(colors: ThemeColors): CSSProperties {
+  return {
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
+    borderLeft: `4px solid ${colors.accent}`,
+    borderRadius: 8,
+    padding: 18,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+  };
+}
 
-const heroStyle: CSSProperties = {
-  border: '1px solid',
-  borderLeft: '4px solid #f97316',
-  borderRadius: 8,
-  padding: 20,
-  display: 'flex',
-  alignItems: 'flex-start',
-  justifyContent: 'space-between',
-  gap: 16,
-};
+function getEyebrowStyle(colors: ThemeColors): CSSProperties {
+  return {
+    margin: '0 0 8px',
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: '1.2px',
+    textTransform: 'uppercase',
+  };
+}
 
-const eyebrowStyle: CSSProperties = {
-  margin: 0,
-  fontSize: 11,
-  fontWeight: 900,
-  letterSpacing: '1px',
-  textTransform: 'uppercase',
-};
+function getTitleStyle(colors: ThemeColors): CSSProperties {
+  return {
+    margin: 0,
+    color: colors.text,
+    fontSize: 28,
+    lineHeight: 1.1,
+    fontWeight: 900,
+    letterSpacing: '0.5px',
+    textTransform: 'uppercase',
+  };
+}
 
-const titleStyle: CSSProperties = {
-  margin: '6px 0 8px',
-  fontSize: 28,
-  lineHeight: 1.1,
-  letterSpacing: '0.5px',
-};
+function getSubtitleStyle(colors: ThemeColors): CSSProperties {
+  return {
+    margin: '10px 0 0',
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 1.5,
+    maxWidth: 820,
+  };
+}
 
-const subtitleStyle: CSSProperties = {
-  margin: 0,
-  fontSize: 14,
-  lineHeight: 1.5,
-  maxWidth: 720,
-};
-
-const statusPillStyle: CSSProperties = {
-  border: '1px solid',
-  borderRadius: 999,
-  padding: '8px 12px',
-  fontSize: 11,
-  fontWeight: 900,
-  letterSpacing: '1px',
-  whiteSpace: 'nowrap',
-};
-
-const summaryGridStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-  gap: 14,
-};
-
-const twoColumnStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-  gap: 14,
-};
-
-const sectionGridStyle: CSSProperties = {
+const gridStyle: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
   gap: 14,
 };
 
-const cardStyle: CSSProperties = {
-  border: '1px solid',
-  borderRadius: 8,
-  padding: 16,
-  boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
-};
+function getCardStyle(colors: ThemeColors): CSSProperties {
+  return {
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 8,
+    padding: 16,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+  };
+}
 
-const summaryValueStyle: CSSProperties = {
-  margin: '8px 0 0',
-  fontSize: 14,
-  fontWeight: 800,
-  lineHeight: 1.45,
-};
-
-const cardTitleStyle: CSSProperties = {
-  margin: '0 0 12px',
-  fontSize: 15,
-  fontWeight: 900,
-  letterSpacing: '0.6px',
-  textTransform: 'uppercase',
-};
+function getCardTitleStyle(colors: ThemeColors): CSSProperties {
+  return {
+    margin: '0 0 12px',
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: 900,
+    letterSpacing: '0.8px',
+    textTransform: 'uppercase',
+  };
+}
 
 const listStyle: CSSProperties = {
-  listStyle: 'none',
   margin: 0,
-  padding: 0,
+  paddingLeft: 18,
+};
+
+function getListItemStyle(colors: ThemeColors): CSSProperties {
+  return {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 1.45,
+    marginBottom: 8,
+  };
+}
+
+const blockStackStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 10,
+  gap: 14,
 };
 
-const listItemStyle: CSSProperties = {
-  display: 'flex',
-  gap: 10,
-  alignItems: 'flex-start',
-  fontSize: 13,
-  lineHeight: 1.45,
-  fontWeight: 650,
-};
-
-const bulletStyle: CSSProperties = {
-  width: 7,
-  height: 7,
-  borderRadius: 999,
-  marginTop: 6,
-  flex: '0 0 auto',
-};
+function getPreStyle(colors: ThemeColors): CSSProperties {
+  return {
+    margin: 0,
+    padding: 14,
+    background: colors.surfaceAlt,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 6,
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 1.45,
+    whiteSpace: 'pre-wrap',
+    overflowX: 'auto',
+    fontFamily:
+      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+  };
+}
