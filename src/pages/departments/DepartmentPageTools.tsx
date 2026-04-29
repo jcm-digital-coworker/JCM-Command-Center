@@ -143,7 +143,6 @@ export function CrewGuidancePanel({ department, orders, theme = 'dark' }: Depart
   );
 }
 
-}
 
 export function EmptyState({ text, theme = 'dark' }: DepartmentPageProps & { text: string }) {
   return <div style={emptyStyle(theme)}>{text}</div>;
