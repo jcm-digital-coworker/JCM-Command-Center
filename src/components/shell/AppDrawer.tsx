@@ -45,7 +45,6 @@ export default function AppDrawer({
     { id: 'maintenance', label: 'MAINTENANCE' },
     { id: 'receiving', label: 'RECEIVING' },
     { id: 'risk', label: 'QA / SAFETY' },
-    { id: 'warRoomContext', label: 'WAR ROOM CONTEXT' },
     { id: 'machines', label: 'MACHINES' },
     { id: 'alerts', label: 'MACHINE ALERTS' },
     { id: 'simulation', label: 'SIMULATION' },
