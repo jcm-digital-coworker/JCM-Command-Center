@@ -51,6 +51,7 @@ export default function AppDrawer({
     <>
       <div style={overlayStyle} onClick={onClose} />
       <div style={drawerStyle}>
+        {/* Fixed Header */}
         <div style={headerStyle}>
           <div>
             <div
@@ -74,23 +75,26 @@ export default function AppDrawer({
           </button>
         </div>
 
-        <div style={menuStyle}>
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => {
-                setTab(t.id);
-                onClose();
-              }}
-              style={tab === t.id ? activeTabStyle : tabStyle}
-            >
-              <div style={indicatorStyle(tab === t.id)} />
-              {t.label}
-            </button>
-          ))}
+        {/* Scrollable Menu Area */}
+        <div style={menuContainerStyle}>
+          <div style={menuStyle}>
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setTab(t.id);
+                  onClose();
+                }}
+                style={tab === t.id ? activeTabStyle : tabStyle}
+              >
+                <div style={indicatorStyle(tab === t.id)} />
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Settings Section */}
+        {/* Fixed Settings Section */}
         <div style={settingsSectionStyle}>
           <div style={settingsHeaderStyle}>SETTINGS</div>
 
@@ -111,6 +115,7 @@ export default function AppDrawer({
           </div>
         </div>
 
+        {/* Fixed Footer */}
         <div style={footerStyle}>
           <div style={{ fontSize: 11, color: '#94a3b8' }}>Nash, Texas</div>
         </div>
@@ -148,6 +153,8 @@ const drawerStyle: CSSProperties = {
   background: '#1e293b',
   zIndex: 1000,
   boxShadow: '4px 0 20px rgba(0,0,0,0.5)',
+  display: 'flex',
+  flexDirection: 'column',
 };
 
 const headerStyle: CSSProperties = {
@@ -158,6 +165,7 @@ const headerStyle: CSSProperties = {
   alignItems: 'center',
   borderBottom: '1px solid #334155',
   color: 'white',
+  flexShrink: 0,
 };
 
 const closeButtonStyle: CSSProperties = {
@@ -173,6 +181,14 @@ const closeButtonStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+};
+
+// NEW: Scrollable container for menu
+const menuContainerStyle: CSSProperties = {
+  flex: 1,
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  minHeight: 0, // Important for flex scrolling
 };
 
 const menuStyle: CSSProperties = {
@@ -207,7 +223,7 @@ const activeTabStyle: CSSProperties = {
 const settingsSectionStyle: CSSProperties = {
   borderTop: '1px solid #334155',
   padding: '16px 20px',
-  marginTop: 'auto',
+  flexShrink: 0,
 };
 
 const settingsHeaderStyle: CSSProperties = {
@@ -242,4 +258,5 @@ const footerStyle: CSSProperties = {
   padding: '16px 20px',
   borderTop: '1px solid #334155',
   textAlign: 'center',
+  flexShrink: 0,
 };

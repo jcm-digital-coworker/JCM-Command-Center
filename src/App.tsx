@@ -22,6 +22,7 @@ import MachinesPage, { AlertsPage } from './pages/MachinesPage';
 import SimulationPage from './pages/SimulationPage';
 import MaintenancePage from './pages/MaintenancePage';
 import MaintenanceRequestsPage from './pages/MaintenanceRequestsPage';
+import MaintenanceAnalyticsPage from './pages/MaintenanceAnalyticsPage';
 import DocumentsPage from './pages/DocumentsPage';
 import RiskPage from './pages/RiskPage';
 import WorkCenterDetailPage from './pages/WorkCenterDetailPage';
@@ -248,9 +249,9 @@ export default function App() {
     background: currentTheme.background,
     minHeight: '100vh',
   };
-  const [maintenanceView, setMaintenanceView] = useState<'tasks' | 'requests'>(
-    'requests'
-  );
+  
+  const [maintenanceView, setMaintenanceView] = useState<'tasks' | 'requests' | 'analytics'
+>('requests');
 
   const sortedMachines = useMemo(() => {
     return [...machines].sort((a, b) => {
@@ -625,17 +626,31 @@ export default function App() {
             </button>
           </div>
 
+<button
+        onClick={() => setMaintenanceView('analytics')}
+        style={
+          maintenanceView === 'analytics'
+            ? activeTabButtonStyle
+            : tabButtonStyle
+        }
+      >
+        Analytics
+      </button>
+
           {maintenanceView === 'requests' ? (
-            <MaintenanceRequestsPage theme={theme} />
-          ) : (
-            <MaintenancePage
-              machines={filteredMachines}
-              tasks={filteredMaintenanceTasks}
-              theme={theme}
-            />
-          )}
-        </div>
-      )}
+      <MaintenanceRequestsPage theme={theme} />
+    ) : maintenanceView === 'tasks' ? (
+      <MaintenancePage
+        machines={filteredMachines}
+        tasks={filteredMaintenanceTasks}
+        theme={theme}
+      />
+    ) : (
+      <MaintenanceAnalyticsPage theme={theme} />
+    )}
+  </div>
+)}
+
 
       {tab === 'receiving' && (
         <ReceivingPage
