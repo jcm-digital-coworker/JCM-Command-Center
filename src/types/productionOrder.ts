@@ -34,6 +34,7 @@ export type MaterialStatus =
   | 'NOT_RECEIVED'
   | 'STAGED'
   | 'MISSING'
+  | 'ORDER_REQUIRED'
   | 'UNKNOWN';
 
 export type QaStatus =
@@ -101,7 +102,15 @@ export type ProductionOrder = {
   blockedReason?: BlockedReason;
   notes?: string[];
 
+  blueprintId?: string;
+  partNumber?: string;
+  drawingRevision?: string;
+  salesReleasedAt?: string;
+  engineeringRequired?: boolean;
+  engineeringStatus?: 'NOT_REQUIRED' | 'PENDING' | 'RELEASED' | 'HOLD';
+  productionSupervisorAcknowledged?: boolean;
   materialStatus?: MaterialStatus;
+  materialAvailableDate?: string;
   qaStatus?: QaStatus;
   projectedShipDate?: string;
   assemblyPartNumber?: string;
