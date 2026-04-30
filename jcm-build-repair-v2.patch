@@ -1,0 +1,131 @@
+diff --git a/src/types/app.ts b/src/types/app.ts
+index 54fad11..1111111 100644
+--- a/src/types/app.ts
++++ b/src/types/app.ts
+@@ -1,3 +1,5 @@
++import type { Department } from './machine';
++
+ export type AppTab =
+   | 'dashboard'
+   | 'machines'
+@@ -18,10 +20,19 @@ export type AppTab =
+   | 'risk'
+   | 'warRoomContext';
+
++export type DepartmentFilter = 'All' | Department;
++
+ export type RoleView =
++  | 'Operator'
++  | 'Lead / Supervisor'
++  | 'Manager'
++  | 'Maintenance'
++  | 'Forklift / Receiving'
++  | 'QA'
+   | 'operator'
+   | 'lead'
+   | 'supervisor'
+   | 'management'
+   | 'maintenance'
+-  | 'qa';
++  | 'qa';
+diff --git a/src/modules/crewGuidance.ts b/src/modules/crewGuidance.ts
+index 898675b..2222222 100644
+--- a/src/modules/crewGuidance.ts
++++ b/src/modules/crewGuidance.ts
+@@ -128,7 +128,12 @@ export function getCrewGuidance({
+   workers: crew = workers,
+   machines: plantMachines = machines,
+ }: CrewGuidanceContext): CrewGuidanceItem[] {
+-  const rule = departmentCrewRules[department];
++  const rule = departmentCrewRules[department] ?? {
++    requiredSkills: [],
++    readyAction: 'Maintain normal coverage and monitor for new blockers.',
++    blockedAction:
++      'Hold staffing changes until the active blocker is identified and cleared.',
++  };
+   const departmentOrders = getOrdersForDepartment(orders, department);
+   const availableWorkers = getAvailableWorkersForDepartment(crew, department);
+   const matchedWorkers = getMatchedWorkers(availableWorkers, rule.requiredSkills);
+@@ -233,11 +238,12 @@ function getMissingSkills(
+ }
+
+ function isRunnableOrder(order: ProductionOrder): boolean {
+-  return order.flowStatus === 'runnable' && order.status !== 'complete';
++  const status = String(order.status ?? '').toLowerCase();
++  return String(order.flowStatus ?? '').toLowerCase() === 'runnable' && status !== 'complete' && status !== 'done';
+ }
+
+ function isBlockedOrder(order: ProductionOrder): boolean {
+-  return order.flowStatus === 'blocked' || order.blockers.length > 0;
++  return String(order.flowStatus ?? '').toLowerCase() === 'blocked' || (order.blockers ?? []).length > 0;
+ }
+
+ function getBlockerTypes(
+@@ -247,7 +253,7 @@ function getBlockerTypes(
+   const blockerTypes = new Set<FlowBlockerType>();
+
+   blockedOrders.forEach((order) => {
+-    order.blockers.forEach((blocker) => blockerTypes.add(blocker.type));
++    (order.blockers ?? []).forEach((blocker) => blockerTypes.add(blocker.type));
+   });
+
+   machineBlockers.forEach((blocker) => blockerTypes.add(blocker));
+diff --git a/src/pages/departments/DepartmentPageTools.tsx b/src/pages/departments/DepartmentPageTools.tsx
+index 9bfc548..3333333 100644
+--- a/src/pages/departments/DepartmentPageTools.tsx
++++ b/src/pages/departments/DepartmentPageTools.tsx
+@@ -112,35 +112,42 @@ export function OrderCard({ order, theme = 'dark' }: DepartmentPageProps & { ord
+ }
+
+ export function CrewGuidancePanel({ department, orders, theme = 'dark' }: DepartmentPageProps & { department: Department; orders: ProductionOrder[] }) {
+-  const recommendations = getCrewGuidanceForDepartment(department, orders, workers);
++  const recommendations = getCrewGuidanceForDepartment(department, { orders, workers });
+
+   return (
+     <CardGrid>
+       {recommendations.map((recommendation) => (
+-        <div key={recommendation.id} style={crewCardStyle(recommendation.tone, theme)}>
++        <div key={recommendation.id} style={crewCardStyle(getCrewTone(recommendation.level), theme)}>
+           <div style={cardHeaderStyle}>
+             <strong style={cardTitleStyle(theme)}>{recommendation.title}</strong>
+-            <span style={crewToneStyle(recommendation.tone, theme)}>{recommendation.tone}</span>
++            <span style={crewToneStyle(getCrewTone(recommendation.level), theme)}>{getCrewTone(recommendation.level)}</span>
+           </div>
+-          <p style={bodyStyle(theme)}>{recommendation.reason}</p>
++          <p style={bodyStyle(theme)}>{recommendation.message}</p>
++          <p style={bodyStyle(theme)}>{recommendation.action}</p>
+           <div style={chipRowStyle}>
+-            {recommendation.suggestedRoles.map((role) => (
+-              <span key={role} style={chipStyle(theme)}>Role: {role}</span>
++            {recommendation.requiredSkills.map((skill) => (
++              <span key={skill} style={chipStyle(theme)}>Skill: {statusLabel(skill)}</span>
+             ))}
+             {recommendation.orderNumbers.length > 0 ? recommendation.orderNumbers.map((orderNumber) => (
+               <span key={orderNumber} style={chipStyle(theme)}>Order: {orderNumber}</span>
+             )) : <span style={chipStyle(theme)}>No target order</span>}
+           </div>
+           <div style={workerListStyle(theme)}>
+-            <strong>Available co-workers:</strong>{' '}
+-            {recommendation.availableWorkers.length > 0
+-              ? recommendation.availableWorkers.map((worker) => worker.name).join(', ')
++            <strong>Matched co-workers:</strong>{' '}
++            {recommendation.workerIds.length > 0
++              ? recommendation.workerIds
++                  .map((workerId) => workers.find((worker) => worker.id === workerId)?.name ?? workerId)
++                  .join(', ')
+               : 'None shown available'}
+           </div>
+         </div>
+       ))}
+     </CardGrid>
+   );
+ }
++
++function getCrewTone(level: 'info' | 'warning' | 'critical'): 'GO' | 'WATCH' | 'HOLD' {
++  if (level === 'critical') return 'HOLD';
++  if (level === 'warning') return 'WATCH';
++  return 'GO';
++}
+
+
+ export function EmptyState({ text, theme = 'dark' }: DepartmentPageProps & { text: string }) {
