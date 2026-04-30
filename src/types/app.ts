@@ -1,3 +1,5 @@
+import type { Department } from './machine';
+
 export type AppTab =
   | 'dashboard'
   | 'machines'
@@ -18,7 +20,15 @@ export type AppTab =
   | 'risk'
   | 'warRoomContext';
 
+export type DepartmentFilter = 'All' | Department;
+
 export type RoleView =
+  | 'Operator'
+  | 'Lead / Supervisor'
+  | 'Manager'
+  | 'Maintenance'
+  | 'Forklift / Receiving'
+  | 'QA'
   | 'operator'
   | 'lead'
   | 'supervisor'
