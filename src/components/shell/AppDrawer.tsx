@@ -49,6 +49,17 @@ export default function AppDrawer({
 
   return (
     <>
+      <style>
+        {`
+          .drawer-menu-scroll {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+          }
+          .drawer-menu-scroll::-webkit-scrollbar {
+            display: none; /* Chrome/Safari/Opera */
+          }
+        `}
+      </style>
       <div style={overlayStyle} onClick={onClose} />
       <div style={drawerStyle}>
         {/* Fixed Header */}
@@ -75,8 +86,8 @@ export default function AppDrawer({
           </button>
         </div>
 
-        {/* Scrollable Menu Area */}
-        <div style={menuContainerStyle}>
+        {/* Scrollable Menu Area - NO VISIBLE SCROLLBAR */}
+        <div style={menuContainerStyle} className="drawer-menu-scroll">
           <div style={menuStyle}>
             {tabs.map((t) => (
               <button
@@ -183,12 +194,12 @@ const closeButtonStyle: CSSProperties = {
   justifyContent: 'center',
 };
 
-// NEW: Scrollable container for menu
+// Scrollable container - scrollbar hidden via CSS class
 const menuContainerStyle: CSSProperties = {
   flex: 1,
   overflowY: 'auto',
   overflowX: 'hidden',
-  minHeight: 0, // Important for flex scrolling
+  minHeight: 0,
 };
 
 const menuStyle: CSSProperties = {
