@@ -158,6 +158,9 @@ export function CrewGuidancePanel({
     <CardGrid>
       {recommendations.map((recommendation) => {
         const tone = getCrewTone(recommendation.level);
+        const requiredSkills = recommendation.requiredSkills ?? [];
+        const orderNumbers = recommendation.orderNumbers ?? [];
+        const workerIds = recommendation.workerIds ?? [];
 
         return (
           <div key={recommendation.id} style={crewCardStyle(tone, theme)}>
@@ -170,14 +173,14 @@ export function CrewGuidancePanel({
             <p style={bodyStyle(theme)}>{recommendation.action}</p>
 
             <div style={chipRowStyle}>
-              {recommendation.requiredSkills.map((skill) => (
+              {requiredSkills.map((skill) => (
                 <span key={skill} style={chipStyle(theme)}>
                   Skill: {statusLabel(skill)}
                 </span>
               ))}
 
-              {recommendation.orderNumbers.length > 0 ? (
-                recommendation.orderNumbers.map((orderNumber) => (
+              {orderNumbers.length > 0 ? (
+                orderNumbers.map((orderNumber) => (
                   <span key={orderNumber} style={chipStyle(theme)}>
                     Order: {orderNumber}
                   </span>
@@ -189,8 +192,8 @@ export function CrewGuidancePanel({
 
             <div style={workerListStyle(theme)}>
               <strong>Matched co-workers:</strong>{' '}
-              {recommendation.workerIds.length > 0
-                ? recommendation.workerIds
+              {workerIds.length > 0
+                ? workerIds
                     .map(
                       (workerId) =>
                         workers.find((worker) => worker.id === workerId)?.name ??
