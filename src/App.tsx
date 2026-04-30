@@ -60,6 +60,7 @@ function filterByDepartment<T extends { department: Department }>(
 export default function App() {
   const [selected, setSelected] = useState<Machine | null>(null);
   const [tab, setTab] = useState<AppTab>('dashboard');
+  const [tabHistory, setTabHistory] = useState<AppTab[]>([]);
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
   const [simulatorMachine, setSimulatorMachine] = useState<Machine | null>(
     null
@@ -101,6 +102,19 @@ export default function App() {
 
   const currentTheme: ThemeColors = theme === 'dark' ? darkTheme : lightTheme;
 
+  function navigateTo(nextTab: AppTab) {
+    if (nextTab === tab) return;
+    setTabHistory((prev) => [...prev, tab]);
+    setTab(nextTab);
+  }
+
+  function goBack() {
+    if (tabHistory.length === 0) return;
+    const prev = tabHistory[tabHistory.length - 1];
+    setTabHistory((h) => h.slice(0, -1));
+    setTab(prev);
+  }
+
   function openWorkCenterForDepartment(nextDepartment: DepartmentFilter) {
     setSelected(null);
     setSimulatorMachine(null);
@@ -110,6 +124,7 @@ export default function App() {
       setDepartmentFilter('All');
       setReceivingInitialView('hub');
       setCoverageInitialView('hub');
+      setTabHistory([]);
       setTab('dashboard');
       return;
     }
@@ -120,7 +135,7 @@ export default function App() {
 
     if (nextDepartment === 'Receiving') {
       setSelectedWorkCenter(null);
-      setTab('receiving');
+      navigateTo('receiving');
       return;
     }
 
@@ -128,7 +143,7 @@ export default function App() {
       (workCenter) => workCenter.department === nextDepartment
     );
     setSelectedWorkCenter(matchingWorkCenter ?? null);
-    setTab('dashboard');
+    navigateTo('dashboard');
   }
 
   function changeRoleView(nextRole: RoleView) {
@@ -140,21 +155,21 @@ export default function App() {
       setSelectedWorkCenter(null);
       setDepartmentFilter('Receiving');
       setReceivingInitialView('ready');
-      setTab('receiving');
+      navigateTo('receiving');
       return;
     }
 
     if (nextRole === 'Maintenance') {
       setSelectedWorkCenter(null);
       setMaintenanceView('requests');
-      setTab('maintenance');
+      navigateTo('maintenance');
       return;
     }
 
     if (nextRole === 'Lead / Supervisor' || nextRole === 'Manager') {
       setSelectedWorkCenter(null);
       setCoverageInitialView('hub');
-      setTab('coverage');
+      navigateTo('coverage');
       return;
     }
 
@@ -167,11 +182,11 @@ export default function App() {
         (workCenter) => workCenter.department === departmentFilter
       );
       setSelectedWorkCenter(matchingWorkCenter ?? null);
-      setTab('dashboard');
+      navigateTo('dashboard');
       return;
     }
 
-    setTab('dashboard');
+    navigateTo('dashboard');
   }
 
   const statusBarStyle: CSSProperties = {
@@ -188,13 +203,6 @@ export default function App() {
     boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
   };
 
-  const dropdownContainerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 8,
-  };
-
   const statusLabelStyle: CSSProperties = {
     color: currentTheme.textMuted,
     fontSize: 11,
@@ -202,20 +210,6 @@ export default function App() {
     textAlign: 'center',
     letterSpacing: '1px',
     textTransform: 'uppercase',
-  };
-
-  const dropdownStyle: CSSProperties = {
-    padding: '10px 14px',
-    borderRadius: 4,
-    border: `1px solid ${currentTheme.border}`,
-    background: currentTheme.surfaceAlt,
-    color: currentTheme.text,
-    fontSize: 13,
-    fontWeight: 700,
-    cursor: 'pointer',
-    outline: 'none',
-    minWidth: 150,
-    letterSpacing: '0.5px',
   };
 
   const getAlertsButtonStyle = (alertCount: number): CSSProperties => {
@@ -388,13 +382,13 @@ export default function App() {
             setSelectedWorkCenter(null);
             setDepartmentFilter(selectedWorkCenter.department);
             setMaintenanceView('requests');
-            setTab('maintenance');
+            navigateTo('maintenance');
           }}
           onOpenCoverage={(view = 'hub') => {
             setSelectedWorkCenter(null);
             setDepartmentFilter(selectedWorkCenter.department);
             setCoverageInitialView(view);
-            setTab('coverage');
+            navigateTo('coverage');
           }}
           onOpenReceiving={(view, requesterDepartment) => {
             setSelectedWorkCenter(null);
@@ -405,7 +399,7 @@ export default function App() {
                 : 'Receiving'
             );
             setReceivingInitialView(view);
-            setTab('receiving');
+            navigateTo('receiving');
           }}
           theme={theme}
         />
@@ -438,7 +432,7 @@ export default function App() {
         open={menuOpen}
         tab={tab}
         setTab={(nextTab) => {
-          setTab(nextTab);
+          navigateTo(nextTab);
           setMenuOpen(false);
         }}
         roleView={roleView}
@@ -451,7 +445,12 @@ export default function App() {
         onToggleTheme={toggleTheme}
       />
 
-      <AppHeader onMenuClick={() => setMenuOpen(true)} theme={theme} />
+      <AppHeader
+        onMenuClick={() => setMenuOpen(true)}
+        onBackClick={goBack}
+        showBack={tabHistory.length > 0}
+        theme={theme}
+      />
 
       {/* Command Mode Bar: global navigation is mission-based. Page filters handle local context. */}
       <div style={statusBarStyle}>
@@ -485,67 +484,67 @@ export default function App() {
           }}
         >
           <button
-            onClick={() => setTab('dashboard')}
+            onClick={() => navigateTo('dashboard')}
             style={getModeButtonStyle(tab === 'dashboard', theme)}
           >
             Command
           </button>
           <button
-            onClick={() => setTab('orders')}
+            onClick={() => navigateTo('orders')}
             style={getModeButtonStyle(tab === 'orders', theme)}
           >
             Orders
           </button>
           <button
-            onClick={() => setTab('coverage')}
+            onClick={() => navigateTo('coverage')}
             style={getModeButtonStyle(tab === 'coverage', theme)}
           >
             Crew
           </button>
           <button
-            onClick={() => setTab('plantMap')}
+            onClick={() => navigateTo('plantMap')}
             style={getModeButtonStyle(tab === 'plantMap', theme)}
           >
             Plant Map
           </button>
           <button
-            onClick={() => setTab('fab')}
+            onClick={() => navigateTo('fab')}
             style={getModeButtonStyle(tab === 'fab', theme)}
           >
             Fab
           </button>
           <button
-            onClick={() => setTab('coating')}
+            onClick={() => navigateTo('coating')}
             style={getModeButtonStyle(tab === 'coating', theme)}
           >
             Coating
           </button>
           <button
-            onClick={() => setTab('shipping')}
+            onClick={() => navigateTo('shipping')}
             style={getModeButtonStyle(tab === 'shipping', theme)}
           >
             Shipping
           </button>
           <button
-            onClick={() => setTab('maintenance')}
+            onClick={() => navigateTo('maintenance')}
             style={getModeButtonStyle(tab === 'maintenance', theme)}
           >
             Maintenance
           </button>
           <button
-            onClick={() => setTab('receiving')}
+            onClick={() => navigateTo('receiving')}
             style={getModeButtonStyle(tab === 'receiving', theme)}
           >
             Receiving
           </button>
           <button
-            onClick={() => setTab('risk')}
+            onClick={() => navigateTo('risk')}
             style={getModeButtonStyle(tab === 'risk', theme)}
           >
             QA / Safety
           </button>
           <button
-            onClick={() => setTab('warRoomContext')}
+            onClick={() => navigateTo('warRoomContext')}
             style={getModeButtonStyle(tab === 'warRoomContext', theme)}
           >
             War Room
@@ -553,7 +552,7 @@ export default function App() {
         </div>
 
         <button
-          onClick={() => setTab('alerts')}
+          onClick={() => navigateTo('alerts')}
           style={getAlertsButtonStyle(filteredAlerts.length)}
         >
           {filteredAlerts.length}{' '}
