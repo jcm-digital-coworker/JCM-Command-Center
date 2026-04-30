@@ -5,18 +5,25 @@ export function getBlueprintForOrder(
   order: ProductionOrder,
   blueprints: PartBlueprint[]
 ): PartBlueprint | undefined {
-  return blueprints.find((b) => b.partNumber === order.assemblyPartNumber);
+  return blueprints.find(
+    (blueprint) =>
+      blueprint.id === order.blueprintId ||
+      blueprint.partNumber === order.partNumber ||
+      blueprint.partNumber === order.assemblyPartNumber
+  );
 }
 
 export function getStationPacket(
   order: ProductionOrder,
   blueprint: PartBlueprint | undefined
 ): StationPacket {
+  const orderBlockers = order.blockers ?? [];
+
   if (!blueprint) {
     return {
       orderNumber: order.orderNumber,
-      partNumber: order.assemblyPartNumber || 'UNKNOWN',
-      revision: 'UNKNOWN',
+      partNumber: order.partNumber || order.assemblyPartNumber || 'UNKNOWN',
+      revision: order.drawingRevision || 'UNKNOWN',
       description: order.productFamily,
       department: order.currentDepartment,
       status: 'MISSING_BLUEPRINT',
@@ -24,7 +31,7 @@ export function getStationPacket(
       rightNow: 'Missing blueprint data',
       instructions: [],
       requiredChecks: [],
-      blockers: order.blockers.map((b) => b.message),
+      blockers: orderBlockers.map((blocker) => blocker.message),
       materials: [],
       qaRequirements: [],
       safetyNotes: [],
@@ -33,22 +40,19 @@ export function getStationPacket(
   }
 
   const operation = blueprint.routing.find(
-    (r) => r.department === order.currentDepartment
+    (routeStep) => routeStep.department === order.currentDepartment
   );
-
-  const blockers = order.blockers.map((b) => b.message);
+  const blockers = orderBlockers.map((blocker) => blocker.message);
 
   return {
     orderNumber: order.orderNumber,
     partNumber: blueprint.partNumber,
-    revision: blueprint.revision,
+    revision: order.drawingRevision || blueprint.revision,
     description: blueprint.description,
     department: order.currentDepartment,
     status: blockers.length ? 'BLOCKED' : 'READY',
     priority: String(order.priority),
-    rightNow: blockers.length
-      ? 'Order is blocked'
-      : 'Ready for operation',
+    rightNow: blockers.length ? 'Order is blocked' : 'Ready for operation',
     operation: operation?.operation,
     instructions: operation?.instructions || [],
     requiredChecks: operation?.requiredChecks || [],
