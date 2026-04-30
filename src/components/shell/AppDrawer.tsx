@@ -134,6 +134,12 @@ export default function AppDrawer({
         {/* Dev Tools */}
         <div style={devToolsSectionStyle}>
           <div style={devToolsHeaderStyle}>DEV TOOLS</div>
+          <button
+            onClick={() => { setTab('warRoomContext'); onClose(); }}
+            style={tab === 'warRoomContext' ? devTabActiveStyle : devTabStyle}
+          >
+            WAR ROOM CONTEXT
+          </button>
           <div style={devToolsItemStyle}>
             <span style={devToolsLabelStyle}>ROLE</span>
             <select
@@ -345,6 +351,29 @@ const devToolsLabelStyle: CSSProperties = {
   color: '#475569',
   fontWeight: 700,
   letterSpacing: '0.5px',
+};
+
+const devTabStyle: CSSProperties = {
+  display: 'block',
+  width: '100%',
+  textAlign: 'left',
+  background: 'transparent',
+  border: '1px solid #334155',
+  color: '#475569',
+  padding: '7px 10px',
+  borderRadius: 4,
+  fontSize: 11,
+  fontWeight: 700,
+  cursor: 'pointer',
+  letterSpacing: '0.5px',
+  marginBottom: 8,
+};
+
+const devTabActiveStyle: CSSProperties = {
+  ...devTabStyle,
+  border: '1px solid #f97316',
+  color: '#f97316',
+  background: 'rgba(249,115,22,0.1)',
 };
 
 const devSelectStyle: CSSProperties = {

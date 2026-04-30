@@ -541,12 +541,6 @@ export default function App() {
           >
             QA / Safety
           </button>
-          <button
-            onClick={() => navigateTo('warRoomContext')}
-            style={getModeButtonStyle(tab === 'warRoomContext', theme)}
-          >
-            War Room
-          </button>
         </div>
 
         <button
