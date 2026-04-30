@@ -1,7 +1,7 @@
 import type { ProductionOrder } from '../types/productionOrder';
 
 export function hasMissingBlueprint(order: ProductionOrder): boolean {
-  return !order.blueprintId && !order.partNumber;
+  return order.engineeringRequired === true && !order.blueprintId && !order.partNumber;
 }
 
 export function getCurrentOrderGate(order: ProductionOrder) {
@@ -29,7 +29,7 @@ export function getWorkflowSignal(order: ProductionOrder) {
     return {
       orderNumber: order.orderNumber,
       gate,
-      message: 'Missing blueprint — Engineering must create and release drawing.',
+      message: 'Missing blueprint - Engineering must create and release drawing.',
       action: 'Route to Engineering',
     };
   }
