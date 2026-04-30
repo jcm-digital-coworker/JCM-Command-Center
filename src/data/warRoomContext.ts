@@ -64,6 +64,33 @@ export const warRoomContextSections: WarRoomContextSection[] = [
 
 export const warRoomContextBlocks: WarRoomContextBlock[] = [
   {
+    id: 'jcm-company-profile',
+    title: 'JCM Industries — Company Profile',
+    body: `JCM Industries, Inc.
+Address: 200 Old Boston Road, Nash, Texas 75569
+Phone: 903-832-2581
+Founded: 1976 by James C. Morriss Jr.
+
+Products: Pipe repair and tapping products for the waterworks industry
+- Repair Line: Repair Sleeves (Model 101/102 Universal Couplings and Clamps)
+- Connection Line: Service Saddles (Model 401 DI, 406 SS), Tapping Sleeves (Model 415 CS, 432 SS)
+- Branching Line: UCCs, Multi-Band and Single-Band couplings
+- Engineered Line: Expansion Joints (Model 801), Flanged Adapters, Sur-Grip Restrainers
+
+Materials:
+- Ductile Iron: ASTM A-536
+- Carbon Steel: ASTM A516 Gr.70
+- Stainless Steel: 304 / 316 SS
+- Gaskets: NBR (standard water service), EPDM (chemical / high-temp)
+- Coating: Powercron 590-534 fusion-bonded epoxy
+
+Certifications:
+- ANSI/NSF 61 — Drinking Water System Components
+- NSF 372 — Lead-Free Compliance
+- AWWA C219 — Bolted Sleeve-Type Couplings
+- AWWA C800 — Underground Service Line Fittings`,
+  },
+  {
     id: 'war-room-handoff',
     title: 'War Room Handoff Template',
     body: `JCM Command Center Project
