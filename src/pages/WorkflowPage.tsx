@@ -49,7 +49,7 @@ function OperatorView({
   return (
     <div style={getPageStyle()}>
       <div style={getHeaderStyle(theme)}>
-        <div>
+        <div style={getHeaderLeftStyle()}>
           <div style={getDeptLabelStyle(theme)}>{deptLabel}</div>
           <div style={getRoleTagStyle()}>OPERATOR VIEW</div>
         </div>
@@ -189,14 +189,16 @@ function LeadView({
         )}
         {crew.map((person) => (
           <div key={person.id} style={getCrewRowStyle(theme)}>
-            <div style={getCrewNameStyle(theme)}>{person.name}</div>
-            <div style={getCrewDetailStyle()}>{person.station}</div>
+            <div style={getCrewBodyStyle()}>
+              <div style={getCrewNameStyle(theme)}>{person.name}</div>
+              <div style={getCrewDetailStyle()}>{person.station}</div>
+              {person.assignedTo && (
+                <div style={getCrewAssignedStyle()}>→ {person.assignedTo}</div>
+              )}
+            </div>
             <div style={getCrewStatusBadge(person.status)}>
               {person.status}
             </div>
-            {person.assignedTo && (
-              <div style={getCrewAssignedStyle()}>→ {person.assignedTo}</div>
-            )}
           </div>
         ))}
       </div>
@@ -225,12 +227,14 @@ function LeadView({
                 <span style={getStatusChip(isRunnable)}>
                   {isRunnable ? 'RUNNABLE' : 'BLOCKED'}
                 </span>
-                <span style={getDeptChipStyle(theme)}>{order.currentDepartment}</span>
               </div>
               <div style={getOrderFamilyStyle(theme)}>{order.productFamily}</div>
-              {order.nextDepartment && (
-                <div style={getNextDeptStyle()}>Next: {order.nextDepartment}</div>
-              )}
+              <div style={getOrderMetaRowStyle()}>
+                <span style={getDeptChipStyle(theme)}>{order.currentDepartment}</span>
+                {order.nextDepartment && (
+                  <span style={getNextDeptStyle()}>→ {order.nextDepartment}</span>
+                )}
+              </div>
               {isBlocked &&
                 order.blockers.map((b, i) => (
                   <div key={i} style={getBlockerStyle(theme)}>
@@ -307,11 +311,11 @@ function ManagerView({
   return (
     <div style={getPageStyle()}>
       <div style={getHeaderStyle(theme)}>
-        <div>
+        <div style={getHeaderLeftStyle()}>
           <div style={getDeptLabelStyle(theme)}>PLANT COMMAND</div>
           <div style={getRoleTagStyle()}>MANAGER VIEW</div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <div style={getManagerBadge('red')}>{blockedOrders.length} BLOCKED</div>
           <div style={getManagerBadge('orange')}>{priorityOrders.length} PRIORITY</div>
         </div>
@@ -356,9 +360,11 @@ function ManagerView({
                   <span style={getStatusChip(isRunnable)}>
                     {isRunnable ? 'RUNNABLE' : 'BLOCKED'}
                   </span>
-                  <span style={getDeptChipStyle(theme)}>{order.currentDepartment}</span>
                 </div>
                 <div style={getOrderFamilyStyle(theme)}>{order.productFamily}</div>
+                <div style={getOrderMetaRowStyle()}>
+                  <span style={getDeptChipStyle(theme)}>{order.currentDepartment}</span>
+                </div>
                 {isBlocked &&
                   order.blockers.map((b, i) => (
                     <div key={i} style={getBlockerStyle(theme)}>
@@ -473,7 +479,13 @@ function getHeaderStyle(theme: 'dark' | 'light'): CSSProperties {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
   };
+}
+
+function getHeaderLeftStyle(): CSSProperties {
+  return { flex: 1, minWidth: 0 };
 }
 
 function getDeptLabelStyle(theme: 'dark' | 'light'): CSSProperties {
@@ -483,6 +495,9 @@ function getDeptLabelStyle(theme: 'dark' | 'light'): CSSProperties {
     letterSpacing: '1px',
     color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
     textTransform: 'uppercase',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   };
 }
 
@@ -627,7 +642,7 @@ function getStatusChip(isRunnable: boolean): CSSProperties {
 
 function getDeptChipStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 700,
     color: '#94a3b8',
     background: theme === 'dark' ? '#1e293b' : '#f1f5f9',
@@ -635,20 +650,36 @@ function getDeptChipStyle(theme: 'dark' | 'light'): CSSProperties {
     borderRadius: 3,
     padding: '2px 6px',
     letterSpacing: '0.5px',
-    marginLeft: 'auto',
+    whiteSpace: 'nowrap',
   };
 }
 
 function getOrderFamilyStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
-    fontSize: 13,
+    fontSize: 14,
     color: theme === 'dark' ? '#cbd5e1' : '#475569',
     fontWeight: 600,
+    marginTop: 4,
+    lineHeight: 1.4,
+  };
+}
+
+function getOrderMetaRowStyle(): CSSProperties {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    flexWrap: 'wrap',
   };
 }
 
 function getNextDeptStyle(): CSSProperties {
-  return { fontSize: 11, color: '#64748b', marginTop: 4 };
+  return {
+    fontSize: 11,
+    color: '#64748b',
+    whiteSpace: 'nowrap',
+  };
 }
 
 function getBlockerStyle(theme: 'dark' | 'light'): CSSProperties {
@@ -661,6 +692,8 @@ function getBlockerStyle(theme: 'dark' | 'light'): CSSProperties {
     borderRadius: 4,
     padding: '6px 10px',
     fontWeight: 600,
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
   };
 }
 
@@ -718,7 +751,7 @@ function getMachineColor(state: string): string {
   return map[state] ?? '#64748b';
 }
 
-function getSubmitBtnStyle(theme: 'dark' | 'light'): CSSProperties {
+function getSubmitBtnStyle(_theme: 'dark' | 'light'): CSSProperties {
   return {
     width: '100%',
     padding: 16,
@@ -738,6 +771,7 @@ const crewSummaryRowStyle: CSSProperties = {
   display: 'flex',
   gap: 8,
   marginBottom: 12,
+  flexWrap: 'wrap',
 };
 
 function getCrewStat(
@@ -747,16 +781,17 @@ function getCrewStat(
   const map = { green: '#10b981', blue: '#3b82f6', yellow: '#eab308' };
   const c = map[color];
   return {
-    flex: 1,
+    flex: '1 1 80px',
     background: theme === 'dark' ? '#0f172a' : '#f8fafc',
     border: `1px solid ${c}44`,
     borderRadius: 4,
-    padding: '8px 12px',
+    padding: '10px 8px',
     textAlign: 'center',
     fontSize: 12,
     fontWeight: 700,
     color: c,
     letterSpacing: '0.5px',
+    lineHeight: 1.4,
   };
 }
 
@@ -767,19 +802,42 @@ function getCrewRowStyle(theme: 'dark' | 'light'): CSSProperties {
     borderRadius: 4,
     padding: '10px 12px',
     marginBottom: 6,
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr auto',
-    gap: '4px 8px',
-    alignItems: 'center',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  };
+}
+
+function getCrewBodyStyle(): CSSProperties {
+  return {
+    flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
   };
 }
 
 function getCrewNameStyle(theme: 'dark' | 'light'): CSSProperties {
-  return { fontSize: 13, fontWeight: 700, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' };
+  return {
+    fontSize: 13,
+    fontWeight: 700,
+    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
 }
 
 function getCrewDetailStyle(): CSSProperties {
-  return { fontSize: 11, color: '#64748b' };
+  return {
+    fontSize: 11,
+    color: '#64748b',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
 }
 
 function getCrewStatusBadge(status: string): CSSProperties {
@@ -803,13 +861,19 @@ function getCrewStatusBadge(status: string): CSSProperties {
 }
 
 function getCrewAssignedStyle(): CSSProperties {
-  return { fontSize: 10, color: '#94a3b8', gridColumn: '1 / -1', paddingLeft: 2 };
+  return {
+    fontSize: 10,
+    color: '#94a3b8',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
 }
 
 const actionRowStyle: CSSProperties = {
-  display: 'flex',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
   gap: 8,
-  flexWrap: 'wrap',
   marginTop: 4,
 };
 
@@ -825,8 +889,7 @@ function getActionBtn(
   };
   const c = map[color];
   return {
-    flex: 1,
-    padding: 12,
+    padding: '12px 8px',
     background: `${c}22`,
     border: `1px solid ${c}`,
     borderRadius: 4,
@@ -835,7 +898,8 @@ function getActionBtn(
     fontWeight: 800,
     letterSpacing: '0.7px',
     cursor: 'pointer',
-    minWidth: 120,
+    textAlign: 'center',
+    lineHeight: 1.3,
   };
 }
 
@@ -939,7 +1003,7 @@ function getCrewTileCountStyle(): CSSProperties {
   };
 }
 
-function getEmptyStyle(theme: 'dark' | 'light'): CSSProperties {
+function getEmptyStyle(_theme: 'dark' | 'light'): CSSProperties {
   return {
     fontSize: 13,
     color: '#64748b',
