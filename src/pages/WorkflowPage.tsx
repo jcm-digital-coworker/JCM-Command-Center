@@ -718,7 +718,7 @@ function getMachineColor(state: string): string {
   return map[state] ?? '#64748b';
 }
 
-function getSubmitBtnStyle(theme: 'dark' | 'light'): CSSProperties {
+function getSubmitBtnStyle(_theme: 'dark' | 'light'): CSSProperties {
   return {
     width: '100%',
     padding: 16,
@@ -939,7 +939,7 @@ function getCrewTileCountStyle(): CSSProperties {
   };
 }
 
-function getEmptyStyle(theme: 'dark' | 'light'): CSSProperties {
+function getEmptyStyle(_theme: 'dark' | 'light'): CSSProperties {
   return {
     fontSize: 13,
     color: '#64748b',

@@ -20,6 +20,10 @@ export default function AppDrawer({
   open,
   tab,
   setTab,
+  roleView,
+  setRoleView,
+  departmentFilter,
+  setDepartmentFilter,
   onClose,
   theme,
   onToggleTheme,
@@ -124,6 +128,48 @@ export default function AppDrawer({
             <button onClick={onToggleTheme} style={themeToggleStyle}>
               {theme === 'dark' ? '🌙 DARK' : '☀️ LIGHT'}
             </button>
+          </div>
+        </div>
+
+        {/* Dev Tools */}
+        <div style={devToolsSectionStyle}>
+          <div style={devToolsHeaderStyle}>DEV TOOLS</div>
+          <div style={devToolsItemStyle}>
+            <span style={devToolsLabelStyle}>ROLE</span>
+            <select
+              value={roleView}
+              onChange={(e) => setRoleView(e.target.value as RoleView)}
+              style={devSelectStyle}
+            >
+              <option value="Operator">Operator</option>
+              <option value="Lead / Supervisor">Lead / Supervisor</option>
+              <option value="Manager">Manager</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Forklift / Receiving">Forklift / Receiving</option>
+              <option value="QA">QA</option>
+            </select>
+          </div>
+          <div style={devToolsItemStyle}>
+            <span style={devToolsLabelStyle}>DEPT</span>
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value as DepartmentFilter)}
+              style={devSelectStyle}
+            >
+              <option value="All">All</option>
+              <option value="Receiving">Receiving</option>
+              <option value="Machine Shop">Machine Shop</option>
+              <option value="Material Handling">Material Handling</option>
+              <option value="Fab">Fab</option>
+              <option value="Coating">Coating</option>
+              <option value="Assembly">Assembly</option>
+              <option value="Saddles Dept">Saddles Dept</option>
+              <option value="Patch Clamps">Patch Clamps</option>
+              <option value="Clamps">Clamps</option>
+              <option value="QA">QA</option>
+              <option value="Shipping">Shipping</option>
+              <option value="Maintenance">Maintenance</option>
+            </select>
           </div>
         </div>
 
@@ -271,4 +317,45 @@ const footerStyle: CSSProperties = {
   borderTop: '1px solid #334155',
   textAlign: 'center',
   flexShrink: 0,
+};
+
+const devToolsSectionStyle: CSSProperties = {
+  borderTop: '1px dashed #334155',
+  padding: '12px 20px',
+  flexShrink: 0,
+};
+
+const devToolsHeaderStyle: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 800,
+  color: '#475569',
+  letterSpacing: '1.5px',
+  marginBottom: 10,
+};
+
+const devToolsItemStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 8,
+};
+
+const devToolsLabelStyle: CSSProperties = {
+  fontSize: 11,
+  color: '#475569',
+  fontWeight: 700,
+  letterSpacing: '0.5px',
+};
+
+const devSelectStyle: CSSProperties = {
+  background: '#0f172a',
+  border: '1px solid #334155',
+  color: '#64748b',
+  padding: '4px 8px',
+  borderRadius: 4,
+  fontSize: 11,
+  fontWeight: 600,
+  cursor: 'pointer',
+  outline: 'none',
+  maxWidth: 160,
 };
