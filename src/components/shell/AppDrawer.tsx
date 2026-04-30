@@ -27,6 +27,7 @@ export default function AppDrawer({
   if (!open) return null;
 
   const tabs: { id: AppTab; label: string }[] = [
+    { id: 'workflow', label: 'MY WORKFLOW' },
     { id: 'dashboard', label: 'COMMAND CENTER' },
     { id: 'orders', label: 'ORDERS' },
     { id: 'coverage', label: 'CREW / COVERAGE' },

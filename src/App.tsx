@@ -17,6 +17,7 @@ import Lv4500JcmSimulator from './components/Lv4500JcmSimulator';
 import AppHeader from './components/shell/AppHeader';
 import AppDrawer from './components/shell/AppDrawer';
 
+import WorkflowPage from './pages/WorkflowPage';
 import DashboardPage from './pages/DashboardPage';
 import MachinesPage, { AlertsPage } from './pages/MachinesPage';
 import SimulationPage from './pages/SimulationPage';
@@ -168,25 +169,16 @@ export default function App() {
 
     if (nextRole === 'Lead / Supervisor' || nextRole === 'Manager') {
       setSelectedWorkCenter(null);
-      setCoverageInitialView('hub');
-      navigateTo('coverage');
+      navigateTo('workflow');
       return;
     }
 
-    if (
-      nextRole === 'Operator' &&
-      departmentFilter !== 'All' &&
-      departmentFilter !== 'Receiving'
-    ) {
-      const matchingWorkCenter = workCenters.find(
-        (workCenter) => workCenter.department === departmentFilter
-      );
-      setSelectedWorkCenter(matchingWorkCenter ?? null);
-      navigateTo('dashboard');
+    if (nextRole === 'Operator') {
+      navigateTo('workflow');
       return;
     }
 
-    navigateTo('dashboard');
+    navigateTo('workflow');
   }
 
   const statusBarStyle: CSSProperties = {
@@ -484,6 +476,12 @@ export default function App() {
           }}
         >
           <button
+            onClick={() => navigateTo('workflow')}
+            style={getModeButtonStyle(tab === 'workflow', theme)}
+          >
+            Workflow
+          </button>
+          <button
             onClick={() => navigateTo('dashboard')}
             style={getModeButtonStyle(tab === 'dashboard', theme)}
           >
@@ -559,6 +557,20 @@ export default function App() {
           {filteredAlerts.length === 1 ? 'Alert' : 'Alerts'}
         </button>
       </div>
+
+      {tab === 'workflow' && (
+        <WorkflowPage
+          roleView={roleView}
+          departmentFilter={departmentFilter}
+          machines={filteredMachines}
+          theme={theme}
+          onGoToMaintenance={() => {
+            setMaintenanceView('requests');
+            navigateTo('maintenance');
+          }}
+          onGoToTab={navigateTo}
+        />
+      )}
 
       {tab === 'dashboard' && (
         <DashboardPage
@@ -701,6 +713,7 @@ export default function App() {
 
 function getCommandLabel(tab: AppTab): string {
   const labels: Record<AppTab, string> = {
+    workflow: 'My Workflow',
     dashboard: 'Command Center',
     machines: 'Machines',
     alerts: 'Machine Alerts',

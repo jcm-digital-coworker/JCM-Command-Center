@@ -1,6 +1,7 @@
 import type { Department } from './machine';
 
 export type AppTab =
+  | 'workflow'
   | 'dashboard'
   | 'machines'
   | 'alerts'
