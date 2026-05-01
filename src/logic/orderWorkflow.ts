@@ -1,93 +1,49 @@
 import type { ProductionOrder } from '../types/productionOrder';
+import { evaluateWorkflow } from './workflowEvaluation';
 
 export function isSalesOriginOrder(order: ProductionOrder): boolean {
   return order.workflowOrigin === 'SALES';
 }
 
 export function hasMissingBlueprint(order: ProductionOrder): boolean {
-  return order.engineeringRequired === true && !order.blueprintId && !order.partNumber;
+  const evaluation = evaluateWorkflow(order);
+  return evaluation.checkpointResults.some(
+    (result) =>
+      result.checkpoint === 'ENGINEERING_REVIEW' &&
+      result.strength === 'HARD_STOP' &&
+      result.reason.toLowerCase().includes('blueprint')
+  );
 }
 
 export function hasMaterialIssue(order: ProductionOrder): boolean {
-  const materialStatus = String(order.materialStatus ?? 'UNKNOWN').toUpperCase();
-  return (
-    materialStatus === 'MISSING' ||
-    materialStatus === 'NOT_RECEIVED' ||
-    materialStatus === 'ORDER_REQUIRED' ||
-    order.blockers.some((blocker) => blocker.type === 'material')
+  const evaluation = evaluateWorkflow(order);
+  return evaluation.checkpointResults.some(
+    (result) =>
+      result.checkpoint === 'MATERIAL_READINESS' &&
+      (result.strength === 'HARD_STOP' || result.strength === 'SOFT_ACTION')
   );
 }
 
 export function getCurrentOrderGate(order: ProductionOrder) {
-  if (isSalesOriginOrder(order) && !order.salesReleasedAt) return 'SALES';
-
-  if (hasMissingBlueprint(order)) return 'ENGINEERING';
-
-  if (order.engineeringRequired && order.engineeringStatus !== 'RELEASED') {
-    return 'ENGINEERING';
-  }
-
-  if (isSalesOriginOrder(order) && !order.productionSupervisorAcknowledged) {
-    return 'SUPERVISOR';
-  }
-
-  if (hasMaterialIssue(order)) return 'RECEIVING';
-
-  return 'SHOP';
+  const evaluation = evaluateWorkflow(order);
+  return evaluation.primaryGate.owner;
 }
 
 export function getWorkflowSignal(order: ProductionOrder) {
-  const gate = getCurrentOrderGate(order);
-
-  if (hasMissingBlueprint(order)) {
-    return {
-      orderNumber: order.orderNumber,
-      gate,
-      message: 'Missing blueprint - Engineering must create and release drawing.',
-      action: 'Route to Engineering',
-    };
-  }
-
-  if (gate === 'SALES') {
-    return {
-      orderNumber: order.orderNumber,
-      gate,
-      message: 'Sales has not released this order into production yet.',
-      action: 'Wait for Sales release',
-    };
-  }
-
-  if (gate === 'ENGINEERING') {
-    return {
-      orderNumber: order.orderNumber,
-      gate,
-      message: 'Engineering release is required before production can proceed.',
-      action: 'Complete Engineering release',
-    };
-  }
-
-  if (gate === 'SUPERVISOR') {
-    return {
-      orderNumber: order.orderNumber,
-      gate,
-      message: 'Production supervisor review is needed before shop-floor release.',
-      action: 'Acknowledge and prioritize order',
-    };
-  }
-
-  if (gate === 'RECEIVING') {
-    return {
-      orderNumber: order.orderNumber,
-      gate,
-      message: 'Material not ready',
-      action: 'Receiving must stage or order material',
-    };
-  }
+  const evaluation = evaluateWorkflow(order);
 
   return {
     orderNumber: order.orderNumber,
-    gate,
-    message: 'Ready for work center',
-    action: `Work in ${order.currentDepartment}`,
+    gate: evaluation.primaryGate.owner,
+    checkpoint: evaluation.primaryGate.checkpoint,
+    strength: evaluation.primaryGate.strength,
+    urgency: evaluation.primaryGate.urgency,
+    message: evaluation.primaryGate.reason,
+    action: evaluation.primaryGate.action,
+    pressureScore: evaluation.pressureScore,
+    canProceed: evaluation.canProceed,
+    parallelActions: evaluation.parallelActions,
+    watchers: evaluation.watchers,
+    explanation: evaluation.explanation,
   };
 }
