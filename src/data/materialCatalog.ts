@@ -7,6 +7,13 @@ export type DepartmentMaterial = {
 };
 
 export const departmentMaterialCatalog: Record<Department, DepartmentMaterial[]> = {
+  Sales: [],
+  Engineering: [],
+  Office: [
+    { partNumber: 'OFFICE-PAPER-CASE', description: 'Printer paper case', unit: 'case' },
+    { partNumber: 'TONER-BLACK', description: 'Black printer toner', unit: 'ea' },
+    { partNumber: 'PENS-BLUE-BOX', description: 'Blue pens box', unit: 'box' },
+  ],
   Receiving: [],
   'Machine Shop': [
     { partNumber: 'RAW-4140-RD-2.000', description: '4140 round bar, 2.000 in', unit: 'ft' },
@@ -25,6 +32,11 @@ export const departmentMaterialCatalog: Record<Department, DepartmentMaterial[]>
     { partNumber: 'GAS-MIX-75-25', description: '75/25 shielding gas cylinder', unit: 'cyl' },
     { partNumber: 'PLATE-A36-0.375', description: 'A36 plate, 0.375 in', unit: 'sheet' },
     { partNumber: 'BRACKET-KIT-FAB', description: 'Fab bracket kit', unit: 'kit' },
+  ],
+  Coating: [
+    { partNumber: 'MEDIA-BLAST-STD', description: 'Blast media / shot', unit: 'bag' },
+    { partNumber: 'PAINT-ENAMEL-STD', description: 'Enamel coating material', unit: 'gal' },
+    { partNumber: 'POWDER-PLASTIC-DIP', description: 'Plastic dip coating powder', unit: 'bag' },
   ],
   Assembly: [
     { partNumber: 'BOLT-KIT-400', description: '400 series bolt kit', unit: 'kit' },
@@ -47,11 +59,6 @@ export const departmentMaterialCatalog: Record<Department, DepartmentMaterial[]>
     { partNumber: 'GASKET-CLAMP-STD', description: 'Standard clamp gasket', unit: 'ea' },
     { partNumber: 'HARDWARE-CLAMP-KIT', description: 'Clamp hardware kit', unit: 'kit' },
   ],
-  Coating: [
-    { partNumber: 'MEDIA-BLAST-STD', description: 'Blast media / shot', unit: 'bag' },
-    { partNumber: 'PAINT-ENAMEL-STD', description: 'Enamel coating material', unit: 'gal' },
-    { partNumber: 'POWDER-PLASTIC-DIP', description: 'Plastic dip coating powder', unit: 'bag' },
-  ],
   QA: [
     { partNumber: 'GAUGE-CHECK-STD', description: 'Inspection gauge / verification tool', unit: 'ea' },
     { partNumber: 'TAG-QA-HOLD', description: 'QA hold tag', unit: 'pack' },
@@ -65,11 +72,6 @@ export const departmentMaterialCatalog: Record<Department, DepartmentMaterial[]>
     { partNumber: 'HYD-OIL-ISO46', description: 'Hydraulic oil ISO 46', unit: 'gal' },
     { partNumber: 'WAY-LUBE-68', description: 'Way lube 68', unit: 'gal' },
     { partNumber: 'AIR-FILTER-STD', description: 'Standard air filter', unit: 'ea' },
-  ],
-  Office: [
-    { partNumber: 'OFFICE-PAPER-CASE', description: 'Printer paper case', unit: 'case' },
-    { partNumber: 'TONER-BLACK', description: 'Black printer toner', unit: 'ea' },
-    { partNumber: 'PENS-BLUE-BOX', description: 'Blue pens box', unit: 'box' },
   ],
 };
 
