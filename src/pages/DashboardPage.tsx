@@ -29,6 +29,8 @@ type QuickAction = {
   detail: string;
   target: AppTab;
   tone: 'orange' | 'blue' | 'green' | 'red' | 'slate';
+  count?: number;
+  priority: number;
 };
 
 type QuickActionState = {
@@ -265,90 +267,160 @@ export default function DashboardPage({
 }
 
 function getQuickActionsForRole(roleView: RoleView, state: QuickActionState): QuickAction[] {
-  const alertTone = state.alertCount > 0 ? 'red' : 'green';
-  const maintenanceTone = state.activeTaskCount > 0 ? 'orange' : 'slate';
-  const qaTone = state.openRiskCount + state.qaHoldCount > 0 ? 'red' : 'slate';
-  const blockerTone = state.blockedOrderCount > 0 ? 'red' : 'orange';
-  const materialTone = state.materialIssueCount > 0 ? 'orange' : 'green';
+  const alertAction = createLiveAction(
+    'View Equipment Alerts',
+    'No active equipment alerts in current view',
+    'Open active equipment alarms and offline status',
+    'alerts',
+    state.alertCount,
+    'red',
+    'green',
+    5,
+  );
+  const maintenanceAction = createLiveAction(
+    'Open Maintenance',
+    'No active maintenance pressure in current view',
+    'Review active maintenance requests and scheduled task pressure',
+    'maintenance',
+    state.activeTaskCount,
+    'orange',
+    'slate',
+    4,
+  );
+  const qaAction = createLiveAction(
+    'Review QA / Safety',
+    'No open QA / safety signal in current view',
+    'Review quality holds, safety signals, and risk items',
+    'risk',
+    state.openRiskCount + state.qaHoldCount,
+    'red',
+    'slate',
+    5,
+  );
+  const blockerAction = createLiveAction(
+    'Resolve Blockers',
+    'No blocked orders in current view',
+    'Review blocked flow before assigning labor',
+    'orders',
+    state.blockedOrderCount,
+    'red',
+    'orange',
+    6,
+  );
+  const materialAction = createLiveAction(
+    'Resolve Material Issues',
+    'Material is clear in current view',
+    'Open receiving and material readiness issues',
+    'receiving',
+    state.materialIssueCount,
+    'orange',
+    'green',
+    5,
+  );
 
   if (roleView === 'Operator') {
-    return [
-      { label: 'View Work Queue', detail: 'Open assigned work and current station priorities', target: 'workflow', tone: 'orange' },
-      { label: 'Report Blocked Work', detail: 'Open workflow to review blocked orders and next action', target: 'workflow', tone: blockerTone },
-      { label: 'Request Material', detail: 'Open receiving and material readiness view', target: 'receiving', tone: materialTone },
-      { label: 'Call Maintenance', detail: 'Open maintenance requests and support status', target: 'maintenance', tone: maintenanceTone },
-      { label: 'Review QA / Safety', detail: 'Check quality holds and safety signals', target: 'risk', tone: qaTone },
-      { label: 'Open Documents', detail: 'Access procedures, standards, and references', target: 'documents', tone: 'slate' },
-    ];
+    return sortQuickActions([
+      { label: 'View Work Queue', detail: 'Open assigned work and current station priorities', target: 'workflow', tone: 'orange', priority: 3 },
+      { ...blockerAction, label: state.blockedOrderCount > 0 ? 'Report Blocked Work' : 'Review Blocker Status', target: 'workflow' },
+      { ...materialAction, label: state.materialIssueCount > 0 ? 'Request Material' : 'Check Material Status' },
+      { ...maintenanceAction, label: state.activeTaskCount > 0 ? 'Call Maintenance' : 'Maintenance Status' },
+      qaAction,
+      { label: 'Open Documents', detail: 'Access procedures, standards, and references', target: 'documents', tone: 'slate', priority: 1 },
+    ]);
   }
 
   if (roleView === 'Lead / Supervisor') {
-    return [
-      { label: 'Resolve Blockers', detail: 'Review blocked flow before assigning labor', target: 'orders', tone: blockerTone },
-      { label: 'Check Crew Coverage', detail: 'See available crew and coverage gaps', target: 'coverage', tone: 'orange' },
-      { label: 'Open Departments', detail: 'Review work-center focus and department status', target: 'plantMap', tone: 'green' },
-      { label: 'View Equipment Alerts', detail: 'Open active equipment alarms and status issues', target: 'alerts', tone: alertTone },
-      { label: 'Escalate Engineering', detail: 'Open orders for blueprint, routing, or release blockers', target: 'orders', tone: 'blue' },
-      { label: 'Open Maintenance', detail: 'Review requests and scheduled task pressure', target: 'maintenance', tone: maintenanceTone },
-    ];
+    return sortQuickActions([
+      blockerAction,
+      { label: 'Check Crew Coverage', detail: 'See available crew and coverage gaps', target: 'coverage', tone: state.blockedOrderCount > 0 ? 'orange' : 'slate', priority: 3 },
+      { label: 'Open Departments', detail: 'Review work-center focus and department status', target: 'plantMap', tone: 'green', priority: 2 },
+      alertAction,
+      { label: 'Escalate Engineering', detail: state.blockedOrderCount > 0 ? 'Check blueprint, routing, or release blockers' : 'Review engineering release status', target: 'orders', tone: 'blue', priority: state.blockedOrderCount > 0 ? 4 : 2 },
+      maintenanceAction,
+    ]);
   }
 
   if (roleView === 'Manager') {
-    return [
-      { label: 'Plant Command Review', detail: 'Review plant criticals, flow, and department status', target: 'dashboard', tone: 'orange' },
-      { label: 'Review Orders', detail: 'Check order status, blockers, and due dates', target: 'orders', tone: blockerTone },
-      { label: 'Check Crew Coverage', detail: 'Review staffing status across departments', target: 'coverage', tone: 'slate' },
-      { label: 'Open Departments', detail: 'Review department focus and work-center status', target: 'plantMap', tone: 'green' },
-      { label: 'View Equipment Alerts', detail: 'Open plant equipment alarms and critical status', target: 'alerts', tone: alertTone },
-      { label: 'Review QA / Safety', detail: 'Check quality holds, safety signals, and risk items', target: 'risk', tone: qaTone },
-      { label: 'Open Maintenance', detail: 'Review repair workload and maintenance analytics', target: 'maintenance', tone: maintenanceTone },
-      { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate' },
-    ];
+    return sortQuickActions([
+      { label: 'Plant Command Review', detail: 'Review plant criticals, flow, and department status', target: 'dashboard', tone: state.blockedOrderCount + state.alertCount > 0 ? 'orange' : 'slate', priority: 2 },
+      blockerAction,
+      { label: 'Check Crew Coverage', detail: 'Review staffing status across departments', target: 'coverage', tone: 'slate', priority: 2 },
+      { label: 'Open Departments', detail: 'Review department focus and work-center status', target: 'plantMap', tone: 'green', priority: 2 },
+      alertAction,
+      qaAction,
+      maintenanceAction,
+      { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate', priority: 1 },
+    ]);
   }
 
   if (roleView === 'Maintenance') {
-    return [
-      { label: 'Open Maintenance', detail: 'Review active requests, tasks, and analytics', target: 'maintenance', tone: maintenanceTone },
-      { label: 'View Equipment Alerts', detail: 'Open equipment alarms and offline status', target: 'alerts', tone: alertTone },
-      { label: 'Review Work Queue', detail: 'Check workflow impact before taking equipment down', target: 'workflow', tone: blockerTone },
-      { label: 'Open Equipment', detail: 'Review equipment status and detail cards', target: 'machines', tone: 'blue' },
-      { label: 'Check QA / Safety', detail: 'Review safety-related risk signals', target: 'risk', tone: qaTone },
-      { label: 'Open Documents', detail: 'Access procedures, standards, and references', target: 'documents', tone: 'slate' },
-    ];
+    return sortQuickActions([
+      maintenanceAction,
+      alertAction,
+      { ...blockerAction, label: 'Review Work Queue', detail: state.blockedOrderCount > 0 ? 'Check workflow impact before taking equipment down' : 'Check production impact before maintenance work', target: 'workflow' },
+      { label: 'Open Equipment', detail: 'Review equipment status and detail cards', target: 'machines', tone: 'blue', priority: 3 },
+      qaAction,
+      { label: 'Open Documents', detail: 'Access procedures, standards, and references', target: 'documents', tone: 'slate', priority: 1 },
+    ]);
   }
 
   if (roleView === 'Forklift / Receiving') {
-    return [
-      { label: 'Open Receiving', detail: 'Review inbound, staged, ready, and held material', target: 'receiving', tone: materialTone },
-      { label: 'Request Queue', detail: 'Check material requests from production departments', target: 'receiving', tone: 'orange' },
-      { label: 'View Work Queue', detail: 'Review orders waiting on receiving or material movement', target: 'workflow', tone: blockerTone },
-      { label: 'Check Crew Coverage', detail: 'Review receiving and forklift coverage status', target: 'coverage', tone: 'slate' },
-      { label: 'Open Orders', detail: 'Review material status by order', target: 'orders', tone: 'blue' },
-      { label: 'View Equipment Alerts', detail: 'Open active equipment alerts affecting movement', target: 'alerts', tone: alertTone },
-    ];
+    return sortQuickActions([
+      { ...materialAction, label: state.materialIssueCount > 0 ? 'Open Material Issues' : 'Open Receiving' },
+      { label: 'Request Queue', detail: 'Check material requests from production departments', target: 'receiving', tone: state.materialIssueCount > 0 ? 'orange' : 'slate', priority: state.materialIssueCount > 0 ? 4 : 2 },
+      { ...blockerAction, label: 'View Work Queue', detail: state.blockedOrderCount > 0 ? 'Review orders waiting on receiving or movement' : 'Review orders near receiving handoff', target: 'workflow' },
+      { label: 'Check Crew Coverage', detail: 'Review receiving and forklift coverage status', target: 'coverage', tone: 'slate', priority: 2 },
+      { label: 'Open Orders', detail: 'Review material status by order', target: 'orders', tone: 'blue', priority: 2 },
+      alertAction,
+    ]);
   }
 
   if (roleView === 'QA') {
-    return [
-      { label: 'Review QA / Safety', detail: 'Open quality holds, safety signals, and risk items', target: 'risk', tone: qaTone },
-      { label: 'Open QA Department', detail: 'Review QA department cards and station signals', target: 'qa', tone: 'blue' },
-      { label: 'Review Orders', detail: 'Check order quality status and release blockers', target: 'orders', tone: blockerTone },
-      { label: 'Open Documents', detail: 'Access standards, inspection references, and procedures', target: 'documents', tone: 'slate' },
-      { label: 'Check Crew Coverage', detail: 'Review QA coverage and available support', target: 'coverage', tone: 'slate' },
-      { label: 'View Equipment Alerts', detail: 'Open equipment status that may affect inspection flow', target: 'alerts', tone: alertTone },
-    ];
+    return sortQuickActions([
+      qaAction,
+      { label: 'Open QA Department', detail: 'Review QA department cards and station signals', target: 'qa', tone: 'blue', priority: 3 },
+      blockerAction,
+      { label: 'Open Documents', detail: 'Access standards, inspection references, and procedures', target: 'documents', tone: 'slate', priority: 2 },
+      { label: 'Check Crew Coverage', detail: 'Review QA coverage and available support', target: 'coverage', tone: 'slate', priority: 2 },
+      alertAction,
+    ]);
   }
 
-  return [
-    { label: 'View Work Queue', detail: 'Open current workflow and station priorities', target: 'workflow', tone: 'orange' },
-    { label: 'Find Order', detail: 'Review order status, blockers, and routing', target: 'orders', tone: 'blue' },
-    { label: 'Open Departments', detail: 'Use department focus cards and work-center view', target: 'plantMap', tone: 'green' },
-    { label: 'Check Crew Coverage', detail: 'See available crew and coverage status', target: 'coverage', tone: 'slate' },
-    { label: 'View Equipment Alerts', detail: 'Open active equipment alarms and status issues', target: 'alerts', tone: alertTone },
-    { label: 'Open Maintenance', detail: 'Review requests, scheduled tasks, and analytics', target: 'maintenance', tone: maintenanceTone },
-    { label: 'Review QA / Safety', detail: 'Open risk, quality, and safety signals', target: 'risk', tone: qaTone },
-    { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate' },
-  ];
+  return sortQuickActions([
+    { label: 'View Work Queue', detail: 'Open current workflow and station priorities', target: 'workflow', tone: 'orange', priority: 3 },
+    blockerAction,
+    materialAction,
+    { label: 'Open Departments', detail: 'Use department focus cards and work-center view', target: 'plantMap', tone: 'green', priority: 2 },
+    { label: 'Check Crew Coverage', detail: 'See available crew and coverage status', target: 'coverage', tone: 'slate', priority: 2 },
+    alertAction,
+    maintenanceAction,
+    qaAction,
+    { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate', priority: 1 },
+  ]);
+}
+
+function createLiveAction(
+  label: string,
+  clearDetail: string,
+  activeDetail: string,
+  target: AppTab,
+  count: number,
+  activeTone: QuickAction['tone'],
+  clearTone: QuickAction['tone'],
+  activePriority: number,
+): QuickAction {
+  return {
+    label,
+    detail: count > 0 ? `${count} active - ${activeDetail}` : clearDetail,
+    target,
+    count: count > 0 ? count : undefined,
+    tone: count > 0 ? activeTone : clearTone,
+    priority: count > 0 ? activePriority : 1,
+  };
+}
+
+function sortQuickActions(actions: QuickAction[]): QuickAction[] {
+  return [...actions].sort((a, b) => b.priority - a.priority);
 }
 
 function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: RoleView; actions: QuickAction[]; onGoToTab: (tab: AppTab) => void; theme: 'dark' | 'light' }) {
@@ -368,7 +440,10 @@ function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: 
             style={getQuickActionButtonStyle(theme, action.tone)}
             onClick={() => onGoToTab(action.target)}
           >
-            <span style={getQuickActionLabelStyle(action.tone)}>{action.label}</span>
+            <span style={getQuickActionLabelStyle(action.tone)}>
+              {action.label}
+              {action.count ? ` (${action.count})` : ''}
+            </span>
             <span style={quickActionDetailStyle}>{action.detail}</span>
           </button>
         ))}
