@@ -35,34 +35,6 @@ export function installDashboardQuickActionRuntimeBridge() {
   if (bridgeWindow[BRIDGE_FLAG]) return;
   bridgeWindow[BRIDGE_FLAG] = true;
 
-  document.addEventListener('click', (event) => {
-    const button = (event.target as HTMLElement | null)?.closest('button');
-    if (!button) return;
-
-    const section = button.closest('section');
-    if (!section?.textContent?.includes('QUICK ACTIONS')) return;
-
-    const label = button.textContent ?? '';
-    const orders = getRuntimeProductionOrders(productionOrders);
-
-    if (label.includes('Resolve Blockers') || label.includes('Report Blocked Work')) {
-      applyQuickActionRuntimeIntent('RESOLVE_FIRST_BLOCKER', orders);
-      queuePromptRender();
-      return;
-    }
-
-    if (label.includes('Resolve Material Issues') || label.includes('Open Material Issues')) {
-      applyQuickActionRuntimeIntent('STAGE_FIRST_MATERIAL_ISSUE', orders);
-      queuePromptRender();
-      return;
-    }
-
-    if (label.includes('Escalate Engineering')) {
-      applyQuickActionRuntimeIntent('ESCALATE_FIRST_BLOCKED_ORDER', orders);
-      queuePromptRender();
-    }
-  });
-
   window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, queuePromptRender);
   window.addEventListener('storage', queuePromptRender);
 
@@ -215,6 +187,8 @@ function createPromptCard(prompt: EmbeddedPrompt): HTMLElement {
   const action = document.createElement('button');
   action.type = 'button';
   action.textContent = prompt.actionLabel.toUpperCase();
+  if (prompt.intent) action.dataset.runtimeIntent = prompt.intent;
+  if (prompt.routeLabel) action.dataset.routeLabel = prompt.routeLabel;
   action.style.marginTop = '10px';
   action.style.padding = '7px 9px';
   action.style.borderRadius = '4px';
@@ -226,17 +200,7 @@ function createPromptCard(prompt: EmbeddedPrompt): HTMLElement {
   action.style.letterSpacing = '0.6px';
   action.style.cursor = 'pointer';
 
-  action.addEventListener('click', (event) => {
-    event.stopPropagation();
-    if (prompt.intent) {
-      applyQuickActionRuntimeIntent(prompt.intent, getRuntimeProductionOrders(productionOrders));
-      queuePromptRender();
-    }
-
-    if (prompt.routeLabel) {
-      clickQuickActionByLabel(prompt.routeLabel);
-    }
-  });
+  action.addEventListener('click', handlePromptActionClick);
 
   card.appendChild(title);
   card.appendChild(detail);
@@ -244,13 +208,32 @@ function createPromptCard(prompt: EmbeddedPrompt): HTMLElement {
   return card;
 }
 
+function handlePromptActionClick(event: MouseEvent) {
+  event.stopPropagation();
+
+  const button = event.currentTarget;
+  if (!(button instanceof HTMLButtonElement)) return;
+
+  const runtimeIntent = button.dataset.runtimeIntent as QuickActionRuntimeIntent | undefined;
+  if (runtimeIntent) {
+    applyQuickActionRuntimeIntent(runtimeIntent, getRuntimeProductionOrders(productionOrders));
+    queuePromptRender();
+  }
+
+  const routeLabel = button.dataset.routeLabel;
+  if (routeLabel) {
+    clickQuickActionByLabel(routeLabel);
+  }
+}
+
 function clickQuickActionByLabel(label: string) {
   const quickActionsSection = findQuickActionsSection();
   if (!quickActionsSection) return;
 
-  const matchingButton = Array.from(quickActionsSection.querySelectorAll('button')).find(
-    (button) => button.textContent?.includes(label) && button.id !== PROMPT_CONTAINER_ID,
-  );
+  const matchingButton = Array.from(quickActionsSection.querySelectorAll('button')).find((button) => {
+    if (button.closest(`#${PROMPT_CONTAINER_ID}`)) return false;
+    return button.textContent?.includes(label);
+  });
 
   if (matchingButton instanceof HTMLButtonElement) {
     matchingButton.click();
