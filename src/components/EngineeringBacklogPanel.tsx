@@ -9,7 +9,7 @@ type Props = {
 
 export default function EngineeringBacklogPanel({ theme = 'dark' }: Props) {
   const engineeringOrders = productionOrders.filter(
-    (order) => hasMissingBlueprint(order) || getWorkflowSignal(order).gate === 'ENGINEERING'
+    (order) => hasMissingBlueprint(order) || getWorkflowSignal(order).gate === 'Engineering'
   );
 
   return (
