@@ -25,6 +25,7 @@ export default function AppDrawer({
   departmentFilter,
   setDepartmentFilter,
   onClose,
+  workCenters,
   theme,
   onToggleTheme,
 }: AppDrawerProps) {
@@ -93,6 +94,7 @@ export default function AppDrawer({
         {/* Scrollable Menu Area - NO VISIBLE SCROLLBAR */}
         <div style={menuContainerStyle} className="drawer-menu-scroll">
           <div style={menuStyle}>
+            <div style={drawerSectionLabelStyle}>PRIMARY</div>
             {tabs.map((t) => (
               <button
                 key={t.id}
@@ -104,6 +106,31 @@ export default function AppDrawer({
               >
                 <div style={indicatorStyle(tab === t.id)} />
                 {t.label}
+              </button>
+            ))}
+
+            <div style={drawerSectionLabelStyle}>WORK CENTERS</div>
+            <button
+              onClick={() => {
+                setDepartmentFilter('All');
+                onClose();
+              }}
+              style={departmentFilter === 'All' ? activeWorkCenterStyle : workCenterStyle}
+            >
+              <div style={indicatorStyle(departmentFilter === 'All')} />
+              ALL DEPARTMENTS
+            </button>
+            {workCenters.map((center) => (
+              <button
+                key={center.id}
+                onClick={() => {
+                  setDepartmentFilter(center.department);
+                  onClose();
+                }}
+                style={departmentFilter === center.department ? activeWorkCenterStyle : workCenterStyle}
+              >
+                <div style={indicatorStyle(departmentFilter === center.department)} />
+                {center.name.toUpperCase()}
               </button>
             ))}
           </div>
@@ -162,18 +189,11 @@ export default function AppDrawer({
               style={devSelectStyle}
             >
               <option value="All">All</option>
-              <option value="Receiving">Receiving</option>
-              <option value="Machine Shop">Machine Shop</option>
-              <option value="Material Handling">Material Handling</option>
-              <option value="Fab">Fab</option>
-              <option value="Coating">Coating</option>
-              <option value="Assembly">Assembly</option>
-              <option value="Saddles Dept">Saddles Dept</option>
-              <option value="Patch Clamps">Patch Clamps</option>
-              <option value="Clamps">Clamps</option>
-              <option value="QA">QA</option>
-              <option value="Shipping">Shipping</option>
-              <option value="Maintenance">Maintenance</option>
+              {workCenters.map((center) => (
+                <option key={center.id} value={center.department}>
+                  {center.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -246,7 +266,6 @@ const closeButtonStyle: CSSProperties = {
   justifyContent: 'center',
 };
 
-// Scrollable container - scrollbar hidden via CSS class
 const menuContainerStyle: CSSProperties = {
   flex: 1,
   overflowY: 'auto',
@@ -259,6 +278,14 @@ const menuStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 4,
+};
+
+const drawerSectionLabelStyle: CSSProperties = {
+  color: '#64748b',
+  fontSize: 10,
+  fontWeight: 900,
+  letterSpacing: '1.5px',
+  margin: '12px 0 4px 16px',
 };
 
 const tabStyle: CSSProperties = {
@@ -279,6 +306,18 @@ const tabStyle: CSSProperties = {
 
 const activeTabStyle: CSSProperties = {
   ...tabStyle,
+  background: 'rgba(249, 115, 22, 0.15)',
+  color: '#f97316',
+};
+
+const workCenterStyle: CSSProperties = {
+  ...tabStyle,
+  padding: '10px 16px',
+  fontSize: 12,
+};
+
+const activeWorkCenterStyle: CSSProperties = {
+  ...workCenterStyle,
   background: 'rgba(249, 115, 22, 0.15)',
   color: '#f97316',
 };
