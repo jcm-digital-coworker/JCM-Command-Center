@@ -48,8 +48,8 @@ export default function AppDrawer({
     { id: 'maintenance', label: 'MAINTENANCE' },
     { id: 'receiving', label: 'RECEIVING' },
     { id: 'risk', label: 'QA / SAFETY' },
-    { id: 'machines', label: 'MACHINES' },
-    { id: 'alerts', label: 'MACHINE ALERTS' },
+    { id: 'machines', label: 'EQUIPMENT' },
+    { id: 'alerts', label: 'EQUIPMENT ALERTS' },
     { id: 'simulation', label: 'SIMULATION' },
     { id: 'documents', label: 'DOCUMENTS' },
   ];
@@ -89,7 +89,7 @@ export default function AppDrawer({
             </div>
           </div>
           <button onClick={onClose} style={closeButtonStyle}>
-            ✕
+            X
           </button>
         </div>
 
@@ -154,7 +154,7 @@ export default function AppDrawer({
               THEME
             </span>
             <button onClick={onToggleTheme} style={themeToggleStyle}>
-              {theme === 'dark' ? '🌙 DARK' : '☀️ LIGHT'}
+              {theme === 'dark' ? 'DARK' : 'LIGHT'}
             </button>
           </div>
         </div>
