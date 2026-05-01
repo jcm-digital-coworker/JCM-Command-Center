@@ -2,6 +2,9 @@ import type { Department } from "../types/machine";
 import type { WorkCenter } from "../types/plant";
 
 export const plantDepartmentOrder: Department[] = [
+  "Sales",
+  "Engineering",
+  "Office",
   "Receiving",
   "Machine Shop",
   "Material Handling",
@@ -14,10 +17,57 @@ export const plantDepartmentOrder: Department[] = [
   "QA",
   "Shipping",
   "Maintenance",
-  "Office",
 ];
 
 export const workCenters: WorkCenter[] = [
+  {
+    id: "sales",
+    department: "Sales",
+    name: "Sales",
+    status: "PLANNED",
+    primaryFunction:
+      "Own customer order intake, release signals, priority changes, and commercial handoff into production.",
+    dailyFocus: [
+      "Sales order release readiness",
+      "Customer priority and hot-order visibility",
+      "Missing commercial details before production launch",
+      "Order-change communication to scheduling and production",
+    ],
+    roles: ["Sales", "Customer Service", "Inside Sales", "Sales Lead", "Manager"],
+    coverage: { note: "Business-side work center for order release and customer signal visibility" },
+    stationTabletDefault: "Order release queue, customer priority notes, holds, and production handoff status.",
+    nextBuildModules: ["Sales release queue", "Order change log", "Customer priority board", "Production handoff checklist"],
+  },
+  {
+    id: "engineering",
+    department: "Engineering",
+    name: "Engineering",
+    status: "WATCH",
+    primaryFunction:
+      "Own blueprint, routing, engineered-order review, and production packet release before work reaches the floor.",
+    dailyFocus: [
+      "Blueprint and routing release",
+      "Engineered order review",
+      "Missing drawing or revision blockers",
+      "Production packet readiness",
+    ],
+    roles: ["Engineer", "Drafter", "Engineering Support", "Engineering Lead", "Manager"],
+    coverage: { note: "Business-side workflow gate for engineered products and blueprint release" },
+    stationTabletDefault: "Blueprint backlog, engineering holds, routing readiness, and released packet status.",
+    nextBuildModules: ["Blueprint backlog", "Routing release board", "Engineering hold tracker", "Revision handoff log"],
+  },
+  {
+    id: "office",
+    department: "Office",
+    name: "Office",
+    status: "PLANNED",
+    primaryFunction: "Administrative, purchasing, scheduling, and management visibility across plant operations.",
+    dailyFocus: ["Purchasing requests", "Production visibility", "Plant communication", "Management approvals"],
+    roles: ["Admin", "Purchasing", "Scheduler", "Manager"],
+    coverage: { note: "Shared office hub separate from Sales and Engineering workflow gates" },
+    stationTabletDefault: "Requests, approvals, and plant status visibility.",
+    nextBuildModules: ["Request approvals", "Purchasing board", "Schedule visibility", "Manager view"],
+  },
   {
     id: "receiving",
     department: "Receiving",
@@ -85,7 +135,6 @@ export const workCenters: WorkCenter[] = [
     stationTabletDefault: "Weld queue, blockers, fixture needs, and handoffs to assembly.",
     nextBuildModules: ["Fab subgroup boards", "Weld queue", "Quality hold tracker", "Assembly handoff"],
   },
-
   {
     id: "coating",
     department: "Coating",
@@ -148,7 +197,6 @@ export const workCenters: WorkCenter[] = [
     stationTabletDefault: "Queue, blockers, and work instructions.",
     nextBuildModules: ["Production board", "Inventory needs", "Inspection checklist"],
   },
-
   {
     id: "qa",
     department: "QA",
@@ -185,17 +233,5 @@ export const workCenters: WorkCenter[] = [
     coverage: { note: "Deferred but critical plant-wide module" },
     stationTabletDefault: "Open requests, urgent downtime, assigned tasks, and closeout notes.",
     nextBuildModules: ["Work order intake", "Priority queue", "Assignment board", "Maintenance history"],
-  },
-  {
-    id: "office",
-    department: "Office",
-    name: "Office",
-    status: "PLANNED",
-    primaryFunction: "Future administrative, purchasing, scheduling, and office personnel views.",
-    dailyFocus: ["Purchasing requests", "Production visibility", "Plant communication"],
-    roles: ["Admin", "Purchasing", "Engineering", "Sales", "Manager"],
-    coverage: { note: "Deferred office personnel module" },
-    stationTabletDefault: "Requests, approvals, and plant status visibility.",
-    nextBuildModules: ["Request approvals", "Purchasing board", "Manager view"],
   },
 ];
