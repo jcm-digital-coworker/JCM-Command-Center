@@ -1,7 +1,10 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { workers } from '../../data/workers';
+import { seedCoverage } from '../../data/coverage';
+import { COVERAGE_STORAGE_KEY } from '../../logic/coverage';
 import { getCrewGuidanceForDepartment } from '../../logic/crewGuidance';
 import type { Department } from '../../types/machine';
+import type { CoveragePerson } from '../../types/coverage';
 import type { PlantAsset, PlantAssetKind } from '../../types/plantAsset';
 import type { ProductionOrder } from '../../types/productionOrder';
 
@@ -112,34 +115,38 @@ export function OrderCard({
   order,
   theme = 'dark',
 }: DepartmentPageProps & { order: ProductionOrder }) {
+  const isBlocked = (order.blockers ?? []).length > 0 || String(order.flowStatus).toLowerCase() === 'blocked';
+  const isRunnable = String(order.flowStatus).toLowerCase() === 'runnable';
+  const priority = String(order.priority ?? 'normal').toLowerCase();
+  const priorityColor = priority === 'critical' ? '#dc2626' : priority === 'hot' ? '#f59e0b' : '#64748b';
+  const flowColor = isBlocked ? '#dc2626' : isRunnable ? '#10b981' : '#64748b';
+  const borderColor = isBlocked ? '#dc2626' : isRunnable ? '#10b981' : '#334155';
+
   return (
-    <div style={cardStyle(theme)}>
+    <div style={{ ...cardStyle(theme), borderLeft: `4px solid ${borderColor}` }}>
       <div style={cardHeaderStyle}>
-        <strong style={cardTitleStyle(theme)}>{order.orderNumber}</strong>
-        <span style={pillStyle(order.status, theme)}>
-          {statusLabel(order.status)}
-        </span>
+        <strong style={cardTitleStyle(theme)}>#{order.orderNumber} — {order.productFamily}</strong>
+        <span style={priorityPillStyle(priorityColor)}>{priority.toUpperCase()}</span>
       </div>
       <div style={metaStyle(theme)}>
-        {order.customer ?? 'Customer not set'} • {statusLabel(order.productFamily)}
+        {order.currentDepartment}{order.nextDepartment ? ` → ${order.nextDepartment}` : ''}
       </div>
-      <p style={bodyStyle(theme)}>
-        Part {order.assemblyPartNumber ?? 'Not assigned'} • Qty{' '}
-        {order.quantity ?? 'TBD'} • Ship {order.projectedShipDate ?? 'TBD'}
-      </p>
-      <div style={chipRowStyle}>
-        <span style={chipStyle(theme)}>
-          Material: {statusLabel(order.materialStatus ?? 'UNKNOWN')}
+      <div style={{ ...chipRowStyle, marginTop: 8 }}>
+        <span style={flowChipStyle(flowColor)}>
+          {isBlocked ? 'BLOCKED' : isRunnable ? 'RUNNABLE' : statusLabel(order.status)}
         </span>
-        <span style={chipStyle(theme)}>
-          QA: {statusLabel(order.qaStatus ?? 'UNKNOWN')}
-        </span>
-        {order.blockedReason && (
-          <span style={chipStyle(theme)}>
-            Block: {statusLabel(order.blockedReason)}
-          </span>
+        {order.materialStatus && order.materialStatus !== 'UNKNOWN' && (
+          <span style={chipStyle(theme)}>MAT: {statusLabel(order.materialStatus)}</span>
+        )}
+        {order.projectedShipDate && (
+          <span style={chipStyle(theme)}>SHIP {order.projectedShipDate}</span>
         )}
       </div>
+      {(order.blockers ?? []).map((blocker, i) => (
+        <div key={i} style={blockerRowStyle(theme)}>
+          ⚠ {blocker.type.toUpperCase()}: {blocker.message}
+        </div>
+      ))}
     </div>
   );
 }
@@ -213,6 +220,68 @@ function getCrewTone(level: 'info' | 'warning' | 'critical'): 'GO' | 'WATCH' | '
   if (level === 'critical') return 'HOLD';
   if (level === 'warning') return 'WATCH';
   return 'GO';
+}
+
+export function LiveCrewSection({
+  department,
+  theme = 'dark',
+}: DepartmentPageProps & { department: Department }) {
+  const [people] = useState<CoveragePerson[]>(() => {
+    try {
+      const stored = localStorage.getItem(COVERAGE_STORAGE_KEY);
+      if (!stored) return seedCoverage;
+      const parsed = JSON.parse(stored) as CoveragePerson[];
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : seedCoverage;
+    } catch {
+      return seedCoverage;
+    }
+  });
+
+  const crew = people.filter((p) => p.department === department && p.status !== 'OFFLINE');
+  const assigned = crew.filter((p) => p.status === 'ASSIGNED');
+  const available = crew.filter((p) => p.status === 'AVAILABLE');
+  const onBreak = crew.filter((p) => p.status === 'BREAK');
+
+  if (crew.length === 0) return <div style={emptyStyle(theme)}>No crew signed in for this department.</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={crewSummaryRowStyle}>
+        <CrewStat label="ASSIGNED" count={assigned.length} color="#f59e0b" theme={theme} />
+        <CrewStat label="AVAILABLE" count={available.length} color="#10b981" theme={theme} />
+        <CrewStat label="ON BREAK" count={onBreak.length} color="#8b5cf6" theme={theme} />
+      </div>
+      <div style={gridStyle}>
+        {crew.map((person) => {
+          const dotColor = person.status === 'AVAILABLE' ? '#10b981' : person.status === 'ASSIGNED' ? '#f59e0b' : '#8b5cf6';
+          return (
+            <div key={person.id} style={{ ...cardStyle(theme), borderLeft: `3px solid ${dotColor}`, padding: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                <div>
+                  <div style={cardTitleStyle(theme)}>{person.name}</div>
+                  <div style={metaStyle(theme)}>{person.role}</div>
+                  <div style={metaStyle(theme)}>{person.station}</div>
+                </div>
+                <span style={pillStyle(person.status, theme)}>{person.status}</span>
+              </div>
+              {person.assignedTo && (
+                <div style={{ ...bodyStyle(theme), marginTop: 6, fontStyle: 'italic' }}>→ {person.assignedTo}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CrewStat({ label, count, color, theme }: { label: string; count: number; color: string; theme: 'dark' | 'light' }) {
+  return (
+    <div style={{ padding: '8px 14px', borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}44`, borderLeft: `3px solid ${color}` }}>
+      <div style={{ color, fontSize: 20, fontWeight: 900 }}>{count}</div>
+      <div style={{ color: '#64748b', fontSize: 10, fontWeight: 900, letterSpacing: '0.8px' }}>{label}</div>
+    </div>
+  );
 }
 
 export function EmptyState({
@@ -423,3 +492,17 @@ function emptyStyle(theme: 'dark' | 'light'): CSSProperties {
     borderRadius: 6,
   };
 }
+
+function priorityPillStyle(color: string): CSSProperties {
+  return { border: `1px solid ${color}`, color, background: `${color}1f`, padding: '4px 7px', borderRadius: 999, fontSize: 10, fontWeight: 900, whiteSpace: 'nowrap' };
+}
+
+function flowChipStyle(color: string): CSSProperties {
+  return { border: `1px solid ${color}`, color, background: `${color}1f`, padding: '4px 8px', borderRadius: 4, fontSize: 11, fontWeight: 900 };
+}
+
+function blockerRowStyle(theme: 'dark' | 'light'): CSSProperties {
+  return { marginTop: 8, padding: '7px 10px', borderRadius: 4, background: theme === 'dark' ? 'rgba(220,38,38,0.12)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: theme === 'dark' ? '#fca5a5' : '#991b1b', fontSize: 12, fontWeight: 800, lineHeight: 1.4, wordBreak: 'break-word' };
+}
+
+const crewSummaryRowStyle: CSSProperties = { display: 'flex', gap: 10, flexWrap: 'wrap' };

@@ -25,4 +25,5 @@ export interface MaintenanceRequest {
   completedAt?: string;
   workDone?: string;
   partsUsed?: string;
+  photos?: string[]; // base64 data URLs
 }

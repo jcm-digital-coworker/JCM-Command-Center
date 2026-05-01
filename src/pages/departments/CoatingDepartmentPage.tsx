@@ -1,6 +1,6 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function CoatingDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
@@ -14,6 +14,10 @@ export default function CoatingDepartmentPage({ theme = 'dark' }: DepartmentPage
       subtitle="Coating is process-zone based: blast, enamel, dip, passivation, and cure/finish flow. The page avoids pretending this area is just another machine list."
       theme={theme}
     >
+      <Section title="Crew on Shift" theme={theme}>
+        <LiveCrewSection department="Coating" theme={theme} />
+      </Section>
+
       <Section title="Crew Guidance" theme={theme}>
         <CrewGuidancePanel department="Coating" orders={productionOrders} theme={theme} />
       </Section>

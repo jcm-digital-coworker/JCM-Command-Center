@@ -1,6 +1,6 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function FabDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
@@ -14,6 +14,10 @@ export default function FabDepartmentPage({ theme = 'dark' }: DepartmentPageProp
       subtitle="Fab is cell and skill driven, not machine driven. This view keeps Industrial, Special, 412, 452, and 432 work visible as separate capacity lanes."
       theme={theme}
     >
+      <Section title="Crew on Shift" theme={theme}>
+        <LiveCrewSection department="Fab" theme={theme} />
+      </Section>
+
       <Section title="Crew Guidance" theme={theme}>
         <CrewGuidancePanel department="Fab" orders={productionOrders} theme={theme} />
       </Section>

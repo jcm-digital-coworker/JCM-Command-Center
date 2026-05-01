@@ -1,5 +1,5 @@
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentOrders, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 const assemblyCells = [
@@ -20,6 +20,10 @@ export default function AssemblyDepartmentPage({ theme = 'dark' }: DepartmentPag
       subtitle="Assembly is kit-readiness and final build flow. It reveals missing or bad inputs from upstream, so this page focuses on readiness and blockers."
       theme={theme}
     >
+      <Section title="Crew on Shift" theme={theme}>
+        <LiveCrewSection department="Assembly" theme={theme} />
+      </Section>
+
       <Section title="Crew Guidance" theme={theme}>
         <CrewGuidancePanel department="Assembly" orders={productionOrders} theme={theme} />
       </Section>

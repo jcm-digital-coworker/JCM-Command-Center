@@ -1,6 +1,6 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function QADepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
@@ -15,6 +15,10 @@ export default function QADepartmentPage({ theme = 'dark' }: DepartmentPageProps
       subtitle="QA is the truth layer: testing, compliance, inspection, and release. This page focuses on holds, pending checks, and what protects Shipping from bad exits."
       theme={theme}
     >
+      <Section title="Crew on Shift" theme={theme}>
+        <LiveCrewSection department="QA" theme={theme} />
+      </Section>
+
       <Section title="Crew Guidance" theme={theme}>
         <CrewGuidancePanel department="QA" orders={productionOrders} theme={theme} />
       </Section>

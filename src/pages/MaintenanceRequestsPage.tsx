@@ -232,6 +232,19 @@ function RequestCard({
             </>
           )}
 
+          {request.photos && request.photos.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <div style={getPhotoLabelStyle(theme)}>PHOTOS</div>
+              <div style={photoRowStyle}>
+                {request.photos.map((src, i) => (
+                  <a key={i} href={src} target="_blank" rel="noopener noreferrer">
+                    <img src={src} alt={`Photo ${i + 1}`} style={photoThumbStyle} />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div
             style={{
               marginTop: 16,
@@ -576,4 +589,16 @@ const completeButtonStyle: CSSProperties = {
   cursor: 'pointer',
   fontSize: 13,
   letterSpacing: '0.5px',
+};
+
+function getPhotoLabelStyle(theme: 'dark' | 'light'): CSSProperties {
+  return { fontSize: 11, fontWeight: 900, color: '#64748b', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 };
+}
+
+const photoRowStyle: CSSProperties = {
+  display: 'flex', flexWrap: 'wrap', gap: 8,
+};
+
+const photoThumbStyle: CSSProperties = {
+  width: 72, height: 72, objectFit: 'cover', borderRadius: 6, border: '1px solid #334155', display: 'block', cursor: 'pointer',
 };

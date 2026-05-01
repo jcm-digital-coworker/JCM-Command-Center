@@ -21,6 +21,8 @@ export default function MaintenanceSubmitPage({
     useState<MaintenanceRequestPriority>('NORMAL');
   const [problem, setProblem] = useState('');
   const [submittedBy, setSubmittedBy] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoError, setPhotoError] = useState('');
   const serviceTargets = [
     ...machines.map((machine) => ({ id: machine.id, name: machine.name, department: machine.department, group: 'Machine' })),
     ...plantAssets.map((asset) => ({ id: asset.id, name: asset.name, department: asset.ownerDepartment, group: asset.kind.replaceAll('_', ' ') })),
@@ -48,7 +50,7 @@ export default function MaintenanceSubmitPage({
       status: 'NEW' as const,
     };
 
-    addMaintenanceRequest(newRequest);
+    addMaintenanceRequest({ ...newRequest, photos: photos.length > 0 ? photos : undefined });
     onSubmitSuccess();
   };
 
@@ -135,6 +137,56 @@ export default function MaintenanceSubmitPage({
             rows={4}
             required
           />
+        </div>
+
+        <div style={fieldStyle}>
+          <label style={getLabelStyle(theme)}>Photos (optional — max 3)</label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            style={getFileInputStyle(theme)}
+            onChange={(e) => {
+              setPhotoError('');
+              const files = Array.from(e.target.files ?? []);
+              if (files.length + photos.length > 3) {
+                setPhotoError('Maximum 3 photos allowed.');
+                return;
+              }
+              files.forEach((file) => {
+                if (file.size > 2 * 1024 * 1024) {
+                  setPhotoError(`${file.name} is over 2MB — resize before uploading.`);
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  const result = ev.target?.result;
+                  if (typeof result === 'string') {
+                    setPhotos((prev) => [...prev, result].slice(0, 3));
+                  }
+                };
+                reader.readAsDataURL(file);
+              });
+              e.target.value = '';
+            }}
+          />
+          {photoError && <div style={photoErrorStyle}>{photoError}</div>}
+          {photos.length > 0 && (
+            <div style={photoPreviewRowStyle}>
+              {photos.map((src, i) => (
+                <div key={i} style={photoThumbWrapStyle}>
+                  <img src={src} alt={`Photo ${i + 1}`} style={photoThumbStyle} />
+                  <button
+                    type="button"
+                    onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                    style={photoRemoveBtnStyle}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={fieldStyle}>
@@ -309,4 +361,42 @@ function getSubmitButtonStyle(theme: 'dark' | 'light'): CSSProperties {
 
 const fieldStyle: CSSProperties = {
   marginBottom: 20,
+};
+
+function getFileInputStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'block',
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: 6,
+    border: theme === 'dark' ? '1px dashed #475569' : '1px dashed #cbd5e1',
+    background: theme === 'dark' ? '#0f172a' : '#f8fafc',
+    color: theme === 'dark' ? '#94a3b8' : '#475569',
+    fontSize: 13,
+    cursor: 'pointer',
+    boxSizing: 'border-box',
+  };
+}
+
+const photoErrorStyle: CSSProperties = {
+  marginTop: 6, color: '#ef4444', fontSize: 12, fontWeight: 700,
+};
+
+const photoPreviewRowStyle: CSSProperties = {
+  display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10,
+};
+
+const photoThumbWrapStyle: CSSProperties = {
+  position: 'relative', width: 80, height: 80, flexShrink: 0,
+};
+
+const photoThumbStyle: CSSProperties = {
+  width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #334155',
+};
+
+const photoRemoveBtnStyle: CSSProperties = {
+  position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 999,
+  background: '#ef4444', border: 'none', color: '#fff', fontSize: 10, fontWeight: 900,
+  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  lineHeight: 1, padding: 0,
 };
