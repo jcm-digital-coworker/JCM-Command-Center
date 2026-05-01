@@ -16,6 +16,15 @@ export type ProductionOrderStatus =
 
 export type FlowStatus = 'runnable' | 'blocked' | 'RUNNABLE' | 'BLOCKED';
 
+export type ProductFamily =
+  | 'REPAIR_FITTING'
+  | 'COUPLING'
+  | 'SERVICE_SADDLE'
+  | 'TAPPING_SLEEVE'
+  | 'RESTRAINER'
+  | 'PIPE_FABRICATION'
+  | 'ENGINEERED_FITTING';
+
 export type ProductLane =
   | 'SERVICE_SADDLE'
   | 'CLAMP'
