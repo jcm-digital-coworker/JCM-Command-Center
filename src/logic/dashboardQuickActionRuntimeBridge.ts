@@ -20,6 +20,7 @@ type EmbeddedPrompt = {
   detail: string;
   actionLabel: string;
   intent?: QuickActionRuntimeIntent;
+  routeLabel?: string;
   tone: 'red' | 'orange' | 'blue' | 'green' | 'slate';
 };
 
@@ -149,6 +150,7 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
       detail: 'Workflow is blocked. Resolve the first blocker or escalate before labor is assigned.',
       actionLabel: 'Resolve first blocker',
       intent: 'RESOLVE_FIRST_BLOCKER',
+      routeLabel: 'Orders',
       tone: 'red',
     });
   }
@@ -159,6 +161,7 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
       detail: 'Material is not fully received. Stage the first material issue before pushing work forward.',
       actionLabel: 'Stage material issue',
       intent: 'STAGE_FIRST_MATERIAL_ISSUE',
+      routeLabel: 'Receiving',
       tone: 'orange',
     });
   }
@@ -168,6 +171,7 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
       title: `QA hold ${qaHold.orderNumber}`,
       detail: 'Quality status needs review before the order can flow cleanly.',
       actionLabel: 'Review QA / Safety',
+      routeLabel: 'QA / Safety',
       tone: 'blue',
     });
   }
@@ -177,6 +181,7 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
       title: 'No embedded prompts active',
       detail: 'No blocked order, material issue, or QA hold is currently driving dashboard action.',
       actionLabel: 'Review workflow',
+      routeLabel: 'Workflow',
       tone: 'green',
     });
   }
@@ -226,19 +231,30 @@ function createPromptCard(prompt: EmbeddedPrompt): HTMLElement {
     if (prompt.intent) {
       applyQuickActionRuntimeIntent(prompt.intent, getRuntimeProductionOrders(productionOrders));
       queuePromptRender();
-      return;
     }
 
-    const riskButton = Array.from(document.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('QA / SAFETY'),
-    );
-    riskButton instanceof HTMLButtonElement && riskButton.click();
+    if (prompt.routeLabel) {
+      clickQuickActionByLabel(prompt.routeLabel);
+    }
   });
 
   card.appendChild(title);
   card.appendChild(detail);
   card.appendChild(action);
   return card;
+}
+
+function clickQuickActionByLabel(label: string) {
+  const quickActionsSection = findQuickActionsSection();
+  if (!quickActionsSection) return;
+
+  const matchingButton = Array.from(quickActionsSection.querySelectorAll('button')).find(
+    (button) => button.textContent?.includes(label) && button.id !== PROMPT_CONTAINER_ID,
+  );
+
+  if (matchingButton instanceof HTMLButtonElement) {
+    matchingButton.click();
+  }
 }
 
 function getPromptColor(tone: EmbeddedPrompt['tone']): string {
