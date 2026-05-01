@@ -24,6 +24,13 @@ interface DashboardPageProps {
   theme?: 'dark' | 'light';
 }
 
+type QuickAction = {
+  label: string;
+  detail: string;
+  target: AppTab;
+  tone: 'orange' | 'blue' | 'green' | 'red' | 'slate';
+};
+
 export default function DashboardPage({
   machines,
   alerts,
@@ -49,6 +56,17 @@ export default function DashboardPage({
   .slice(0, 4);
   const plantCriticals = blockedOrders.length + materialIssues.length + qaHolds.length + alerts.length;
 
+  const quickActions: QuickAction[] = [
+    { label: 'View Work Queue', detail: 'Open current workflow and station priorities', target: 'workflow', tone: 'orange' },
+    { label: 'Find Order', detail: 'Review order status, blockers, and routing', target: 'orders', tone: 'blue' },
+    { label: 'Open Departments', detail: 'Use department focus cards and work-center view', target: 'plantMap', tone: 'green' },
+    { label: 'Check Crew Coverage', detail: 'See available crew and coverage status', target: 'coverage', tone: 'slate' },
+    { label: 'View Equipment Alerts', detail: 'Open active equipment alarms and status issues', target: 'alerts', tone: alerts.length > 0 ? 'red' : 'green' },
+    { label: 'Open Maintenance', detail: 'Review requests, scheduled tasks, and analytics', target: 'maintenance', tone: activeTasks.length > 0 ? 'orange' : 'slate' },
+    { label: 'Review QA / Safety', detail: 'Open risk, quality, and safety signals', target: 'risk', tone: openRisks.length + qaHolds.length > 0 ? 'red' : 'slate' },
+    { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate' },
+  ];
+
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
   };
@@ -61,6 +79,8 @@ export default function DashboardPage({
           <p style={subtitleStyle}>Plant pulse, order flow, crew needs, and department-specific action</p>
         </div>
       </div>
+
+      <QuickActionsPanel actions={quickActions} onGoToTab={onGoToTab} theme={theme} />
 
       <div style={getOverviewBarStyle(theme)}>
         <StatusMetric label="OPEN ORDERS" value={openOrders.length} total={productionOrders.length} color="#3b82f6" theme={theme} />
@@ -97,7 +117,7 @@ export default function DashboardPage({
         <MissionCard
           title="Plant Criticals"
           value={plantCriticals.toString()}
-          detail="Orders, material, QA, maintenance, and machine alerts combined"
+          detail="Orders, material, QA, maintenance, and equipment alerts combined"
           color={plantCriticals > 0 ? '#dc2626' : '#10b981'}
           theme={theme}
           onClick={() => onGoToTab(plantCriticals > 0 ? 'orders' : 'plantMap')}
@@ -208,7 +228,7 @@ export default function DashboardPage({
       </Section>
 
       <Section
-        title="MACHINE SHOP INTELLIGENCE"
+        title="EQUIPMENT INTELLIGENCE"
         count={machines.length}
         color="#64748b"
         expanded={expandedSection === 'machines'}
@@ -218,7 +238,7 @@ export default function DashboardPage({
       >
         <div style={listStyle}>
           <div style={getPlantNoteStyle(theme)}>
-            Machine data stays powerful, but it is now one module inside the plant command model.
+            Equipment data stays powerful, but it is now one module inside the plant command model.
           </div>
           {alerts.slice(0, expandedSection === 'machines' ? undefined : 3).map((machine) => (
             <div key={machine.id} style={getItemStyle(theme)} onClick={() => onOpenMachine(machine)}>
@@ -229,10 +249,36 @@ export default function DashboardPage({
               <StatusBadge state={machine.state} priority={machine.alarmPriority} />
             </div>
           ))}
-          {alerts.length === 0 && <div style={getPlantNoteStyle(theme)}>No active machine alerts in the current view.</div>}
+          {alerts.length === 0 && <div style={getPlantNoteStyle(theme)}>No active equipment alerts in the current view.</div>}
         </div>
       </Section>
     </div>
+  );
+}
+
+function QuickActionsPanel({ actions, onGoToTab, theme }: { actions: QuickAction[]; onGoToTab: (tab: AppTab) => void; theme: 'dark' | 'light' }) {
+  return (
+    <section style={getQuickActionsPanelStyle(theme)}>
+      <div style={quickActionsHeaderStyle}>
+        <div>
+          <h3 style={getQuickActionsTitleStyle(theme)}>QUICK ACTIONS</h3>
+          <p style={quickActionsSubtitleStyle}>Direct access to high-use plant command areas.</p>
+        </div>
+      </div>
+      <div style={quickActionsGridStyle}>
+        {actions.map((action) => (
+          <button
+            key={action.label}
+            type="button"
+            style={getQuickActionButtonStyle(theme, action.tone)}
+            onClick={() => onGoToTab(action.target)}
+          >
+            <span style={getQuickActionLabelStyle(action.tone)}>{action.label}</span>
+            <span style={quickActionDetailStyle}>{action.detail}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -312,8 +358,10 @@ function MissionCard({ title, value, detail, color, theme, onClick }: { title: s
 
 function getDepartmentResourceLabel(department: string) {
   const labels: Record<string, string> = {
+    Sales: 'Order release / customer signal',
+    Engineering: 'Blueprints / routing release',
     Receiving: 'Material intake / staging',
-    'Machine Shop': 'Machines / machining cells',
+    'Machine Shop': 'Machining cells / equipment',
     'Material Handling': 'Equipment / cut-form flow',
     Fab: 'Weld cells / skill lanes',
     Coating: 'Process zones / finish flow',
@@ -367,9 +415,38 @@ const listStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap
 const gridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 };
 const mutedTextStyle: CSSProperties = { fontSize: 12, color: '#64748b', lineHeight: 1.4 };
 const workCenterBodyStyle: CSSProperties = { fontSize: 12, color: '#64748b', lineHeight: 1.4, marginTop: 8 };
+const quickActionsHeaderStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 };
+const quickActionsSubtitleStyle: CSSProperties = { margin: '4px 0 0', fontSize: 12, color: '#64748b', letterSpacing: '0.7px', textTransform: 'uppercase' };
+const quickActionsGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 };
+const quickActionDetailStyle: CSSProperties = { display: 'block', marginTop: 6, color: '#64748b', fontSize: 12, lineHeight: 1.35 };
 
 function getTitleStyle(theme: 'dark' | 'light'): CSSProperties {
   return { margin: 0, fontSize: 24, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', letterSpacing: '0.5px' };
+}
+
+function getQuickActionsPanelStyle(theme: 'dark' | 'light'): CSSProperties {
+  return { background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', borderLeft: '4px solid #f97316', borderRadius: 6, padding: 16, marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' };
+}
+
+function getQuickActionsTitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  return { margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 16, fontWeight: 900, letterSpacing: '0.8px' };
+}
+
+function getQuickActionButtonStyle(theme: 'dark' | 'light', tone: QuickAction['tone']): CSSProperties {
+  const color = getQuickActionColor(tone);
+  return { textAlign: 'left', borderRadius: 5, border: `1px solid ${color}55`, borderLeft: `4px solid ${color}`, background: theme === 'dark' ? '#0f172a' : '#f8fafc', padding: 12, cursor: 'pointer' };
+}
+
+function getQuickActionLabelStyle(tone: QuickAction['tone']): CSSProperties {
+  return { display: 'block', color: getQuickActionColor(tone), fontSize: 12, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase' };
+}
+
+function getQuickActionColor(tone: QuickAction['tone']): string {
+  if (tone === 'blue') return '#3b82f6';
+  if (tone === 'green') return '#10b981';
+  if (tone === 'red') return '#dc2626';
+  if (tone === 'slate') return '#64748b';
+  return '#f97316';
 }
 
 function getOverviewBarStyle(_theme: 'dark' | 'light'): CSSProperties {
