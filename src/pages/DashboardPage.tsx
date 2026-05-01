@@ -31,11 +31,21 @@ type QuickAction = {
   tone: 'orange' | 'blue' | 'green' | 'red' | 'slate';
 };
 
+type QuickActionState = {
+  alertCount: number;
+  activeTaskCount: number;
+  openRiskCount: number;
+  qaHoldCount: number;
+  blockedOrderCount: number;
+  materialIssueCount: number;
+};
+
 export default function DashboardPage({
   machines,
   alerts,
   tasks,
   risks,
+  roleView,
   onGoToTab,
   onOpenMachine,
   onOpenWorkCenter,
@@ -56,16 +66,14 @@ export default function DashboardPage({
   .slice(0, 4);
   const plantCriticals = blockedOrders.length + materialIssues.length + qaHolds.length + alerts.length;
 
-  const quickActions: QuickAction[] = [
-    { label: 'View Work Queue', detail: 'Open current workflow and station priorities', target: 'workflow', tone: 'orange' },
-    { label: 'Find Order', detail: 'Review order status, blockers, and routing', target: 'orders', tone: 'blue' },
-    { label: 'Open Departments', detail: 'Use department focus cards and work-center view', target: 'plantMap', tone: 'green' },
-    { label: 'Check Crew Coverage', detail: 'See available crew and coverage status', target: 'coverage', tone: 'slate' },
-    { label: 'View Equipment Alerts', detail: 'Open active equipment alarms and status issues', target: 'alerts', tone: alerts.length > 0 ? 'red' : 'green' },
-    { label: 'Open Maintenance', detail: 'Review requests, scheduled tasks, and analytics', target: 'maintenance', tone: activeTasks.length > 0 ? 'orange' : 'slate' },
-    { label: 'Review QA / Safety', detail: 'Open risk, quality, and safety signals', target: 'risk', tone: openRisks.length + qaHolds.length > 0 ? 'red' : 'slate' },
-    { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate' },
-  ];
+  const quickActions = getQuickActionsForRole(roleView, {
+    alertCount: alerts.length,
+    activeTaskCount: activeTasks.length,
+    openRiskCount: openRisks.length,
+    qaHoldCount: qaHolds.length,
+    blockedOrderCount: blockedOrders.length,
+    materialIssueCount: materialIssues.length,
+  });
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -80,7 +88,7 @@ export default function DashboardPage({
         </div>
       </div>
 
-      <QuickActionsPanel actions={quickActions} onGoToTab={onGoToTab} theme={theme} />
+      <QuickActionsPanel roleView={roleView} actions={quickActions} onGoToTab={onGoToTab} theme={theme} />
 
       <div style={getOverviewBarStyle(theme)}>
         <StatusMetric label="OPEN ORDERS" value={openOrders.length} total={productionOrders.length} color="#3b82f6" theme={theme} />
@@ -256,13 +264,100 @@ export default function DashboardPage({
   );
 }
 
-function QuickActionsPanel({ actions, onGoToTab, theme }: { actions: QuickAction[]; onGoToTab: (tab: AppTab) => void; theme: 'dark' | 'light' }) {
+function getQuickActionsForRole(roleView: RoleView, state: QuickActionState): QuickAction[] {
+  const alertTone = state.alertCount > 0 ? 'red' : 'green';
+  const maintenanceTone = state.activeTaskCount > 0 ? 'orange' : 'slate';
+  const qaTone = state.openRiskCount + state.qaHoldCount > 0 ? 'red' : 'slate';
+  const blockerTone = state.blockedOrderCount > 0 ? 'red' : 'orange';
+  const materialTone = state.materialIssueCount > 0 ? 'orange' : 'green';
+
+  if (roleView === 'Operator') {
+    return [
+      { label: 'View Work Queue', detail: 'Open assigned work and current station priorities', target: 'workflow', tone: 'orange' },
+      { label: 'Report Blocked Work', detail: 'Open workflow to review blocked orders and next action', target: 'workflow', tone: blockerTone },
+      { label: 'Request Material', detail: 'Open receiving and material readiness view', target: 'receiving', tone: materialTone },
+      { label: 'Call Maintenance', detail: 'Open maintenance requests and support status', target: 'maintenance', tone: maintenanceTone },
+      { label: 'Review QA / Safety', detail: 'Check quality holds and safety signals', target: 'risk', tone: qaTone },
+      { label: 'Open Documents', detail: 'Access procedures, standards, and references', target: 'documents', tone: 'slate' },
+    ];
+  }
+
+  if (roleView === 'Lead / Supervisor') {
+    return [
+      { label: 'Resolve Blockers', detail: 'Review blocked flow before assigning labor', target: 'orders', tone: blockerTone },
+      { label: 'Check Crew Coverage', detail: 'See available crew and coverage gaps', target: 'coverage', tone: 'orange' },
+      { label: 'Open Departments', detail: 'Review work-center focus and department status', target: 'plantMap', tone: 'green' },
+      { label: 'View Equipment Alerts', detail: 'Open active equipment alarms and status issues', target: 'alerts', tone: alertTone },
+      { label: 'Escalate Engineering', detail: 'Open orders for blueprint, routing, or release blockers', target: 'orders', tone: 'blue' },
+      { label: 'Open Maintenance', detail: 'Review requests and scheduled task pressure', target: 'maintenance', tone: maintenanceTone },
+    ];
+  }
+
+  if (roleView === 'Manager') {
+    return [
+      { label: 'Plant Command Review', detail: 'Review plant criticals, flow, and department status', target: 'dashboard', tone: 'orange' },
+      { label: 'Review Orders', detail: 'Check order status, blockers, and due dates', target: 'orders', tone: blockerTone },
+      { label: 'Check Crew Coverage', detail: 'Review staffing status across departments', target: 'coverage', tone: 'slate' },
+      { label: 'Open Departments', detail: 'Review department focus and work-center status', target: 'plantMap', tone: 'green' },
+      { label: 'View Equipment Alerts', detail: 'Open plant equipment alarms and critical status', target: 'alerts', tone: alertTone },
+      { label: 'Review QA / Safety', detail: 'Check quality holds, safety signals, and risk items', target: 'risk', tone: qaTone },
+      { label: 'Open Maintenance', detail: 'Review repair workload and maintenance analytics', target: 'maintenance', tone: maintenanceTone },
+      { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate' },
+    ];
+  }
+
+  if (roleView === 'Maintenance') {
+    return [
+      { label: 'Open Maintenance', detail: 'Review active requests, tasks, and analytics', target: 'maintenance', tone: maintenanceTone },
+      { label: 'View Equipment Alerts', detail: 'Open equipment alarms and offline status', target: 'alerts', tone: alertTone },
+      { label: 'Review Work Queue', detail: 'Check workflow impact before taking equipment down', target: 'workflow', tone: blockerTone },
+      { label: 'Open Equipment', detail: 'Review equipment status and detail cards', target: 'machines', tone: 'blue' },
+      { label: 'Check QA / Safety', detail: 'Review safety-related risk signals', target: 'risk', tone: qaTone },
+      { label: 'Open Documents', detail: 'Access procedures, standards, and references', target: 'documents', tone: 'slate' },
+    ];
+  }
+
+  if (roleView === 'Forklift / Receiving') {
+    return [
+      { label: 'Open Receiving', detail: 'Review inbound, staged, ready, and held material', target: 'receiving', tone: materialTone },
+      { label: 'Request Queue', detail: 'Check material requests from production departments', target: 'receiving', tone: 'orange' },
+      { label: 'View Work Queue', detail: 'Review orders waiting on receiving or material movement', target: 'workflow', tone: blockerTone },
+      { label: 'Check Crew Coverage', detail: 'Review receiving and forklift coverage status', target: 'coverage', tone: 'slate' },
+      { label: 'Open Orders', detail: 'Review material status by order', target: 'orders', tone: 'blue' },
+      { label: 'View Equipment Alerts', detail: 'Open active equipment alerts affecting movement', target: 'alerts', tone: alertTone },
+    ];
+  }
+
+  if (roleView === 'QA') {
+    return [
+      { label: 'Review QA / Safety', detail: 'Open quality holds, safety signals, and risk items', target: 'risk', tone: qaTone },
+      { label: 'Open QA Department', detail: 'Review QA department cards and station signals', target: 'qa', tone: 'blue' },
+      { label: 'Review Orders', detail: 'Check order quality status and release blockers', target: 'orders', tone: blockerTone },
+      { label: 'Open Documents', detail: 'Access standards, inspection references, and procedures', target: 'documents', tone: 'slate' },
+      { label: 'Check Crew Coverage', detail: 'Review QA coverage and available support', target: 'coverage', tone: 'slate' },
+      { label: 'View Equipment Alerts', detail: 'Open equipment status that may affect inspection flow', target: 'alerts', tone: alertTone },
+    ];
+  }
+
+  return [
+    { label: 'View Work Queue', detail: 'Open current workflow and station priorities', target: 'workflow', tone: 'orange' },
+    { label: 'Find Order', detail: 'Review order status, blockers, and routing', target: 'orders', tone: 'blue' },
+    { label: 'Open Departments', detail: 'Use department focus cards and work-center view', target: 'plantMap', tone: 'green' },
+    { label: 'Check Crew Coverage', detail: 'See available crew and coverage status', target: 'coverage', tone: 'slate' },
+    { label: 'View Equipment Alerts', detail: 'Open active equipment alarms and status issues', target: 'alerts', tone: alertTone },
+    { label: 'Open Maintenance', detail: 'Review requests, scheduled tasks, and analytics', target: 'maintenance', tone: maintenanceTone },
+    { label: 'Review QA / Safety', detail: 'Open risk, quality, and safety signals', target: 'risk', tone: qaTone },
+    { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate' },
+  ];
+}
+
+function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: RoleView; actions: QuickAction[]; onGoToTab: (tab: AppTab) => void; theme: 'dark' | 'light' }) {
   return (
     <section style={getQuickActionsPanelStyle(theme)}>
       <div style={quickActionsHeaderStyle}>
         <div>
           <h3 style={getQuickActionsTitleStyle(theme)}>QUICK ACTIONS</h3>
-          <p style={quickActionsSubtitleStyle}>Direct access to high-use plant command areas.</p>
+          <p style={quickActionsSubtitleStyle}>{formatRoleLabel(roleView)} action shortcuts based on current plant signals.</p>
         </div>
       </div>
       <div style={quickActionsGridStyle}>
@@ -280,6 +375,11 @@ function QuickActionsPanel({ actions, onGoToTab, theme }: { actions: QuickAction
       </div>
     </section>
   );
+}
+
+function formatRoleLabel(roleView: RoleView): string {
+  if (roleView === 'Forklift / Receiving') return 'Receiving';
+  return roleView;
 }
 
 function formatOrderBlock(order: ProductionOrder) {
@@ -323,9 +423,9 @@ function Section({ title, count, color, expanded, onToggle, onViewAll, children,
           <h3 style={{ margin: 0, fontSize: 16, color, letterSpacing: '0.5px', fontWeight: 800 }}>
             {title} ({count})
           </h3>
-          <span style={{ fontSize: 16, color: '#475569' }}>{expanded ? '▼' : '▶'}</span>
+          <span style={{ fontSize: 16, color: '#475569' }}>{expanded ? 'v' : '>'}</span>
         </div>
-        <button onClick={onViewAll} style={viewAllButtonStyle}>VIEW ALL →</button>
+        <button onClick={onViewAll} style={viewAllButtonStyle}>VIEW ALL</button>
       </div>
       <div style={{ marginTop: 12 }}>{children}</div>
     </div>
