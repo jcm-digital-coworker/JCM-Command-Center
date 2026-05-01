@@ -4,6 +4,7 @@ import { productionOrders } from '../data/productionOrders';
 import { partBlueprints } from '../data/partBlueprints';
 import { getBlueprintForOrder, getStationPacket } from './orderBlueprints';
 import { getWorkflowSignal } from './orderWorkflow';
+import { getRuntimeProductionOrders, getRuntimeOrder } from './workflowRuntimeState';
 
 export type WorkflowCardGroupKey = 'DO_NOW' | 'BLOCKED_HERE' | 'UPSTREAM_ACTION' | 'INCOMING' | 'WATCH_ONLY';
 
@@ -38,7 +39,8 @@ const GROUP_META: Record<WorkflowCardGroupKey, Omit<WorkflowCardGroup, 'cards'>>
 const GROUP_ORDER: WorkflowCardGroupKey[] = ['DO_NOW', 'BLOCKED_HERE', 'UPSTREAM_ACTION', 'INCOMING', 'WATCH_ONLY'];
 
 export function getWorkCenterWorkflowGroups(workCenter: WorkCenter, orders: ProductionOrder[] = productionOrders): WorkflowCardGroup[] {
-  const cards = orders
+  const runtimeOrders = getRuntimeProductionOrders(orders);
+  const cards = runtimeOrders
     .map((order) => getWorkflowTabletCard(order, workCenter))
     .filter((card): card is WorkflowTabletCard => Boolean(card))
     .sort((a, b) => b.signal.pressureScore - a.signal.pressureScore);
@@ -50,15 +52,16 @@ export function getWorkCenterWorkflowGroups(workCenter: WorkCenter, orders: Prod
 }
 
 export function getWorkflowTabletCard(order: ProductionOrder, workCenter: WorkCenter): WorkflowTabletCard | undefined {
-  const blueprint = getBlueprintForOrder(order, partBlueprints);
-  const packet = getStationPacket(order, blueprint);
-  const signal = getWorkflowSignal(order);
+  const runtimeOrder = getRuntimeOrder(order);
+  const blueprint = getBlueprintForOrder(runtimeOrder, partBlueprints);
+  const packet = getStationPacket(runtimeOrder, blueprint);
+  const signal = getWorkflowSignal(runtimeOrder);
   const department = workCenter.department;
 
   const ownsPrimary = signal.gate === department;
   const ownsParallel = signal.parallelActions.some((action) => action.owner === department);
-  const isCurrentDepartment = order.currentDepartment === department;
-  const isNextDepartment = order.nextDepartment === department;
+  const isCurrentDepartment = runtimeOrder.currentDepartment === department;
+  const isNextDepartment = runtimeOrder.nextDepartment === department;
   const isWatcher = signal.watchers.some((watcher) => watcher.owner === department);
 
   if (!ownsPrimary && !ownsParallel && !isCurrentDepartment && !isNextDepartment && !isWatcher) {
@@ -68,7 +71,7 @@ export function getWorkflowTabletCard(order: ProductionOrder, workCenter: WorkCe
   const groupKey = getGroupKey({ ownsPrimary, ownsParallel, isCurrentDepartment, isNextDepartment, isWatcher, canProceed: signal.canProceed, strength: signal.strength });
 
   return {
-    order,
+    order: runtimeOrder,
     packet,
     signal,
     groupKey,
@@ -76,7 +79,7 @@ export function getWorkflowTabletCard(order: ProductionOrder, workCenter: WorkCe
     relationshipReason: getRelationshipReason({ groupKey, signal, department, ownsPrimary, ownsParallel, isNextDepartment }),
     operatorConstraint: getOperatorConstraint(groupKey, signal.canProceed),
     urgency: getUrgency(signal.urgency, signal.strength, signal.canProceed),
-    due: getDueLabel(order.projectedShipDate),
+    due: getDueLabel(runtimeOrder.projectedShipDate),
     buttons: getButtons(String(signal.gate), String(signal.checkpoint), String(packet.status), groupKey),
   };
 }
