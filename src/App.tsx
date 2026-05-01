@@ -340,7 +340,7 @@ export default function App() {
               letterSpacing: '0.5px',
             }}
           >
-            READ-ONLY MACHINE SIMULATOR
+            READ-ONLY EQUIPMENT SIMULATOR
           </p>
         </div>
 
@@ -554,7 +554,7 @@ export default function App() {
           style={getAlertsButtonStyle(filteredAlerts.length)}
         >
           {filteredAlerts.length}{' '}
-          {filteredAlerts.length === 1 ? 'Alert' : 'Alerts'}
+          {filteredAlerts.length === 1 ? 'Equipment Alert' : 'Equipment Alerts'}
         </button>
       </div>
 
@@ -719,8 +719,8 @@ function getCommandLabel(tab: AppTab): string {
   const labels: Record<AppTab, string> = {
     workflow: 'My Workflow',
     dashboard: 'Command Center',
-    machines: 'Machines',
-    alerts: 'Machine Alerts',
+    machines: 'Equipment',
+    alerts: 'Equipment Alerts',
     simulation: 'Simulation',
     maintenance: 'Maintenance',
     receiving: 'Receiving',
