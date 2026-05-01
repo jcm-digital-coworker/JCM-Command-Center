@@ -5,6 +5,9 @@ export type Tool = {
 };
 
 export type Department =
+  | "Sales"
+  | "Engineering"
+  | "Office"
   | "Receiving"
   | "Machine Shop"
   | "Material Handling"
@@ -16,8 +19,7 @@ export type Department =
   | "Clamps"
   | "QA"
   | "Shipping"
-  | "Maintenance"
-  | "Office";
+  | "Maintenance";
 
 export type SpindleLoadEvent = {
   time: string;
