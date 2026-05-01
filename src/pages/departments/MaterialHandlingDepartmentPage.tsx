@@ -1,6 +1,6 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function MaterialHandlingDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
@@ -14,6 +14,10 @@ export default function MaterialHandlingDepartmentPage({ theme = 'dark' }: Depar
       subtitle="Cut, roll, saw, press, expand, and stage material. This page focuses on equipment constraints and the queues feeding the rest of the plant."
       theme={theme}
     >
+      <Section title="Crew on Shift" theme={theme}>
+        <LiveCrewSection department="Material Handling" theme={theme} />
+      </Section>
+
       <Section title="Crew Guidance" theme={theme}>
         <CrewGuidancePanel department="Material Handling" orders={productionOrders} theme={theme} />
       </Section>

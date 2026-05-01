@@ -85,45 +85,29 @@ export default function MaintenanceSubmitPage({
 
         <div style={fieldStyle}>
           <label style={getLabelStyle(theme)}>Priority *</label>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <label style={getRadioLabelStyle(theme)}>
-              <input
-                type="radio"
-                value="NORMAL"
-                checked={priority === 'NORMAL'}
-                onChange={(e) =>
-                  setPriority(e.target.value as MaintenanceRequestPriority)
-                }
-                style={{ marginRight: 6 }}
-              />
-              <span style={getPriorityTextStyle('NORMAL')}>● Normal</span>
-            </label>
-            <label style={getRadioLabelStyle(theme)}>
-              <input
-                type="radio"
-                value="URGENT"
-                checked={priority === 'URGENT'}
-                onChange={(e) =>
-                  setPriority(e.target.value as MaintenanceRequestPriority)
-                }
-                style={{ marginRight: 6 }}
-              />
-              <span style={getPriorityTextStyle('URGENT')}>● Urgent</span>
-            </label>
-            <label style={getRadioLabelStyle(theme)}>
-              <input
-                type="radio"
-                value="LINE_DOWN"
-                checked={priority === 'LINE_DOWN'}
-                onChange={(e) =>
-                  setPriority(e.target.value as MaintenanceRequestPriority)
-                }
-                style={{ marginRight: 6 }}
-              />
-              <span style={getPriorityTextStyle('LINE_DOWN')}>
-                ● Line Down
-              </span>
-            </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            {(
+              [
+                { value: 'NORMAL', label: 'Normal' },
+                { value: 'URGENT', label: 'Urgent' },
+                { value: 'LINE_DOWN', label: 'Line Down' },
+                { value: 'MACHINE_DOWN', label: 'Machine Down' },
+                { value: 'SAFETY', label: 'Safety' },
+              ] as { value: MaintenanceRequestPriority; label: string }[]
+            ).map(({ value, label }) => (
+              <label key={value} style={getRadioLabelStyle(theme)}>
+                <input
+                  type="radio"
+                  value={value}
+                  checked={priority === value}
+                  onChange={(e) =>
+                    setPriority(e.target.value as MaintenanceRequestPriority)
+                  }
+                  style={{ marginRight: 6 }}
+                />
+                <span style={getPriorityTextStyle(value)}>● {label}</span>
+              </label>
+            ))}
           </div>
         </div>
 
