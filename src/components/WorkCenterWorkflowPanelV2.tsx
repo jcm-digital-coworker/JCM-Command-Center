@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import type { WorkCenter } from '../types/plant';
 import { getWorkCenterWorkflowGroups } from '../logic/workflowPanelSelectors';
 import { addWorkflowAction } from '../logic/workflowActions';
+import { applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 
 type Props = {
   workCenter: WorkCenter;
@@ -17,8 +19,21 @@ export default function WorkCenterWorkflowPanelV2({
   onOpenEngineering,
   onOpenMaintenance,
 }: Props) {
+  const [runtimeVersion, setRuntimeVersion] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setRuntimeVersion((version) => version + 1);
+    window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
+
   const groups = getWorkCenterWorkflowGroups(workCenter);
   const activeCount = groups.reduce((total, group) => total + group.cards.length, 0);
+  void runtimeVersion;
 
   return (
     <section style={panelStyle(theme)}>
@@ -77,6 +92,7 @@ export default function WorkCenterWorkflowPanelV2({
 
                     {packet.operation ? <div style={{ color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontWeight: 800 }}>Operation: {packet.operation}</div> : null}
                     {packet.blockers?.map((blocker) => <div key={blocker} style={{ color: '#fecaca', marginTop: 6 }}>Blocked: {blocker}</div>)}
+                    {order.lastAction ? <div style={reasonStyle(theme)}>Last action: {order.lastAction}</div> : null}
 
                     {signal.parallelActions.length > 0 ? <SignalList title="Parallel actions" items={signal.parallelActions} theme={theme} /> : null}
                     {signal.watchers.length > 0 ? <SignalList title="Watchers" items={signal.watchers} theme={theme} /> : null}
@@ -115,10 +131,23 @@ function SignalList({ title, items, theme }: { title: string; items: Array<{ own
 
 function act(label: string, orderNumber: string, dept: WorkCenter['department'], rec?: Props['onOpenReceiving'], eng?: Props['onOpenEngineering'], maint?: Props['onOpenMaintenance']) {
   if (label === 'No Action') return;
-  if (label.includes('Engineering') || label.includes('Hold')) { addWorkflowAction({ orderNumber, actionType: 'ENGINEERING_ESCALATION', department: 'Engineering', note: label }); return eng?.(); }
-  if (label.includes('Material') || label.includes('Areas')) { addWorkflowAction({ orderNumber, actionType: 'MATERIAL_REQUEST', department: 'Receiving', note: label }); return rec?.('submit', dept); }
-  if (label.includes('Blocker') || label.includes('Lead')) { addWorkflowAction({ orderNumber, actionType: 'BLOCKER_RESOLUTION', department: dept, note: label }); return maint?.(); }
+  if (label.includes('Engineering') || label.includes('Hold')) {
+    addWorkflowAction({ orderNumber, actionType: 'ENGINEERING_ESCALATION', department: 'Engineering', note: label });
+    applyWorkflowRuntimeAction(orderNumber, 'ESCALATE_ENGINEERING', label);
+    return eng?.();
+  }
+  if (label.includes('Material') || label.includes('Areas')) {
+    addWorkflowAction({ orderNumber, actionType: 'MATERIAL_REQUEST', department: 'Receiving', note: label });
+    applyWorkflowRuntimeAction(orderNumber, 'REQUEST_MATERIAL', label);
+    return rec?.('submit', dept);
+  }
+  if (label.includes('Blocker') || label.includes('Lead')) {
+    addWorkflowAction({ orderNumber, actionType: 'BLOCKER_RESOLUTION', department: dept, note: label });
+    applyWorkflowRuntimeAction(orderNumber, 'RESOLVE_BLOCKER', label);
+    return maint?.();
+  }
   addWorkflowAction({ orderNumber, actionType: 'WORK_STARTED', department: dept, note: label });
+  applyWorkflowRuntimeAction(orderNumber, 'START_WORK', label);
 }
 
 function panelStyle(theme: 'dark' | 'light') { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#fff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
