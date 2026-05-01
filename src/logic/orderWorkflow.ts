@@ -1,11 +1,25 @@
 import type { ProductionOrder } from '../types/productionOrder';
 
+export function isSalesOriginOrder(order: ProductionOrder): boolean {
+  return order.workflowOrigin === 'SALES';
+}
+
 export function hasMissingBlueprint(order: ProductionOrder): boolean {
   return order.engineeringRequired === true && !order.blueprintId && !order.partNumber;
 }
 
+export function hasMaterialIssue(order: ProductionOrder): boolean {
+  const materialStatus = String(order.materialStatus ?? 'UNKNOWN').toUpperCase();
+  return (
+    materialStatus === 'MISSING' ||
+    materialStatus === 'NOT_RECEIVED' ||
+    materialStatus === 'ORDER_REQUIRED' ||
+    order.blockers.some((blocker) => blocker.type === 'material')
+  );
+}
+
 export function getCurrentOrderGate(order: ProductionOrder) {
-  if (!order.salesReleasedAt) return 'SALES';
+  if (isSalesOriginOrder(order) && !order.salesReleasedAt) return 'SALES';
 
   if (hasMissingBlueprint(order)) return 'ENGINEERING';
 
@@ -13,11 +27,11 @@ export function getCurrentOrderGate(order: ProductionOrder) {
     return 'ENGINEERING';
   }
 
-  if (!order.productionSupervisorAcknowledged) return 'SUPERVISOR';
-
-  if (order.materialStatus === 'MISSING' || order.materialStatus === 'NOT_RECEIVED') {
-    return 'RECEIVING';
+  if (isSalesOriginOrder(order) && !order.productionSupervisorAcknowledged) {
+    return 'SUPERVISOR';
   }
+
+  if (hasMaterialIssue(order)) return 'RECEIVING';
 
   return 'SHOP';
 }
@@ -31,6 +45,33 @@ export function getWorkflowSignal(order: ProductionOrder) {
       gate,
       message: 'Missing blueprint - Engineering must create and release drawing.',
       action: 'Route to Engineering',
+    };
+  }
+
+  if (gate === 'SALES') {
+    return {
+      orderNumber: order.orderNumber,
+      gate,
+      message: 'Sales has not released this order into production yet.',
+      action: 'Wait for Sales release',
+    };
+  }
+
+  if (gate === 'ENGINEERING') {
+    return {
+      orderNumber: order.orderNumber,
+      gate,
+      message: 'Engineering release is required before production can proceed.',
+      action: 'Complete Engineering release',
+    };
+  }
+
+  if (gate === 'SUPERVISOR') {
+    return {
+      orderNumber: order.orderNumber,
+      gate,
+      message: 'Production supervisor review is needed before shop-floor release.',
+      action: 'Acknowledge and prioritize order',
     };
   }
 
