@@ -7,15 +7,34 @@ export function getBlueprintForOrder(order: ProductionOrder, blueprints: PartBlu
   );
 }
 
+export function orderRequiresBlueprintPacket(order: ProductionOrder): boolean {
+  return order.engineeringRequired === true || Boolean(order.blueprintId) || Boolean(order.partNumber);
+}
+
 export function getStationPacket(order: ProductionOrder, blueprint?: PartBlueprint) {
   const blockers = order.blockers?.map((b) => b.message) ?? [];
 
-  if (!blueprint) {
+  if (!blueprint && orderRequiresBlueprintPacket(order)) {
     return {
       orderNumber: order.orderNumber,
       status: 'MISSING_BLUEPRINT',
       message: 'Engineering must provide blueprint before work can begin.',
       blockers,
+      operation: undefined,
+      instructions: [],
+      next: undefined,
+    };
+  }
+
+  if (!blueprint) {
+    return {
+      orderNumber: order.orderNumber,
+      status: blockers.length ? 'BLOCKED' : 'READY',
+      message: 'No blueprint packet attached. Using legacy shop-floor order data.',
+      blockers,
+      operation: order.productFamily,
+      instructions: [],
+      next: order.nextDepartment,
     };
   }
 
@@ -26,6 +45,7 @@ export function getStationPacket(order: ProductionOrder, blueprint?: PartBluepri
   return {
     orderNumber: order.orderNumber,
     status: blockers.length ? 'BLOCKED' : 'READY',
+    message: step?.operation ?? 'Blueprint packet attached.',
     operation: step?.operation,
     instructions: step?.instructions ?? [],
     blockers,
