@@ -27,6 +27,7 @@ interface WorkCenterDetailPageProps {
   onGoToMaintenance: () => void;
   onOpenCoverage: (view?: 'hub' | 'signin' | 'available' | 'assigned' | 'break' | 'offline') => void;
   onOpenReceiving?: (view: ReceivingShortcut, requesterDepartment?: WorkCenter['department']) => void;
+  onOpenEngineering?: () => void;
   theme?: 'dark' | 'light';
 }
 
@@ -41,6 +42,7 @@ export default function WorkCenterDetailPage({
   onGoToMaintenance,
   onOpenCoverage,
   onOpenReceiving,
+  onOpenEngineering,
   theme = 'dark',
 }: WorkCenterDetailPageProps) {
   const departmentMachines = workCenter.department === 'Maintenance'
@@ -95,6 +97,7 @@ export default function WorkCenterDetailPage({
         workCenter={workCenter}
         theme={theme}
         onOpenReceiving={onOpenReceiving}
+        onOpenEngineering={onOpenEngineering}
         onOpenMaintenance={onGoToMaintenance}
       />
 

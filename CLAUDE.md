@@ -1,11 +1,44 @@
 # Claude.md - JCM Command Center Development Guide
 
+## ⚠ Contributor Protocol — Read Before Writing Any Code
+
+**Every session must start with:**
+```bash
+git fetch origin main && git log HEAD..origin/main --oneline
+```
+
+If main is ahead of your branch, pull it before writing anything:
+```bash
+git pull origin main
+npm run build   # verify clean before starting
+```
+
+**Why this matters:**
+Main moves fast. It may already contain the component, logic file, or data field you are about to build. Do not duplicate work. Do not build on stale code. Check main first — every time, no exceptions.
+
+**What to look for after fetching:**
+- New files in `src/logic/` — workflow engine, selectors, evaluators
+- New files in `src/components/` — panels, cards, coverage widgets
+- New fields on `ProductionOrder` — `workflowOrigin`, `engineeringRequired`, `salesReleasedAt`, `blueprintId`
+- New `Department` values — `Sales`, `Engineering` are live
+- New work centers in `workCenters.ts`
+- Changes to `AppDrawer.tsx` — new tabs may already be wired
+
+**After checking main:**
+1. Review the Phase 2 status section below to see what is done vs. queued
+2. Review recently changed files before touching them
+3. If a component already solves the problem — use it, don't rebuild it
+
+---
+
 ## Project Overview
 
-**Name:** JCM Digital Co-worker Command Center  
-**Company:** JCM Industries (pipe fitting manufacturer, Nash, Texas)  
-**Purpose:** Plant-wide manufacturing operations dashboard and maintenance tracking system  
-**Status:** Production-ready for Phase 1 pilot (3-5 operators)
+**Name:** JCM Digital Co-worker Command Center
+**Company:** JCM Industries (pipe fitting manufacturer, Nash, Texas)
+**Address:** 200 Old Boston Road, Nash TX 75569 | 903-832-2581
+**Founded:** 1976 by James C. Morriss Jr.
+**Purpose:** Plant-wide manufacturing operations dashboard and maintenance tracking system
+**Status:** Phase 2 in progress — workflow engine live, fluidity improvements queued
 
 ---
 
@@ -13,9 +46,10 @@
 
 - **Framework:** React 19 + TypeScript + Vite
 - **Styling:** CSS-in-JS (inline styles, no external UI libraries)
-- **State:** React useState/useMemo hooks
-- **Data:** localStorage (demo/pilot phase)
-- **Development:** GitHub Codespaces (previously StackBlitz mobile)
+- **State:** React useState/useMemo hooks + custom event bus for runtime state
+- **Data:** localStorage (demo/pilot phase) — Supabase queued for Phase 3
+- **CI:** GitHub Actions (`.github/workflows/build.yml`) — runs on every push
+- **Development:** GitHub Codespaces
 
 ---
 
@@ -36,7 +70,7 @@
 ## System Model
 
 - Plant-first Command Center
-- Department-specific action pages: Receiving, Fab, Coating, Assembly, Shipping, QA, Material Handling
+- Department-specific action pages: Receiving, Fab, Coating, Assembly, Shipping, QA, Material Handling, Sales, Engineering
 - Flow-driven decisions: what can run vs blocked
 - Crew Guidance integrated into departments: who is needed where
 - Structured selection inputs tied to real plant data: workers, assets, orders
@@ -68,31 +102,49 @@ src/
 │   │   ├── RiskCard.tsx
 │   │   └── SimulationCard.tsx
 │   ├── shell/
-│   │   ├── AppHeader.tsx       ← back button + menu button
-│   │   └── AppDrawer.tsx       ← nav drawer + Dev Tools section
+│   │   ├── AppHeader.tsx            ← back button + menu button
+│   │   └── AppDrawer.tsx            ← nav drawer + Dev Tools section
+│   ├── EngineeringBacklogPanel.tsx  ← engineering order backlog
+│   ├── LiveCoveragePanel.tsx        ← crew sign-in shortcuts (supervisor only)
 │   ├── MachineDetail.tsx
+│   ├── ReceivingClosurePanel.tsx    ← receiving material closure loop
+│   ├── ReceivingWorkflowPanel.tsx
 │   ├── StatusBadge.tsx
 │   ├── PriorityBadge.tsx
+│   ├── WorkCenterWorkflowPanel.tsx  ← v1 (order signals, static)
+│   ├── WorkCenterWorkflowPanelV2.tsx ← v2 (grouped by operator responsibility, runtime-aware, crew strip)
 │   └── Lv4500JcmSimulator.tsx
 ├── data/
+│   ├── coverage.ts          ← 28+ named workers, full shift coverage
+│   ├── documents.ts         ← NSF 61, AWWA, WPS, Powercron SOP, torque specs
 │   ├── machine.ts
 │   ├── maintenanceRequests.ts
 │   ├── maintenance.ts
-│   ├── coverage.ts
-│   ├── workers.ts
-│   ├── productionOrders.ts
-│   ├── workCenters.ts
-│   ├── documents.ts
-│   ├── risk.ts
-│   └── [more data files]
+│   ├── materialCatalog.ts
+│   ├── partBlueprints.ts    ← simulated part blueprint data
+│   ├── productFamilies.ts
+│   ├── productionOrders.ts  ← 24 orders: 8 SALES origin + 16 LEGACY_SHOP_FLOOR
+│   ├── risk.ts              ← 14 real JCM manufacturing risks
+│   ├── workCenterAssets.ts
+│   ├── workCenterResources.ts
+│   ├── workCenters.ts       ← includes Sales and Engineering work centers
+│   ├── workers.ts           ← 28 named workers with real JCM job titles
+│   ├── workRoles.ts
+│   └── warRoomContext.ts    ← includes JCM company profile block
 ├── logic/
-│   ├── warnings.ts
+│   ├── coverage.ts
 │   ├── machineSimulators.ts
-│   └── [simulator logic files]
+│   ├── orderBlueprints.ts       ← blueprint resolution + missing-blueprint kickback
+│   ├── orderWorkflow.ts         ← workflow signal generation
+│   ├── warnings.ts
+│   ├── workflowActions.ts       ← action logging helpers
+│   ├── workflowEvaluation.ts    ← checkpoint-based workflow evaluator
+│   ├── workflowPanelSelectors.ts ← groups orders by operator responsibility
+│   └── workflowRuntimeState.ts  ← runtime reducer + custom event bus
 ├── modules/
 │   └── crewGuidance.ts
 ├── pages/
-│   ├── WorkflowPage.tsx        ← role-based: Operator / Lead / Manager views
+│   ├── WorkflowPage.tsx         ← role-based: Operator / Lead / Manager views
 │   ├── DashboardPage.tsx
 │   ├── MachinesPage.tsx
 │   ├── MaintenancePage.tsx
@@ -104,19 +156,20 @@ src/
 │   ├── CoveragePage.tsx
 │   ├── PlantMapPage.tsx
 │   ├── ReceivingPage.tsx
-│   ├── WarRoomContextPage.tsx  ← dev/internal only
+│   ├── WorkCenterDetailPage.tsx  ← station tablet, wires WorkCenterWorkflowPanelV2
+│   ├── WarRoomContextPage.tsx    ← dev/internal only
 │   └── [department pages]
-├── theme/
-│   └── theme.ts
 ├── types/
-│   ├── app.ts                  ← AppTab, RoleView, DepartmentFilter
-│   ├── machine.ts
+│   ├── app.ts              ← AppTab, RoleView, DepartmentFilter
+│   ├── machine.ts          ← Department type (includes Sales, Engineering)
 │   ├── maintenanceRequest.ts
 │   ├── maintenance.ts
+│   ├── partBlueprint.ts    ← blueprint packet types
+│   ├── productionOrder.ts  ← includes workflowOrigin, engineeringRequired, salesReleasedAt
 │   └── [more type definitions]
 ├── utils/
 │   └── export.ts
-├── App.tsx                     ← routing only, tabHistory back navigation
+├── App.tsx       ← routing only, tabHistory back navigation
 ├── index.css
 └── main.tsx
 ```
@@ -148,6 +201,43 @@ src/
 | Maintenance | Maintenance tab | Maintenance requests |
 | Forklift / Receiving | Receiving tab | Ready queue |
 | QA | WorkflowPage | Manager-tier view |
+
+---
+
+## Workflow Engine (Phase 2 — Live)
+
+The workflow engine drives what operators see on station tablets. Key files:
+
+| File | Purpose |
+|------|---------|
+| `logic/workflowEvaluation.ts` | Checkpoint evaluator — determines what gate blocks an order |
+| `logic/workflowRuntimeState.ts` | In-memory runtime reducer — holds operator actions, fires `WORKFLOW_RUNTIME_UPDATED_EVENT` |
+| `logic/workflowPanelSelectors.ts` | Groups orders into DO_NOW / BLOCKED_HERE / UPSTREAM_ACTION / INCOMING / WATCH_ONLY |
+| `logic/orderWorkflow.ts` | Generates the workflow signal (gate, message, action, pressure score) |
+| `logic/orderBlueprints.ts` | Resolves part blueprints and detects missing-blueprint kickback |
+| `logic/workflowActions.ts` | Logs operator actions to localStorage |
+
+**WorkCenterWorkflowPanelV2** is the primary station tablet card. It:
+- Listens to `WORKFLOW_RUNTIME_UPDATED_EVENT` and `storage` to re-render on action
+- Groups orders by operator responsibility
+- Shows crew on shift for this work center
+- Routes action buttons to Receiving, Engineering, or Maintenance
+
+---
+
+## Production Order Fields (key additions)
+
+```typescript
+workflowOrigin: 'SALES' | 'LEGACY_SHOP_FLOOR'
+engineeringRequired: boolean
+engineeringStatus: 'PENDING' | 'RELEASED' | 'NOT_REQUIRED'
+productionSupervisorAcknowledged: boolean
+salesReleasedAt: string         // ISO timestamp
+blueprintId: string             // links to partBlueprints
+partNumber: string
+drawingRevision: string
+materialStatus: MaterialStatus
+```
 
 ---
 
@@ -190,27 +280,12 @@ accent: '#f97316' (safety orange)
 
 ---
 
-## Current Features
-
-### Complete & Working
-
-1. **Workflow Page** — role-based view (Operator / Lead / Manager)
-2. **Back Navigation** — full tab history stack, `← BACK` in header
-3. **Dashboard** — overview of machine status, alerts, maintenance
-4. **Maintenance System** — request submission, workflow, scheduled tasks, analytics, CSV export
-5. **Machine Monitoring** — grid view, alert filtering, CNC diagnostics, simulators
-6. **Production** — orders tracking, coverage/crew management, receiving workflow, plant mapping
-7. **Safety** — risk tracking
-8. **Documents** — categorized plant docs
-9. **Dark/Light Theme** — full app support
-10. **Mobile-Friendly** — touch-optimized
-
----
-
 ## localStorage Schema
 
 - `jcm_theme` — 'dark' | 'light'
 - `jcm_maintenance_requests` — MaintenanceRequest[]
+- `jcm_live_coverage_v1` — CoveragePerson[] (falls back to seedCoverage)
+- `jcm_workflow_actions` — WorkflowAction[] (action log)
 
 ---
 
@@ -221,16 +296,26 @@ accent: '#f97316' (safety orange)
 - Analytics to show value
 - CSV export for management review
 - Mobile-friendly interface
-- Target: 3-5 Machine Shop operators
 
 ### Phase 2 — In Progress
+
 **Done:**
-- Role-based WorkflowPage
+- Role-based WorkflowPage (Operator / Lead / Manager)
 - Back navigation (tabHistory stack)
 - Dev Tools in drawer (role/dept switchers, War Room)
+- Real JCM data: workers, coverage, documents, risk, productionOrders (all files)
+- WorkCenterWorkflowPanelV2 — station tablet grouped by operator responsibility
+- Checkpoint-based workflow evaluator
+- Runtime state reducer with custom event bus
+- Panel selectors (DO_NOW / BLOCKED_HERE / UPSTREAM_ACTION / INCOMING / WATCH_ONLY)
+- Sales + Engineering departments and work centers
+- GitHub Actions CI pipeline
 
 **Queued:**
-- App fluidity (rough spots, incomplete pages)
+- Crew data cycling into WorkCenterWorkflowPanelV2 tablet card
+- onOpenEngineering wired from WorkCenterDetailPage → App.tsx
+- App fluidity (rough spots, incomplete department pages)
+- DepartmentCards dark mode support (currently hardcoded light colors)
 - Supabase backend (replace localStorage) — after app is solid
 - Multi-user real-time sync
 - Photo attachments on maintenance requests
@@ -263,16 +348,19 @@ Currently `src/modules/crewGuidance.ts` exists. Full migration after Phase 2 sta
 ## Quick Reference
 
 ```bash
+# Always do this first
+git fetch origin main && git log HEAD..origin/main --oneline
+
 npm run dev          # start dev server
 npm run build        # type-check + build
 git status
 git add src/...
 git commit -m "message"
-git push -u origin claude/pull-repo-gl8xw
+git push -u origin <your-branch>
 ```
 
 ---
 
-**Last Updated:** April 30, 2026  
-**Version:** v1.1 (Phase 2 in progress)  
+**Last Updated:** May 1, 2026
+**Version:** v1.2 (Phase 2 — workflow engine live)
 **Developer:** Manufacturing Engineering Technician, JCM Industries, Nash, Texas

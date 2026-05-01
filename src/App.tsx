@@ -393,6 +393,10 @@ export default function App() {
             setReceivingInitialView(view);
             navigateTo('receiving');
           }}
+          onOpenEngineering={() => {
+            setSelectedWorkCenter(null);
+            navigateTo('orders');
+          }}
           theme={theme}
         />
       </div>

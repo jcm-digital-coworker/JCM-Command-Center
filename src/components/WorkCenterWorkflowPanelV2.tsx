@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { WorkCenter } from '../types/plant';
+import type { CoveragePerson } from '../types/coverage';
+import { seedCoverage } from '../data/coverage';
+import { COVERAGE_STORAGE_KEY } from '../logic/coverage';
 import { getWorkCenterWorkflowGroups } from '../logic/workflowPanelSelectors';
 import { addWorkflowAction } from '../logic/workflowActions';
 import { applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
@@ -20,6 +23,7 @@ export default function WorkCenterWorkflowPanelV2({
   onOpenMaintenance,
 }: Props) {
   const [runtimeVersion, setRuntimeVersion] = useState(0);
+  const [coveragePeople] = useState<CoveragePerson[]>(() => loadCoverage());
 
   useEffect(() => {
     const refresh = () => setRuntimeVersion((version) => version + 1);
@@ -30,6 +34,11 @@ export default function WorkCenterWorkflowPanelV2({
       window.removeEventListener('storage', refresh);
     };
   }, []);
+
+  const deptCrew = useMemo(
+    () => coveragePeople.filter((p) => p.department === workCenter.department),
+    [coveragePeople, workCenter.department],
+  );
 
   const groups = getWorkCenterWorkflowGroups(workCenter);
   const activeCount = groups.reduce((total, group) => total + group.cards.length, 0);
@@ -44,6 +53,23 @@ export default function WorkCenterWorkflowPanelV2({
         </div>
         <strong style={{ color: '#f97316', whiteSpace: 'nowrap' }}>{activeCount} VISIBLE</strong>
       </div>
+
+      {deptCrew.length > 0 && (
+        <div style={crewStripStyle(theme)}>
+          <div style={crewStripLabelStyle}>CREW ON SHIFT</div>
+          <div style={crewRowStyle}>
+            {deptCrew.map((person) => (
+              <div key={person.id} style={crewChipStyle(person.status, theme)}>
+                <div style={crewDotStyle(person.status)} />
+                <div>
+                  <div style={crewNameStyle(theme)}>{person.name}</div>
+                  <div style={crewStationStyle}>{person.station}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {groups.length === 0 ? <div style={{ color: '#64748b' }}>No active order signals for this work center.</div> : null}
 
@@ -149,6 +175,33 @@ function act(label: string, orderNumber: string, dept: WorkCenter['department'],
   addWorkflowAction({ orderNumber, actionType: 'WORK_STARTED', department: dept, note: label });
   applyWorkflowRuntimeAction(orderNumber, 'START_WORK', label);
 }
+
+function loadCoverage(): CoveragePerson[] {
+  try {
+    const stored = localStorage.getItem(COVERAGE_STORAGE_KEY);
+    if (!stored) return seedCoverage;
+    const parsed = JSON.parse(stored) as CoveragePerson[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : seedCoverage;
+  } catch {
+    return seedCoverage;
+  }
+}
+
+function crewDotColor(status: string): string {
+  if (status === 'AVAILABLE') return '#10b981';
+  if (status === 'ASSIGNED') return '#f59e0b';
+  if (status === 'BREAK') return '#8b5cf6';
+  return '#64748b';
+}
+
+function crewStripStyle(theme: 'dark' | 'light') { return { padding: '10px 14px', borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0', marginBottom: 14 } as const; }
+function crewChipStyle(status: string, theme: 'dark' | 'light') { const color = crewDotColor(status); return { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 6, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: `1px solid ${color}44`, borderLeft: `3px solid ${color}` } as const; }
+function crewDotStyle(status: string) { return { width: 8, height: 8, borderRadius: 999, background: crewDotColor(status), marginTop: 4, flexShrink: 0 } as const; }
+function crewNameStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 12, fontWeight: 900 } as const; }
+
+const crewStripLabelStyle = { color: '#f97316', fontSize: 10, fontWeight: 900, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8 } as const;
+const crewRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 } as const;
+const crewStationStyle = { color: '#64748b', fontSize: 11, fontWeight: 700, marginTop: 2 } as const;
 
 function panelStyle(theme: 'dark' | 'light') { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#fff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
 function groupStyle(theme: 'dark' | 'light') { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
