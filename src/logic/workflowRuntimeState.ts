@@ -74,7 +74,7 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
   if (actionKind === 'REQUEST_MATERIAL') {
     return {
       materialStatus: 'ORDER_REQUIRED',
-      status: 'blocked',
+      status: 'BLOCKED',
       flowStatus: 'blocked',
     };
   }
@@ -89,7 +89,7 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
   if (actionKind === 'ESCALATE_ENGINEERING') {
     return {
       engineeringStatus: 'PENDING',
-      status: 'hold',
+      status: 'HOLD',
       flowStatus: 'blocked',
     };
   }
@@ -111,7 +111,7 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
     return {
       blockers: [],
       flowStatus: 'runnable',
-      status: 'ready',
+      status: 'READY',
     };
   }
 
