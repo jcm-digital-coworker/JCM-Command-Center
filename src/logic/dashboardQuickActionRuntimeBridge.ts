@@ -23,6 +23,10 @@ type EmbeddedPrompt = {
   tone: 'red' | 'orange' | 'blue' | 'green' | 'slate';
 };
 
+let promptRenderQueued = false;
+let promptRenderInProgress = false;
+let lastPromptSignature = '';
+
 export function installDashboardQuickActionRuntimeBridge() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
@@ -61,25 +65,48 @@ export function installDashboardQuickActionRuntimeBridge() {
   window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, queuePromptRender);
   window.addEventListener('storage', queuePromptRender);
 
-  const observer = new MutationObserver(queuePromptRender);
+  const observer = new MutationObserver((mutations) => {
+    if (promptRenderInProgress) return;
+    const promptOnlyMutation = mutations.every((mutation) => {
+      const target = mutation.target as HTMLElement | null;
+      return Boolean(target?.closest?.(`#${PROMPT_CONTAINER_ID}`));
+    });
+    if (promptOnlyMutation) return;
+    queuePromptRender();
+  });
   observer.observe(document.body, { childList: true, subtree: true });
 
   queuePromptRender();
 }
 
 function queuePromptRender() {
-  window.setTimeout(renderEmbeddedPrompts, 0);
+  if (promptRenderQueued) return;
+  promptRenderQueued = true;
+
+  window.setTimeout(() => {
+    promptRenderQueued = false;
+    renderEmbeddedPrompts();
+  }, 50);
 }
 
 function renderEmbeddedPrompts() {
   const quickActionsSection = findQuickActionsSection();
   if (!quickActionsSection) return;
 
+  const prompts = getEmbeddedPrompts();
+  const nextSignature = JSON.stringify(prompts);
   const existing = document.getElementById(PROMPT_CONTAINER_ID);
+
+  if (existing && nextSignature === lastPromptSignature) return;
+
+  promptRenderInProgress = true;
   existing?.remove();
 
-  const prompts = getEmbeddedPrompts();
-  if (prompts.length === 0) return;
+  if (prompts.length === 0) {
+    lastPromptSignature = nextSignature;
+    promptRenderInProgress = false;
+    return;
+  }
 
   const container = document.createElement('div');
   container.id = PROMPT_CONTAINER_ID;
@@ -93,6 +120,8 @@ function renderEmbeddedPrompts() {
   });
 
   quickActionsSection.appendChild(container);
+  lastPromptSignature = nextSignature;
+  promptRenderInProgress = false;
 }
 
 function findQuickActionsSection(): HTMLElement | undefined {
