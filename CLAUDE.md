@@ -158,7 +158,16 @@ src/
 │   ├── ReceivingPage.tsx
 │   ├── WorkCenterDetailPage.tsx  ← station tablet, wires WorkCenterWorkflowPanelV2
 │   ├── WarRoomContextPage.tsx    ← dev/internal only
-│   └── [department pages]
+│   └── departments/
+│       ├── DepartmentPageTools.tsx      ← PageShell, Section, OrderCard, LiveCrewSection, CardGrid, helpers
+│       ├── SalesDepartmentPage.tsx
+│       ├── EngineeringDepartmentPage.tsx
+│       ├── MaterialHandlingDepartmentPage.tsx
+│       ├── FabDepartmentPage.tsx
+│       ├── CoatingDepartmentPage.tsx
+│       ├── AssemblyDepartmentPage.tsx
+│       ├── ShippingDepartmentPage.tsx
+│       └── QADepartmentPage.tsx
 ├── types/
 │   ├── app.ts              ← AppTab, RoleView, DepartmentFilter
 │   ├── machine.ts          ← Department type (includes Sales, Engineering)
@@ -304,22 +313,26 @@ accent: '#f97316' (safety orange)
 - Back navigation (tabHistory stack)
 - Dev Tools in drawer (role/dept switchers, War Room)
 - Real JCM data: workers, coverage, documents, risk, productionOrders (all files)
-- WorkCenterWorkflowPanelV2 — station tablet grouped by operator responsibility
+- WorkCenterWorkflowPanelV2 — station tablet grouped by operator responsibility, crew strip
 - Checkpoint-based workflow evaluator
 - Runtime state reducer with custom event bus
 - Panel selectors (DO_NOW / BLOCKED_HERE / UPSTREAM_ACTION / INCOMING / WATCH_ONLY)
-- Sales + Engineering departments and work centers
+- Sales + Engineering departments, work centers, and department pages
 - GitHub Actions CI pipeline
+- Crew data (LiveCrewSection) wired into all department pages
+- onOpenEngineering wired WorkCenterDetailPage → App.tsx → orders tab
+- OrderCard rewritten to show real data (priority, flowStatus, blockers, route)
+- Photo attachments on maintenance requests (base64, max 3, 2MB each)
+- All 5 maintenance priorities surfaced in submit form (NORMAL / URGENT / LINE_DOWN / MACHINE_DOWN / SAFETY)
 
 **Queued:**
-- Crew data cycling into WorkCenterWorkflowPanelV2 tablet card
-- onOpenEngineering wired from WorkCenterDetailPage → App.tsx
-- App fluidity (rough spots, incomplete department pages)
-- DepartmentCards dark mode support (currently hardcoded light colors)
-- Supabase backend (replace localStorage) — after app is solid
-- Multi-user real-time sync
-- Photo attachments on maintenance requests
-- Email notifications
+- App fluidity audit — remaining rough spots in OrdersPage, DashboardPage, PlantMapPage, WorkflowPage views
+- Supabase backend (replace localStorage) — Phase 3, after app is solid
+- Multi-user real-time sync — Phase 3
+- Email / push notifications — requires backend service, Phase 3
+
+**Dead code note:**
+- `DepartmentCards.tsx` is not imported anywhere in the app. Do not build on it. Safe to delete if it causes confusion.
 
 ### Phase 3 (Future)
 - ERP/MES integration
@@ -362,5 +375,5 @@ git push -u origin <your-branch>
 ---
 
 **Last Updated:** May 1, 2026
-**Version:** v1.2 (Phase 2 — workflow engine live)
+**Version:** v1.3 (Phase 2 — department pages complete, fluidity audit queued)
 **Developer:** Manufacturing Engineering Technician, JCM Industries, Nash, Texas
