@@ -28,6 +28,8 @@ export type ProductLane =
 
 export type ProductionOrderType = 'STANDARD' | 'ENGINEERED' | 'REPAIR' | 'SERVICE' | 'UNKNOWN';
 
+export type WorkflowOrigin = 'SALES' | 'LEGACY_SHOP_FLOOR';
+
 export type MaterialStatus =
   | 'RECEIVED'
   | 'PARTIAL'
@@ -99,6 +101,7 @@ export type ProductionOrder = {
 
   productLane?: ProductLane;
   orderType?: ProductionOrderType;
+  workflowOrigin?: WorkflowOrigin;
   blockedReason?: BlockedReason;
   notes?: string[];
 
