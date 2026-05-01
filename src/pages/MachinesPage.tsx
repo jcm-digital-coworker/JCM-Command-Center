@@ -24,7 +24,7 @@ export default function MachinesPage({
           letterSpacing: '0.5px',
         }}
       >
-        MACHINES
+        EQUIPMENT
       </h2>
       <p
         style={{
@@ -73,7 +73,7 @@ export function AlertsPage({
           letterSpacing: '0.5px',
         }}
       >
-        ALERTS
+        ACTIVE ALERTS
       </h2>
       <p
         style={{
@@ -84,11 +84,11 @@ export function AlertsPage({
           letterSpacing: '0.5px',
         }}
       >
-        {alerts.length} ACTIVE
+        {alerts.length} ACTIVE EQUIPMENT ALERTS
       </p>
 
       {alerts.length === 0 ? (
-        <div style={getEmptyStateStyle(theme)}>✅ NO ACTIVE ALERTS</div>
+        <div style={getEmptyStateStyle(theme)}>NO ACTIVE EQUIPMENT ALERTS</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {alerts.map((machine) => (
