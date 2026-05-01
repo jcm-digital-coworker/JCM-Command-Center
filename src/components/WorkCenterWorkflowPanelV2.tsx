@@ -1,7 +1,7 @@
 import type { WorkCenter } from '../types/plant';
 import { productionOrders } from '../data/productionOrders';
 import { partBlueprints } from '../data/partBlueprints';
-import { getBlueprintForOrder, getStationPacket } from '../logic/orderBlueprints';
+import { getBlueprintForOrder, getStationPacket, orderRequiresBlueprintPacket } from '../logic/orderBlueprints';
 import { getWorkflowSignal } from '../logic/orderWorkflow';
 
 type Props = {
@@ -85,8 +85,8 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
   return <div style={{ padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#fff', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0' }}><div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 900 }}>{label}</div><div style={{ color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontWeight: 900 }}>{value}</div></div>;
 }
 
-function needsMaterial(order: (typeof productionOrders)[number]) { return String(order.materialStatus ?? '').toUpperCase() === 'MISSING' || String(order.materialStatus ?? '').toUpperCase() === 'NOT_RECEIVED' || order.blockers.some((b) => b.type === 'material'); }
-function rank(order: (typeof productionOrders)[number]) { return (String(order.priority).toLowerCase() === 'critical' ? 300 : String(order.priority).toLowerCase() === 'hot' ? 200 : 100) + (String(order.flowStatus).toLowerCase() === 'blocked' ? 60 : 0) + (!order.blueprintId && !order.partNumber ? 80 : 0) + dueLabel(order.projectedShipDate).score; }
+function needsMaterial(order: (typeof productionOrders)[number]) { const materialStatus = String(order.materialStatus ?? '').toUpperCase(); return materialStatus === 'MISSING' || materialStatus === 'NOT_RECEIVED' || materialStatus === 'ORDER_REQUIRED' || order.blockers.some((b) => b.type === 'material'); }
+function rank(order: (typeof productionOrders)[number]) { const missingBlueprintScore = orderRequiresBlueprintPacket(order) && !getBlueprintForOrder(order, partBlueprints) ? 80 : 0; return (String(order.priority).toLowerCase() === 'critical' ? 300 : String(order.priority).toLowerCase() === 'hot' ? 200 : 100) + (String(order.flowStatus).toLowerCase() === 'blocked' ? 60 : 0) + missingBlueprintScore + dueLabel(order.projectedShipDate).score; }
 function getUrgency(order: (typeof productionOrders)[number], status: string, gate: string) { if (status === 'MISSING_BLUEPRINT' || gate === 'ENGINEERING') return { label: 'ENGINEERING REQUIRED', color: '#dc2626' }; if (status === 'BLOCKED') return { label: 'BLOCKED', color: '#dc2626' }; if (String(order.priority).toLowerCase() === 'critical') return { label: 'CRITICAL', color: '#dc2626' }; if (String(order.priority).toLowerCase() === 'hot') return { label: 'HOT', color: '#f59e0b' }; return { label: 'READY', color: '#10b981' }; }
 function dueLabel(date?: string) { if (!date) return { label: 'NO DATE', color: '#64748b', score: 0 }; const days = Math.ceil((new Date(`${date}T00:00:00`).getTime() - Date.now()) / 86400000); if (days < 0) return { label: 'OVERDUE', color: '#dc2626', score: 100 }; if (days === 0) return { label: 'DUE TODAY', color: '#dc2626', score: 90 }; if (days <= 2) return { label: `DUE IN ${days} DAY${days === 1 ? '' : 'S'}`, color: '#f59e0b', score: 60 }; return { label: `DUE IN ${days} DAYS`, color: '#10b981', score: 0 }; }
 function owner(gate: string, current: string) { if (gate === 'ENGINEERING') return 'Engineering'; if (gate === 'RECEIVING') return 'Receiving'; if (gate === 'SUPERVISOR') return 'Production Supervisor'; if (gate === 'SALES') return 'Sales'; return current; }
