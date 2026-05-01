@@ -37,6 +37,8 @@ import CoatingDepartmentPage from './pages/departments/CoatingDepartmentPage';
 import AssemblyDepartmentPage from './pages/departments/AssemblyDepartmentPage';
 import ShippingDepartmentPage from './pages/departments/ShippingDepartmentPage';
 import QADepartmentPage from './pages/departments/QADepartmentPage';
+import SalesDepartmentPage from './pages/departments/SalesDepartmentPage';
+import EngineeringDepartmentPage from './pages/departments/EngineeringDepartmentPage';
 import WarRoomContextPage from './pages/WarRoomContextPage';
 
 type DetailTab = 'overview' | 'events' | 'patterns' | 'notes';
@@ -682,6 +684,10 @@ export default function App() {
 
       {tab === 'plantMap' && <PlantMapPage theme={theme} />}
 
+      {tab === 'sales' && <SalesDepartmentPage theme={theme} />}
+
+      {tab === 'engineering' && <EngineeringDepartmentPage theme={theme} />}
+
       {tab === 'materialHandling' && (
         <MaterialHandlingDepartmentPage theme={theme} />
       )}
@@ -721,6 +727,8 @@ function getCommandLabel(tab: AppTab): string {
     coverage: 'Crew / Coverage',
     orders: 'Orders',
     plantMap: 'Plant Map',
+    sales: 'Sales',
+    engineering: 'Engineering',
     materialHandling: 'Material Handling',
     fab: 'Fab',
     coating: 'Coating',

@@ -17,6 +17,8 @@ export type AppTab =
   | 'assembly'
   | 'shipping'
   | 'qa'
+  | 'sales'
+  | 'engineering'
   | 'documents'
   | 'risk'
   | 'warRoomContext';

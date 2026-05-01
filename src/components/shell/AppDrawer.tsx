@@ -37,6 +37,8 @@ export default function AppDrawer({
     { id: 'orders', label: 'ORDERS' },
     { id: 'coverage', label: 'CREW / COVERAGE' },
     { id: 'plantMap', label: 'PLANT MAP' },
+    { id: 'sales', label: 'SALES' },
+    { id: 'engineering', label: 'ENGINEERING' },
     { id: 'materialHandling', label: 'MATERIAL HANDLING' },
     { id: 'fab', label: 'FAB' },
     { id: 'coating', label: 'COATING' },
