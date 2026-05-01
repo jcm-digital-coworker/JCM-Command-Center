@@ -38,6 +38,27 @@ type DepartmentCrewRule = {
 };
 
 const departmentCrewRules: Record<Department, DepartmentCrewRule> = {
+  Sales: {
+    requiredSkills: ['leadership'],
+    readyAction:
+      'Clear order release, customer priority, or change-note questions before the order enters production flow.',
+    blockedAction:
+      'Hold production handoff until sales release details, customer requirements, or priority changes are confirmed.',
+  },
+  Engineering: {
+    requiredSkills: ['leadership'],
+    readyAction:
+      'Clear blueprint, routing, revision, or production packet questions that unblock the next department.',
+    blockedAction:
+      'Do not push engineered work forward until drawings, routing, and revision status are released.',
+  },
+  Office: {
+    requiredSkills: ['leadership'],
+    readyAction:
+      'Clear scheduling, purchasing, or office decisions that affect plant flow.',
+    blockedAction:
+      'Do not push held work forward until the required office decision is made.',
+  },
   Receiving: {
     requiredSkills: ['receiving', 'material_handling'],
     readyAction:
@@ -118,13 +139,6 @@ const departmentCrewRules: Record<Department, DepartmentCrewRule> = {
       'Assign maintenance coverage to the issue that unlocks the most plant flow.',
     blockedAction:
       'Escalate machine-down, safety, or line-down blockers before routine work.',
-  },
-  Office: {
-    requiredSkills: ['leadership'],
-    readyAction:
-      'Clear scheduling, purchasing, or engineering questions that affect plant flow.',
-    blockedAction:
-      'Do not push held work forward until the required office or engineering decision is made.',
   },
 };
 
