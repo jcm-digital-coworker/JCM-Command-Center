@@ -102,9 +102,9 @@ function FlowOrderCard({ order, theme }: { order: ProductionOrder; theme: 'dark'
 
       <div style={infoGridStyle}>
         <Info label="Lane" value={formatStatus(lane)} theme={theme} />
-        <Info label="Part" value={order.assemblyPartNumber} theme={theme} />
+        <Info label="Part" value={order.assemblyPartNumber ?? 'No assembly part'} theme={theme} />
         <Info label="Current Area" value={order.currentDepartment} theme={theme} />
-        <Info label="Material" value={formatStatus(order.materialStatus)} theme={theme} />
+        <Info label="Material" value={formatStatus(order.materialStatus ?? 'UNKNOWN')} theme={theme} />
       </div>
 
       {flow && (
