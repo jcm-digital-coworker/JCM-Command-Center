@@ -1,8 +1,7 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { maintenanceRequests } from '../data/maintenanceRequests';
 import { machines } from '../data/machine';
 import { maintenanceTasks } from '../data/maintenance';
-import type { MaintenanceRequest } from '../types/maintenanceRequest';
 
 interface MaintenanceAnalyticsPageProps {
   theme?: 'dark' | 'light';
@@ -11,8 +10,6 @@ interface MaintenanceAnalyticsPageProps {
 export default function MaintenanceAnalyticsPage({
   theme = 'dark',
 }: MaintenanceAnalyticsPageProps) {
-  const [dateRange, setDateRange] = useState<'week' | 'month' | 'all'>('week');
-
   const analytics = useMemo(() => {
     const completed = maintenanceRequests.filter((r) => r.status === 'COMPLETED');
     
