@@ -121,4 +121,6 @@ export type ProductionOrder = {
   quantity?: number;
   requiredDepartments?: Department[];
   dependencies?: OrderDependency[];
+  lastAction?: string;
+  lastActionAt?: string;
 };
