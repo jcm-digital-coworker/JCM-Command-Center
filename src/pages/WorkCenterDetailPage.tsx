@@ -6,6 +6,8 @@ import type { RiskItem } from '../types/risk';
 import type { RoleView } from '../types/app';
 import StatusBadge from '../components/StatusBadge';
 import ReceivingWorkflowPanel from '../components/ReceivingWorkflowPanel';
+import ReceivingClosurePanel from '../components/ReceivingClosurePanel';
+import EngineeringBacklogPanel from '../components/EngineeringBacklogPanel';
 import LiveCoveragePanel from '../components/LiveCoveragePanel';
 import WorkCenterWorkflowPanelV2 from '../components/WorkCenterWorkflowPanelV2';
 import { workCenterAssets } from '../data/workCenterAssets';
@@ -51,6 +53,7 @@ export default function WorkCenterDetailPage({
   const isMaintenanceView = isMaintenanceRole(roleView);
   const resourceModel = getResourceModel(workCenter.department);
   const isReceiving = workCenter.id === 'receiving';
+  const showEngineeringLoop = isSupervisorView || workCenter.department === 'Fab' || workCenter.department === 'QA';
   const priority = getPriority(workCenter, departmentMachines, activeTasks, activeRisks);
   const tabletFocus = getTabletFocus(workCenter.id, roleView);
 
@@ -94,6 +97,9 @@ export default function WorkCenterDetailPage({
         onOpenReceiving={onOpenReceiving}
         onOpenMaintenance={onGoToMaintenance}
       />
+
+      {isReceiving ? <ReceivingClosurePanel theme={theme} /> : null}
+      {showEngineeringLoop ? <EngineeringBacklogPanel theme={theme} /> : null}
 
       {isSupervisorView ? (
         <LiveCoveragePanel theme={theme} department={workCenter.department} onOpenStatus={onOpenCoverage} />
