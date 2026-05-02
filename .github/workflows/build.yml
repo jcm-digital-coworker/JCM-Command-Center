@@ -29,3 +29,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Upload demo build
+        uses: actions/upload-artifact@v4
+        with:
+          name: jcm-command-center-demo
+          path: dist
