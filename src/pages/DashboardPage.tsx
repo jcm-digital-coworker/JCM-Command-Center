@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Machine } from '../types/machine';
 import type { MaintenanceTask } from '../types/maintenance';
@@ -6,8 +6,9 @@ import type { RiskItem } from '../types/risk';
 import type { AppTab, RoleView } from '../types/app';
 import type { WorkCenter } from '../types/plant';
 import type { ProductionOrder } from '../types/productionOrder';
-import { productionOrders } from '../data/productionOrders';
 import { getOrderStatusLabel, getOrderBlockReason, formatBlockedReason } from '../logic/orderReadiness';
+import { getDashboardRuntimeTruth } from '../logic/dashboardRuntimeSelectors';
+import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import StatusBadge from '../components/StatusBadge';
 
 interface DashboardPageProps {
@@ -55,18 +56,32 @@ export default function DashboardPage({
   theme = 'dark',
 }: DashboardPageProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [runtimeVersion, setRuntimeVersion] = useState(0);
 
-  const openRisks = risks.filter((r) => r.status === 'OPEN' || r.status === 'IN_PROGRESS');
-  const activeTasks = tasks.filter((t) => t.status !== 'OK');
-  const openOrders = productionOrders.filter((order) => order.status !== 'DONE');
-  const blockedOrders = openOrders.filter((order) => order.status === 'BLOCKED');
-  const materialIssues = openOrders.filter((order) => order.materialStatus !== 'RECEIVED');
-  const qaHolds = openOrders.filter((order) => order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED');
-  const runnableOrders = openOrders.filter((order) => order.status === 'READY' || order.status === 'IN_PROGRESS');
-  const dueSoonOrders = [...openOrders]
-  .sort((a, b) => (a.projectedShipDate ?? '').localeCompare(b.projectedShipDate ?? ''))
-  .slice(0, 4);
-  const plantCriticals = blockedOrders.length + materialIssues.length + qaHolds.length + alerts.length;
+  useEffect(() => {
+    const refresh = () => setRuntimeVersion((version) => version + 1);
+    window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
+
+  void runtimeVersion;
+
+  const openRisks = risks.filter((risk) => risk.status === 'OPEN' || risk.status === 'IN_PROGRESS');
+  const activeTasks = tasks.filter((task) => task.status !== 'OK');
+  const {
+    allOrders,
+    openOrders,
+    blockedOrders,
+    materialIssues,
+    qaHolds,
+    runnableOrders,
+    dueSoonOrders,
+    plantCriticals,
+  } = getDashboardRuntimeTruth(alerts.length);
 
   const quickActions = getQuickActionsForRole(roleView, {
     alertCount: alerts.length,
@@ -92,8 +107,8 @@ export default function DashboardPage({
 
       <QuickActionsPanel roleView={roleView} actions={quickActions} onGoToTab={onGoToTab} theme={theme} />
 
-      <div style={getOverviewBarStyle(theme)}>
-        <StatusMetric label="OPEN ORDERS" value={openOrders.length} total={productionOrders.length} color="#3b82f6" theme={theme} />
+      <div style={getOverviewBarStyle()}>
+        <StatusMetric label="OPEN ORDERS" value={openOrders.length} total={allOrders.length} color="#3b82f6" theme={theme} />
         <StatusMetric label="BLOCKED" value={blockedOrders.length} total={openOrders.length} color="#dc2626" highlight={blockedOrders.length > 0} theme={theme} />
         <StatusMetric label="RUNNABLE" value={runnableOrders.length} total={openOrders.length} color="#10b981" theme={theme} />
         <StatusMetric label="MATERIAL ISSUES" value={materialIssues.length} total={openOrders.length} color="#f59e0b" highlight={materialIssues.length > 0} theme={theme} />
@@ -103,7 +118,7 @@ export default function DashboardPage({
         <MissionCard
           title="Blocked Flow"
           value={`${blockedOrders.length} order${blockedOrders.length === 1 ? '' : 's'}`}
-          detail={blockedOrders.length > 0 ? 'Needs action before labor is spent' : 'No blocked sample orders'}
+          detail={blockedOrders.length > 0 ? 'Needs action before labor is assigned' : 'No blocked sample orders'}
           color="#dc2626"
           theme={theme}
           onClick={() => onGoToTab('orders')}
@@ -111,7 +126,7 @@ export default function DashboardPage({
         <MissionCard
           title="Crew Guidance"
           value={runnableOrders.length > 0 ? 'Runnable work exists' : 'No ready orders'}
-          detail="Guidance > control. Use flow, material, and skill availability before assigning people."
+          detail="Guidance over control. Use flow, material, and skill availability before assigning people."
           color="#8b5cf6"
           theme={theme}
           onClick={() => onGoToTab('coverage')}
@@ -119,7 +134,7 @@ export default function DashboardPage({
         <MissionCard
           title="Material Readiness"
           value={`${materialIssues.length} not fully ready`}
-          detail="Receiving is the physical start gate for every order"
+          detail="Receiving is the physical start gate for every order."
           color="#f97316"
           theme={theme}
           onClick={() => onGoToTab('receiving')}
@@ -127,7 +142,7 @@ export default function DashboardPage({
         <MissionCard
           title="Plant Criticals"
           value={plantCriticals.toString()}
-          detail="Orders, material, QA, maintenance, and equipment alerts combined"
+          detail="Orders, material, QA, maintenance, and equipment alerts combined."
           color={plantCriticals > 0 ? '#dc2626' : '#10b981'}
           theme={theme}
           onClick={() => onGoToTab(plantCriticals > 0 ? 'orders' : 'plantMap')}
@@ -211,7 +226,7 @@ export default function DashboardPage({
             <div key={order.orderNumber} style={getItemStyle(theme)}>
               <div>
                 <div style={getItemTitleStyle(theme)}>{order.orderNumber} quality hold</div>
-                <div style={mutedTextStyle}>{order.assemblyPartNumber} • {order.qaStatus}</div>
+                <div style={mutedTextStyle}>{order.assemblyPartNumber} - {order.qaStatus}</div>
               </div>
               <span style={getPriorityBadge('CRITICAL')}>{order.qaStatus}</span>
             </div>
@@ -220,7 +235,7 @@ export default function DashboardPage({
             <div key={risk.id} style={getItemStyle(theme)}>
               <div>
                 <div style={getItemTitleStyle(theme)}>{risk.title}</div>
-                <div style={mutedTextStyle}>{risk.department} • {risk.category ?? risk.source}</div>
+                <div style={mutedTextStyle}>{risk.department} - {risk.category ?? risk.source}</div>
               </div>
               <span style={getPriorityBadge(risk.severity ?? risk.level)}>{risk.severity ?? risk.level}</span>
             </div>
@@ -229,7 +244,7 @@ export default function DashboardPage({
             <div key={task.id} style={getItemStyle(theme)}>
               <div>
                 <div style={getItemTitleStyle(theme)}>{task.title}</div>
-                <div style={mutedTextStyle}>Maintenance • Due {task.nextDue}</div>
+                <div style={mutedTextStyle}>Maintenance - Due {task.nextDue}</div>
               </div>
               <span style={getPriorityBadge(task.status)}>{task.status.replace('_', ' ')}</span>
             </div>
@@ -254,7 +269,7 @@ export default function DashboardPage({
             <div key={machine.id} style={getItemStyle(theme)} onClick={() => onOpenMachine(machine)}>
               <div>
                 <div style={getItemTitleStyle(theme)}>{machine.name}</div>
-                <div style={mutedTextStyle}>{machine.department} • {machine.lastActivity}</div>
+                <div style={mutedTextStyle}>{machine.department} - {machine.lastActivity}</div>
               </div>
               <StatusBadge state={machine.state} priority={machine.alarmPriority} />
             </div>
@@ -267,56 +282,11 @@ export default function DashboardPage({
 }
 
 function getQuickActionsForRole(roleView: RoleView, state: QuickActionState): QuickAction[] {
-  const alertAction = createLiveAction(
-    'View Equipment Alerts',
-    'No active equipment alerts in current view',
-    'Open active equipment alarms and offline status',
-    'alerts',
-    state.alertCount,
-    'red',
-    'green',
-    5,
-  );
-  const maintenanceAction = createLiveAction(
-    'Open Maintenance',
-    'No active maintenance pressure in current view',
-    'Review active maintenance requests and scheduled task pressure',
-    'maintenance',
-    state.activeTaskCount,
-    'orange',
-    'slate',
-    4,
-  );
-  const qaAction = createLiveAction(
-    'Review QA / Safety',
-    'No open QA / safety signal in current view',
-    'Review quality holds, safety signals, and risk items',
-    'risk',
-    state.openRiskCount + state.qaHoldCount,
-    'red',
-    'slate',
-    5,
-  );
-  const blockerAction = createLiveAction(
-    'Resolve Blockers',
-    'No blocked orders in current view',
-    'Review blocked flow before assigning labor',
-    'orders',
-    state.blockedOrderCount,
-    'red',
-    'orange',
-    6,
-  );
-  const materialAction = createLiveAction(
-    'Resolve Material Issues',
-    'Material is clear in current view',
-    'Open receiving and material readiness issues',
-    'receiving',
-    state.materialIssueCount,
-    'orange',
-    'green',
-    5,
-  );
+  const alertAction = createLiveAction('View Equipment Alerts', 'No active equipment alerts in current view', 'Open active equipment alarms and offline status', 'alerts', state.alertCount, 'red', 'green', 5);
+  const maintenanceAction = createLiveAction('Open Maintenance', 'No active maintenance pressure in current view', 'Review active maintenance requests and scheduled task pressure', 'maintenance', state.activeTaskCount, 'orange', 'slate', 4);
+  const qaAction = createLiveAction('Review QA / Safety', 'No open QA / safety signal in current view', 'Review quality holds, safety signals, and risk items', 'risk', state.openRiskCount + state.qaHoldCount, 'red', 'slate', 5);
+  const blockerAction = createLiveAction('Resolve Blockers', 'No blocked orders in current view', 'Review blocked flow before assigning labor', 'orders', state.blockedOrderCount, 'red', 'orange', 6);
+  const materialAction = createLiveAction('Resolve Material Issues', 'Material is clear in current view', 'Open receiving and material readiness issues', 'receiving', state.materialIssueCount, 'orange', 'green', 5);
 
   if (roleView === 'Operator') {
     return sortQuickActions([
@@ -399,16 +369,7 @@ function getQuickActionsForRole(roleView: RoleView, state: QuickActionState): Qu
   ]);
 }
 
-function createLiveAction(
-  label: string,
-  clearDetail: string,
-  activeDetail: string,
-  target: AppTab,
-  count: number,
-  activeTone: QuickAction['tone'],
-  clearTone: QuickAction['tone'],
-  activePriority: number,
-): QuickAction {
+function createLiveAction(label: string, clearDetail: string, activeDetail: string, target: AppTab, count: number, activeTone: QuickAction['tone'], clearTone: QuickAction['tone'], activePriority: number): QuickAction {
   return {
     label,
     detail: count > 0 ? `${count} active - ${activeDetail}` : clearDetail,
@@ -434,16 +395,8 @@ function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: 
       </div>
       <div style={quickActionsGridStyle}>
         {actions.map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            style={getQuickActionButtonStyle(theme, action.tone)}
-            onClick={() => onGoToTab(action.target)}
-          >
-            <span style={getQuickActionLabelStyle(action.tone)}>
-              {action.label}
-              {action.count ? ` (${action.count})` : ''}
-            </span>
+          <button key={action.label} type="button" style={getQuickActionButtonStyle(theme, action.tone)} onClick={() => onGoToTab(action.target)}>
+            <span style={getQuickActionLabelStyle(action.tone)}>{action.label}{action.count ? ` (${action.count})` : ''}</span>
             <span style={quickActionDetailStyle}>{action.detail}</span>
           </button>
         ))}
@@ -453,8 +406,7 @@ function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: 
 }
 
 function formatRoleLabel(roleView: RoleView): string {
-  if (roleView === 'Forklift / Receiving') return 'Receiving';
-  return roleView;
+  return roleView === 'Forklift / Receiving' ? 'Receiving' : roleView;
 }
 
 function formatOrderBlock(order: ProductionOrder) {
@@ -466,12 +418,8 @@ function OrderRow({ order, theme, compact = false }: { order: ProductionOrder; t
   return (
     <div style={getItemStyle(theme)}>
       <div>
-        <div style={getItemTitleStyle(theme)}>
-          {order.orderNumber} • {order.assemblyPartNumber}
-        </div>
-        <div style={mutedTextStyle}>
-          {order.customer} • Qty {order.quantity} • Ship {order.projectedShipDate}
-        </div>
+        <div style={getItemTitleStyle(theme)}>{order.orderNumber} - {order.assemblyPartNumber}</div>
+        <div style={mutedTextStyle}>{order.customer} - Qty {order.quantity} - Ship {order.projectedShipDate}</div>
         {!compact && <div style={mutedTextStyle}>{formatOrderBlock(order)}</div>}
       </div>
       <span style={getPriorityBadge(order.status)}>{getOrderStatusLabel(order)}</span>
@@ -495,9 +443,7 @@ function Section({ title, count, color, expanded, onToggle, onViewAll, children,
     <div style={getSectionStyle(theme)}>
       <div style={sectionHeaderStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={onToggle}>
-          <h3 style={{ margin: 0, fontSize: 16, color, letterSpacing: '0.5px', fontWeight: 800 }}>
-            {title} ({count})
-          </h3>
+          <h3 style={{ margin: 0, fontSize: 16, color, letterSpacing: '0.5px', fontWeight: 800 }}>{title} ({count})</h3>
           <span style={{ fontSize: 16, color: '#475569' }}>{expanded ? 'v' : '>'}</span>
         </div>
         <button onClick={onViewAll} style={viewAllButtonStyle}>VIEW ALL</button>
@@ -554,6 +500,10 @@ function getDepartmentResourceLabel(department: string) {
 
 function getPriorityBadge(priority: string): CSSProperties {
   const colors: Record<string, string> = {
+    blocked: '#dc2626',
+    hold: '#dc2626',
+    ready: '#10b981',
+    runnable: '#10b981',
     BLOCKED: '#dc2626',
     HOLD: '#dc2626',
     FAILED: '#dc2626',
@@ -568,18 +518,7 @@ function getPriorityBadge(priority: string): CSSProperties {
     DONE: '#64748b',
   };
   const color = colors[priority] || '#64748b';
-  return {
-    padding: '4px 10px',
-    borderRadius: 4,
-    fontSize: 11,
-    fontWeight: 800,
-    background: `${color}25`,
-    color,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    border: `1px solid ${color}50`,
-    whiteSpace: 'nowrap',
-  };
+  return { padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 800, background: `${color}25`, color, textTransform: 'uppercase', letterSpacing: '0.5px', border: `1px solid ${color}50`, whiteSpace: 'nowrap' };
 }
 
 const headerStyle: CSSProperties = { marginBottom: 20 };
@@ -624,7 +563,7 @@ function getQuickActionColor(tone: QuickAction['tone']): string {
   return '#f97316';
 }
 
-function getOverviewBarStyle(_theme: 'dark' | 'light'): CSSProperties {
+function getOverviewBarStyle(): CSSProperties {
   return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, marginBottom: 16 };
 }
 

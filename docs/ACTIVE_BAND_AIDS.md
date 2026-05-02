@@ -13,16 +13,7 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 - Risk: The adapter still finds Quick Actions by section text. A future label change from `QUICK ACTIONS` could break prompt placement.
 - Corrective action: Render `<EmbeddedPromptCards />` directly inside `DashboardPage.tsx` under `<QuickActionsPanel />`, then remove `dashboardQuickActionRuntimeBridge.ts` and the side-effect import from `src/main.tsx`.
 
-### 2. Dashboard order metrics not fully runtime-truth aligned
-
-- Status: STAGED
-- Location: `src/pages/DashboardPage.tsx`
-- Why it exists: Dashboard metrics still calculate from `productionOrders` directly in at least part of the page.
-- Current safer state: `src/logic/dashboardRuntimeSelectors.ts` now centralizes runtime-adjusted dashboard order truth for open orders, blocked orders, material issues, QA holds, runnable orders, due-soon orders, and plant criticals.
-- Risk: Until `DashboardPage.tsx` consumes the selector, prompt cards and station cards can reflect runtime state while dashboard metric cards still reflect base simulated data.
-- Corrective action: Replace local DashboardPage order calculations with `getDashboardRuntimeTruth(alerts.length)` or `selectDashboardRuntimeTruth(...)`.
-
-### 3. First-order runtime targeting
+### 2. First-order runtime targeting
 
 - Status: OPEN
 - Location: `src/logic/quickActionRuntimeTargets.ts`
@@ -30,7 +21,7 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 - Risk: May act on a low-priority issue before a hot or critical order.
 - Corrective action: Add priority-aware selectors using priority, projected ship date, hard blockers, and department/role relevance.
 
-### 4. Inline dashboard styling
+### 3. Inline dashboard styling
 
 - Status: OPEN
 - Location: dashboard pages/components
@@ -39,6 +30,13 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 - Corrective action: Extract shared dashboard card/button/prompt styles or component primitives after behavior is stable.
 
 ## Recently Retired Band-Aids
+
+### Dashboard order metrics not fully runtime-truth aligned
+
+- Status: RETIRED
+- Former location: `src/pages/DashboardPage.tsx`
+- Retired by: `src/logic/dashboardRuntimeSelectors.ts`
+- Notes: Dashboard metrics now consume runtime-adjusted order truth through `getDashboardRuntimeTruth(alerts.length)` instead of calculating directly from raw `productionOrders`.
 
 ### Direct DOM prompt cards
 
