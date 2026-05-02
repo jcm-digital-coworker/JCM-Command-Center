@@ -14,16 +14,14 @@ import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import AccordionSection from '../components/common/AccordionSection';
 import SmartEmptyState from '../components/common/SmartEmptyState';
 import PlantSignalsPanel from '../components/dashboard/PlantSignalsPanel';
+import DashboardOverviewPanels from '../components/dashboard/DashboardOverviewPanels';
 import DashboardWorkCenterCard from '../components/dashboard/DashboardWorkCenterCard';
 import CommandRecommendationCard from '../components/dashboard/CommandRecommendationCard';
 import {
   dashboardGridStyle,
   dashboardHeaderStyle,
   dashboardListStyle,
-  dashboardMetricLabelStyle,
-  dashboardMissionGridStyle,
   dashboardMutedTextStyle,
-  dashboardOverviewBarStyle,
   dashboardQuickActionDetailStyle,
   dashboardQuickActionsGridStyle,
   dashboardQuickActionsHeaderStyle,
@@ -31,9 +29,6 @@ import {
   dashboardSubtitleStyle,
   getDashboardItemStyle,
   getDashboardItemTitleStyle,
-  getDashboardMetricStyle,
-  getDashboardMissionCardStyle,
-  getDashboardMissionValueStyle,
   getDashboardPlantNoteStyle,
   getDashboardQuickActionButtonStyle,
   getDashboardQuickActionLabelStyle,
@@ -130,19 +125,16 @@ export default function DashboardPage({
       <QuickActionsPanel roleView={roleView} actions={quickActions} onGoToTab={onGoToTab} theme={theme} />
       <PlantSignalsPanel onNavigate={onGoToTab} />
 
-      <div style={dashboardOverviewBarStyle}>
-        <StatusMetric label="OPEN ORDERS" value={openOrders.length} total={allOrders.length} color="#3b82f6" theme={theme} />
-        <StatusMetric label="BLOCKED" value={blockedOrders.length} total={openOrders.length} color="#dc2626" highlight={blockedOrders.length > 0} theme={theme} />
-        <StatusMetric label="RUNNABLE" value={runnableOrders.length} total={openOrders.length} color="#10b981" theme={theme} />
-        <StatusMetric label="MATERIAL ISSUES" value={materialIssues.length} total={openOrders.length} color="#f59e0b" highlight={materialIssues.length > 0} theme={theme} />
-      </div>
-
-      <div style={dashboardMissionGridStyle}>
-        <MissionCard title="Blocked Flow" value={`${blockedOrders.length} order${blockedOrders.length === 1 ? '' : 's'}`} detail={blockedOrders.length > 0 ? 'Needs action before labor is assigned' : 'No blocked sample orders'} color="#dc2626" theme={theme} onClick={() => onGoToTab('orders')} />
-        <MissionCard title="Crew Guidance" value={runnableOrders.length > 0 ? 'Runnable work exists' : 'No ready orders'} detail="Guidance over control. Use flow, material, and skill availability before assigning people." color="#8b5cf6" theme={theme} onClick={() => onGoToTab('coverage')} />
-        <MissionCard title="Material Readiness" value={`${materialIssues.length} not fully ready`} detail="Receiving is the physical start gate for every order." color="#f97316" theme={theme} onClick={() => onGoToTab('receiving')} />
-        <MissionCard title="Plant Criticals" value={plantCriticals.toString()} detail="Orders, material, QA, maintenance, and equipment alerts combined." color={plantCriticals > 0 ? '#dc2626' : '#10b981'} theme={theme} onClick={() => onGoToTab(plantCriticals > 0 ? 'orders' : 'plantMap')} />
-      </div>
+      <DashboardOverviewPanels
+        openOrderCount={openOrders.length}
+        totalOrderCount={allOrders.length}
+        blockedOrderCount={blockedOrders.length}
+        runnableOrderCount={runnableOrders.length}
+        materialIssueCount={materialIssues.length}
+        plantCriticalCount={plantCriticals}
+        theme={theme}
+        onGoToTab={onGoToTab}
+      />
 
       <AccordionSection title="BLOCKED ORDERS" count={blockedOrders.length} color="#dc2626" expanded={expandedSection === 'blockedOrders'} onToggle={() => toggleSection('blockedOrders')} onViewAll={() => onGoToTab('orders')} theme={theme}>
         {blockedOrders.length > 0 ? (
@@ -251,6 +243,4 @@ function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: 
 function getQuickActionsToggleStyle(theme: DashboardTheme): CSSProperties { return { border: theme === 'dark' ? '1px dashed #475569' : '1px dashed #cbd5e1', background: theme === 'dark' ? 'rgba(15, 23, 42, 0.55)' : '#f8fafc', color: '#94a3b8', borderRadius: 4, padding: '12px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase', minHeight: 54 }; }
 function formatOrderBlock(order: ProductionOrder) { const blockReason = getOrderBlockReason(order); return blockReason ? formatBlockedReason(blockReason) : 'No blocker listed'; }
 function OrderRow({ order, theme, compact = false }: { order: ProductionOrder; theme: DashboardTheme; compact?: boolean }) { return <div style={getDashboardItemStyle(theme)}><div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} - {order.assemblyPartNumber}</div><div style={dashboardMutedTextStyle}>{order.customer} - Qty {order.quantity} - Ship {order.projectedShipDate}</div>{!compact && <div style={dashboardMutedTextStyle}>{formatOrderBlock(order)}</div>}</div><span style={getPriorityBadge(order.status)}>{getOrderStatusLabel(order)}</span></div>; }
-function StatusMetric({ label, value, total, color, highlight, theme }: { label: string; value: number; total: number; color: string; highlight?: boolean; theme: DashboardTheme }) { const percentage = total > 0 ? Math.round((value / total) * 100) : 0; return <div style={{ ...getDashboardMetricStyle(theme), borderLeft: `3px solid ${color}`, background: highlight ? `${color}12` : undefined }}><div style={dashboardMetricLabelStyle}>{label}</div><div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}><span style={{ fontSize: 23, fontWeight: 800, color }}>{value}</span><span style={{ fontSize: 12, color: '#475569' }}>/ {total}</span></div><div style={{ fontSize: 11, color: '#475569', marginTop: 3 }}>{percentage}%</div></div>; }
-function MissionCard({ title, value, detail, color, theme, onClick }: { title: string; value: string; detail: string; color: string; theme: DashboardTheme; onClick: () => void }) { return <button style={getDashboardMissionCardStyle(theme, color)} onClick={onClick}><div style={{ fontSize: 10, color, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase' }}>{title}</div><div style={getDashboardMissionValueStyle(theme)}>{value}</div><div style={dashboardMutedTextStyle}>{detail}</div></button>; }
 function getPriorityBadge(priority: string): CSSProperties { const colors: Record<string, string> = { blocked: '#dc2626', hold: '#dc2626', ready: '#10b981', runnable: '#10b981', BLOCKED: '#dc2626', HOLD: '#dc2626', FAILED: '#dc2626', HIGH: '#dc2626', CRITICAL: '#dc2626', READY: '#10b981', IN_PROGRESS: '#3b82f6', MEDIUM: '#f59e0b', LOW: '#3b82f6', NORMAL: '#10b981', WAITING: '#f59e0b', DONE: '#64748b' }; const color = colors[priority] || '#64748b'; return { padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 800, background: `${color}25`, color, textTransform: 'uppercase', letterSpacing: '0.5px', border: `1px solid ${color}50`, whiteSpace: 'nowrap' }; }
