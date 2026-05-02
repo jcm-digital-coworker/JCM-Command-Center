@@ -11,6 +11,7 @@ type TravelerDetailModalProps = {
 export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOrders }: TravelerDetailModalProps) {
   const order = traveler.order;
   const signalColor = getSignalColor(traveler.visualSignal);
+  const visibleActions = traveler.actions.filter((action) => action.type !== 'OPEN_DETAIL' && action.type !== 'OPEN_FULL_ORDER');
 
   return (
     <div style={modalOverlayStyle} onClick={onClose}>
@@ -73,8 +74,9 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
 
         <section style={sectionBlockStyle}>
           <div style={smallLabelStyle(theme)}>Traveler Actions</div>
+          <p style={helperTextStyle(theme)}>These are traveler signals. Disabled writeback actions are shown as locked until the live action flow is connected.</p>
           <div style={listStyle}>
-            {traveler.actions.map((action) => (
+            {visibleActions.map((action) => (
               <ActionRow key={action.type} action={action} theme={theme} />
             ))}
           </div>
@@ -104,7 +106,7 @@ function ActionRow({ action, theme }: { action: TravelerAction; theme: 'dark' | 
         <div style={actionLabelStyle(theme, action.enabled)}>{action.label}</div>
         {action.reason ? <div style={actionReasonStyle(theme)}>{action.reason}</div> : null}
       </div>
-      <span style={actionStatusStyle(action.enabled)}>{action.enabled ? 'AVAILABLE' : 'LOCKED'}</span>
+      <span style={actionStatusStyle(action.enabled)}>{action.enabled ? 'SIGNAL' : 'LOCKED'}</span>
     </div>
   );
 }
@@ -134,7 +136,7 @@ function getSignalColor(signal: DynamicTraveler['visualSignal']) {
 const modalOverlayStyle: CSSProperties = {
   position: 'fixed',
   inset: 0,
-  zIndex: 60,
+  zIndex: 1000,
   background: 'rgba(2, 6, 23, 0.78)',
   display: 'flex',
   alignItems: 'center',
@@ -356,5 +358,15 @@ function actionStatusStyle(enabled: boolean): CSSProperties {
     fontWeight: 900,
     letterSpacing: '0.8px',
     whiteSpace: 'nowrap',
+  };
+}
+
+function helperTextStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    margin: '0 0 8px',
+    color: theme === 'dark' ? '#94a3b8' : '#64748b',
+    fontSize: 12,
+    lineHeight: 1.4,
+    fontWeight: 700,
   };
 }
