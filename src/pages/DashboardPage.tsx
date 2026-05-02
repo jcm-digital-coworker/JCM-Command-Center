@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties } from 'react';
 import type { Machine } from '../types/machine';
 import type { MaintenanceTask } from '../types/maintenance';
 import type { RiskItem } from '../types/risk';
@@ -10,6 +10,7 @@ import { getOrderStatusLabel, getOrderBlockReason, formatBlockedReason } from '.
 import { getDashboardRuntimeTruth } from '../logic/dashboardRuntimeSelectors';
 import { getCommandRecommendation } from '../logic/commandRecommendations';
 import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import AccordionSection from '../components/common/AccordionSection';
 import EmbeddedPromptCards from '../components/dashboard/EmbeddedPromptCards';
 import DashboardWorkCenterCard from '../components/dashboard/DashboardWorkCenterCard';
 import CommandRecommendationCard from '../components/dashboard/CommandRecommendationCard';
@@ -25,9 +26,7 @@ import {
   dashboardQuickActionsGridStyle,
   dashboardQuickActionsHeaderStyle,
   dashboardQuickActionsSubtitleStyle,
-  dashboardSectionHeaderStyle,
   dashboardSubtitleStyle,
-  dashboardViewAllButtonStyle,
   getDashboardItemStyle,
   getDashboardItemTitleStyle,
   getDashboardMetricStyle,
@@ -38,7 +37,6 @@ import {
   getDashboardQuickActionLabelStyle,
   getDashboardQuickActionsPanelStyle,
   getDashboardQuickActionsTitleStyle,
-  getDashboardSectionStyle,
   getDashboardTitleStyle,
   type DashboardTheme,
   type DashboardTone,
@@ -164,24 +162,24 @@ export default function DashboardPage({
       </div>
 
       {blockedOrders.length > 0 && (
-        <Section title="BLOCKED ORDERS" count={blockedOrders.length} color="#dc2626" expanded={expandedSection === 'blockedOrders'} onToggle={() => toggleSection('blockedOrders')} onViewAll={() => onGoToTab('orders')} theme={theme}>
+        <AccordionSection title="BLOCKED ORDERS" count={blockedOrders.length} color="#dc2626" expanded={expandedSection === 'blockedOrders'} onToggle={() => toggleSection('blockedOrders')} onViewAll={() => onGoToTab('orders')} theme={theme}>
           <div style={dashboardListStyle}>{blockedOrders.slice(0, expandedSection === 'blockedOrders' ? undefined : 3).map((order) => <OrderRow key={order.orderNumber} order={order} theme={theme} />)}</div>
-        </Section>
+        </AccordionSection>
       )}
 
-      <Section title="ORDERS DUE SOON" count={dueSoonOrders.length} color="#3b82f6" expanded={expandedSection === 'dueSoon'} onToggle={() => toggleSection('dueSoon')} onViewAll={() => onGoToTab('orders')} theme={theme}>
+      <AccordionSection title="ORDERS DUE SOON" count={dueSoonOrders.length} color="#3b82f6" expanded={expandedSection === 'dueSoon'} onToggle={() => toggleSection('dueSoon')} onViewAll={() => onGoToTab('orders')} theme={theme}>
         <div style={dashboardListStyle}>{dueSoonOrders.map((order) => <OrderRow key={order.orderNumber} order={order} theme={theme} compact />)}</div>
-      </Section>
+      </AccordionSection>
 
-      <Section title="DEPARTMENT FOCUS" count={workCenters.length} color="#f97316" expanded={expandedSection === 'workCenters'} onToggle={() => toggleSection('workCenters')} onViewAll={() => toggleSection('workCenters')} theme={theme}>
+      <AccordionSection title="DEPARTMENT FOCUS" count={workCenters.length} color="#f97316" expanded={expandedSection === 'workCenters'} onToggle={() => toggleSection('workCenters')} onViewAll={() => toggleSection('workCenters')} theme={theme}>
         <div style={dashboardGridStyle}>
           {workCenters.slice(0, expandedSection === 'workCenters' ? undefined : 8).map((workCenter) => (
             <DashboardWorkCenterCard key={workCenter.id} workCenter={workCenter} theme={theme} onOpen={onOpenWorkCenter} />
           ))}
         </div>
-      </Section>
+      </AccordionSection>
 
-      <Section title="QA / SAFETY / MAINTENANCE SIGNALS" count={openRisks.length + activeTasks.length + qaHolds.length} color="#f59e0b" expanded={expandedSection === 'signals'} onToggle={() => toggleSection('signals')} onViewAll={() => onGoToTab('risk')} theme={theme}>
+      <AccordionSection title="QA / SAFETY / MAINTENANCE SIGNALS" count={openRisks.length + activeTasks.length + qaHolds.length} color="#f59e0b" expanded={expandedSection === 'signals'} onToggle={() => toggleSection('signals')} onViewAll={() => onGoToTab('risk')} theme={theme}>
         <div style={dashboardListStyle}>
           {qaHolds.slice(0, 2).map((order) => (
             <div key={order.orderNumber} style={getDashboardItemStyle(theme)}>
@@ -202,9 +200,9 @@ export default function DashboardPage({
             </div>
           ))}
         </div>
-      </Section>
+      </AccordionSection>
 
-      <Section title="EQUIPMENT INTELLIGENCE" count={machines.length} color="#64748b" expanded={expandedSection === 'machines'} onToggle={() => toggleSection('machines')} onViewAll={() => onGoToTab('machines')} theme={theme}>
+      <AccordionSection title="EQUIPMENT INTELLIGENCE" count={machines.length} color="#64748b" expanded={expandedSection === 'machines'} onToggle={() => toggleSection('machines')} onViewAll={() => onGoToTab('machines')} theme={theme}>
         <div style={dashboardListStyle}>
           <div style={getDashboardPlantNoteStyle(theme)}>Equipment data stays powerful, but it is now one module inside the plant command model.</div>
           {alerts.slice(0, expandedSection === 'machines' ? undefined : 3).map((machine) => (
@@ -215,7 +213,7 @@ export default function DashboardPage({
           ))}
           {alerts.length === 0 && <div style={getDashboardPlantNoteStyle(theme)}>No active equipment alerts in the current view.</div>}
         </div>
-      </Section>
+      </AccordionSection>
     </div>
   );
 }
@@ -272,10 +270,6 @@ function getQuickActionsToggleStyle(theme: DashboardTheme): CSSProperties { retu
 function formatRoleLabel(roleView: RoleView): string { return roleView === 'Forklift / Receiving' ? 'Receiving' : roleView; }
 function formatOrderBlock(order: ProductionOrder) { const blockReason = getOrderBlockReason(order); return blockReason ? formatBlockedReason(blockReason) : 'No blocker listed'; }
 function OrderRow({ order, theme, compact = false }: { order: ProductionOrder; theme: DashboardTheme; compact?: boolean }) { return <div style={getDashboardItemStyle(theme)}><div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} - {order.assemblyPartNumber}</div><div style={dashboardMutedTextStyle}>{order.customer} - Qty {order.quantity} - Ship {order.projectedShipDate}</div>{!compact && <div style={dashboardMutedTextStyle}>{formatOrderBlock(order)}</div>}</div><span style={getPriorityBadge(order.status)}>{getOrderStatusLabel(order)}</span></div>; }
-interface SectionProps { title: string; count: number; color: string; expanded: boolean; onToggle: () => void; onViewAll: () => void; children: ReactNode; theme: DashboardTheme; }
-function Section({ title, count, color, expanded, onToggle, onViewAll, children, theme }: SectionProps) { return <div style={getDashboardSectionStyle(theme)}><div style={dashboardSectionHeaderStyle}><button type="button" style={getDashboardSectionToggleStyle(theme)} onClick={onToggle}><h3 style={{ margin: 0, fontSize: 16, color, letterSpacing: '0.5px', fontWeight: 800 }}>{title} ({count})</h3><span style={{ fontSize: 16, color: '#475569' }}>{expanded ? 'v' : '>'}</span></button><button onClick={onViewAll} style={dashboardViewAllButtonStyle}>VIEW ALL</button></div>{expanded ? <div style={{ marginTop: 12 }}>{children}</div> : <div style={getDashboardCollapsedHintStyle(theme)}>Tap section title to expand. Use View All to open the full page.</div>}</div>; }
-function getDashboardSectionToggleStyle(theme: DashboardTheme): CSSProperties { return { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: 'transparent', border: 'none', padding: 0, textAlign: 'left', color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }; }
-function getDashboardCollapsedHintStyle(theme: DashboardTheme): CSSProperties { return { marginTop: 10, padding: '10px 12px', borderRadius: 4, background: theme === 'dark' ? 'rgba(15, 23, 42, 0.45)' : '#f8fafc', color: '#64748b', fontSize: 12, fontWeight: 700, letterSpacing: '0.2px' }; }
 function StatusMetric({ label, value, total, color, highlight, theme }: { label: string; value: number; total: number; color: string; highlight?: boolean; theme: DashboardTheme }) { const percentage = total > 0 ? Math.round((value / total) * 100) : 0; return <div style={{ ...getDashboardMetricStyle(theme), borderLeft: `4px solid ${color}`, background: highlight ? `${color}15` : theme === 'dark' ? '#1e293b' : '#ffffff' }}><div style={dashboardMetricLabelStyle}>{label}</div><div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}><span style={{ fontSize: 28, fontWeight: 700, color }}>{value}</span><span style={{ fontSize: 14, color: '#475569' }}>/ {total}</span></div><div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>{percentage}%</div></div>; }
 function MissionCard({ title, value, detail, color, theme, onClick }: { title: string; value: string; detail: string; color: string; theme: DashboardTheme; onClick: () => void }) { return <button style={getDashboardMissionCardStyle(theme, color)} onClick={onClick}><div style={{ fontSize: 11, color, fontWeight: 900, letterSpacing: '0.8px', textTransform: 'uppercase' }}>{title}</div><div style={getDashboardMissionValueStyle(theme)}>{value}</div><div style={dashboardMutedTextStyle}>{detail}</div></button>; }
 function getPriorityBadge(priority: string): CSSProperties { const colors: Record<string, string> = { blocked: '#dc2626', hold: '#dc2626', ready: '#10b981', runnable: '#10b981', BLOCKED: '#dc2626', HOLD: '#dc2626', FAILED: '#dc2626', HIGH: '#dc2626', CRITICAL: '#dc2626', READY: '#10b981', IN_PROGRESS: '#3b82f6', MEDIUM: '#f59e0b', LOW: '#3b82f6', NORMAL: '#10b981', WAITING: '#f59e0b', DONE: '#64748b' }; const color = colors[priority] || '#64748b'; return { padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 800, background: `${color}25`, color, textTransform: 'uppercase', letterSpacing: '0.5px', border: `1px solid ${color}50`, whiteSpace: 'nowrap' }; }
