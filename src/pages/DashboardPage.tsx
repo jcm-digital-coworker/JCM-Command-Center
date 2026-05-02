@@ -13,7 +13,7 @@ import { getCommandRecommendation } from '../logic/commandRecommendations';
 import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import AccordionSection from '../components/common/AccordionSection';
 import SmartEmptyState from '../components/common/SmartEmptyState';
-import EmbeddedPromptCards from '../components/dashboard/EmbeddedPromptCards';
+import PlantSignalsPanel from '../components/dashboard/PlantSignalsPanel';
 import DashboardWorkCenterCard from '../components/dashboard/DashboardWorkCenterCard';
 import CommandRecommendationCard from '../components/dashboard/CommandRecommendationCard';
 import {
@@ -128,7 +128,7 @@ export default function DashboardPage({
         onNavigate={() => onGoToTab(commandRecommendation.targetTab)}
       />
       <QuickActionsPanel roleView={roleView} actions={quickActions} onGoToTab={onGoToTab} theme={theme} />
-      <EmbeddedPromptCards onNavigate={onGoToTab} />
+      <PlantSignalsPanel onNavigate={onGoToTab} />
 
       <div style={dashboardOverviewBarStyle}>
         <StatusMetric label="OPEN ORDERS" value={openOrders.length} total={allOrders.length} color="#3b82f6" theme={theme} />
