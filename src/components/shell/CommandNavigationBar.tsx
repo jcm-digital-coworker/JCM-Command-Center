@@ -30,7 +30,6 @@ export default function CommandNavigationBar({
       </div>
 
       <div style={navRowStyle}>
-        <div style={navSpacerStyle} />
         <div style={groupButtonGridStyle}>
           {groups.map((group) => {
             const active = group.items.some((item) => item.id === tab);
@@ -90,18 +89,16 @@ const statusHeaderStyle: CSSProperties = {
   alignItems: 'baseline',
   gap: 10,
   textAlign: 'center',
+  flexWrap: 'wrap',
 };
 
 const navRowStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(96px, 120px) minmax(460px, 720px) minmax(96px, 120px)',
+  display: 'flex',
   justifyContent: 'center',
-  alignItems: 'center',
+  alignItems: 'stretch',
   gap: 12,
-};
-
-const navSpacerStyle: CSSProperties = {
-  minWidth: 96,
+  flexWrap: 'wrap',
+  width: '100%',
 };
 
 const statusLabelStyle: CSSProperties = {
@@ -123,9 +120,10 @@ function getCurrentLabelStyle(theme: 'dark' | 'light'): CSSProperties {
 
 const groupButtonGridStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(4, minmax(105px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
   gap: 8,
-  width: '100%',
+  width: 'min(100%, 720px)',
+  flex: '1 1 460px',
 };
 
 function getGroupButtonStyle(active: boolean, theme: 'dark' | 'light', groupId: NavigationGroupId): CSSProperties {
@@ -140,6 +138,7 @@ function getGroupButtonStyle(active: boolean, theme: 'dark' | 'light', groupId: 
     cursor: 'pointer',
     textAlign: 'left',
     minHeight: 58,
+    minWidth: 0,
   };
 }
 
@@ -188,6 +187,6 @@ function getAlertsButtonStyle(alertCount: number, theme: 'dark' | 'light'): CSSP
     textTransform: 'uppercase',
     boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
     whiteSpace: 'nowrap',
-    justifySelf: 'stretch',
+    flex: '0 1 132px',
   };
 }
