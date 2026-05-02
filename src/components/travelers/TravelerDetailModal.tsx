@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { DynamicTraveler, TravelerAction } from '../../types/dynamicTraveler';
+import type { DynamicTraveler, TravelerAction, TravelerResource } from '../../types/dynamicTraveler';
 
 type TravelerDetailModalProps = {
   traveler: DynamicTraveler;
@@ -9,6 +10,7 @@ type TravelerDetailModalProps = {
 };
 
 export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOrders }: TravelerDetailModalProps) {
+  const [selectedResource, setSelectedResource] = useState<TravelerResource | null>(traveler.bestResource ?? null);
   const order = traveler.order;
   const signalColor = getSignalColor(traveler.visualSignal);
   const visibleActions = traveler.actions.filter((action) => action.type !== 'OPEN_DETAIL' && action.type !== 'OPEN_FULL_ORDER');
@@ -43,19 +45,29 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
 
         <section style={sectionBlockStyle}>
           <div style={smallLabelStyle(theme)}>Capable Resources</div>
+          <p style={helperTextStyle(theme)}>Only resources that match all required traveler capabilities are shown here. Unusable equipment is intentionally hidden.</p>
           {traveler.capableResources.length > 0 ? (
             <div style={listStyle}>
               {traveler.capableResources.map((resource) => (
-                <div key={resource.id} style={resourceChipStyle(theme, resource.id === traveler.bestResource?.id)}>
+                <button
+                  key={resource.id}
+                  type="button"
+                  style={resourceButtonStyle(theme, resource.id === traveler.bestResource?.id, selectedResource?.id === resource.id)}
+                  onClick={() => setSelectedResource(resource)}
+                >
                   <strong>{resource.label}</strong>
                   <span>{resource.id === traveler.bestResource?.id ? 'Recommended' : formatToken(resource.status)}</span>
-                </div>
+                </button>
               ))}
             </div>
           ) : (
             <div style={warningBoxStyle(theme)}>No capable resource has been mapped for this department/order combination.</div>
           )}
         </section>
+
+        {selectedResource ? (
+          <ResourceContextPanel traveler={traveler} resource={selectedResource} theme={theme} />
+        ) : null}
 
         <section style={sectionBlockStyle}>
           <div style={smallLabelStyle(theme)}>Blockers</div>
@@ -99,6 +111,41 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
   );
 }
 
+function ResourceContextPanel({ traveler, resource, theme }: { traveler: DynamicTraveler; resource: TravelerResource; theme: 'dark' | 'light' }) {
+  const isRecommended = resource.id === traveler.bestResource?.id;
+  const matchingCapabilities = resource.capabilities.filter((capability) => traveler.capableResources.some((candidate) => candidate.id === resource.id && candidate.capabilities.includes(capability)));
+
+  return (
+    <section style={resourceContextStyle(theme, isRecommended)}>
+      <div style={smallLabelStyle(theme)}>Resource Context</div>
+      <div style={resourceContextHeaderStyle}>
+        <div>
+          <div style={resourceTitleStyle(theme)}>{resource.label}</div>
+          <div style={subTextStyle(theme)}>{resource.department} · {formatToken(resource.type)}</div>
+        </div>
+        <span style={resourceStatusBadgeStyle(resource.status, isRecommended)}>{isRecommended ? 'RECOMMENDED' : formatToken(resource.status)}</span>
+      </div>
+
+      <div style={infoGridStyle}>
+        <Info label="Current State" value={formatToken(resource.status)} theme={theme} />
+        <Info label="Traveler Fit" value="Capable for this traveler" theme={theme} />
+        <Info label="Current Job" value="Not connected yet" theme={theme} />
+        <Info label="Queue Impact" value="Traveler queue model pending" theme={theme} />
+      </div>
+
+      <div style={contextNoticeStyle(theme)}>
+        This resource is shown because it satisfies every required capability for this traveler. Equipment that cannot run the job is not shown as an option.
+      </div>
+
+      <div style={chipRowStyle}>
+        {matchingCapabilities.slice(0, 8).map((capability) => (
+          <span key={capability} style={miniChipStyle(theme)}>{formatToken(capability)}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ActionRow({ action, theme }: { action: TravelerAction; theme: 'dark' | 'light' }) {
   return (
     <div style={actionRowStyle(theme, action.enabled)}>
@@ -112,7 +159,7 @@ function ActionRow({ action, theme }: { action: TravelerAction; theme: 'dark' | 
 }
 
 function formatToken(value: string) {
-  return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return value.replaceAll('_', ' ').replaceAll('-', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatMaterial(value: string) {
@@ -201,6 +248,20 @@ const openOrdersButtonStyle: CSSProperties = {
   letterSpacing: '0.7px',
 };
 
+const resourceContextHeaderStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 12,
+  alignItems: 'flex-start',
+};
+
+const chipRowStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 6,
+  marginTop: 10,
+};
+
 function modalCardStyle(theme: 'dark' | 'light', color: string): CSSProperties {
   return {
     width: 'min(760px, 100%)',
@@ -269,8 +330,8 @@ function instructionTextStyle(theme: 'dark' | 'light'): CSSProperties {
   };
 }
 
-function resourceChipStyle(theme: 'dark' | 'light', recommended: boolean): CSSProperties {
-  const color = recommended ? '#10b981' : '#64748b';
+function resourceButtonStyle(theme: 'dark' | 'light', recommended: boolean, selected: boolean): CSSProperties {
+  const color = recommended ? '#10b981' : selected ? '#3b82f6' : '#64748b';
   return {
     display: 'flex',
     justifyContent: 'space-between',
@@ -278,9 +339,71 @@ function resourceChipStyle(theme: 'dark' | 'light', recommended: boolean): CSSPr
     padding: 10,
     borderRadius: 6,
     background: theme === 'dark' ? 'rgba(15,23,42,0.8)' : '#f8fafc',
-    border: `1px solid ${color}66`,
+    border: `1px solid ${color}`,
     color: theme === 'dark' ? '#cbd5e1' : '#334155',
     fontSize: 12,
+    cursor: 'pointer',
+    textAlign: 'left',
+  };
+}
+
+function resourceContextStyle(theme: 'dark' | 'light', recommended: boolean): CSSProperties {
+  const color = recommended ? '#10b981' : '#3b82f6';
+  return {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    background: theme === 'dark' ? 'rgba(15,23,42,0.9)' : '#f8fafc',
+    border: `1px solid ${color}66`,
+    borderLeft: `4px solid ${color}`,
+  };
+}
+
+function resourceTitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+    fontSize: 15,
+    fontWeight: 900,
+  };
+}
+
+function resourceStatusBadgeStyle(status: string, recommended: boolean): CSSProperties {
+  const color = recommended ? '#10b981' : status === 'DOWN' ? '#ef4444' : status === 'BUSY' ? '#f97316' : '#64748b';
+  return {
+    whiteSpace: 'nowrap',
+    color,
+    border: `1px solid ${color}`,
+    background: `${color}1f`,
+    borderRadius: 4,
+    padding: '5px 8px',
+    fontSize: 10,
+    fontWeight: 900,
+  };
+}
+
+function contextNoticeStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 6,
+    background: theme === 'dark' ? '#111827' : '#ffffff',
+    border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0',
+    color: theme === 'dark' ? '#cbd5e1' : '#475569',
+    fontSize: 12,
+    lineHeight: 1.45,
+    fontWeight: 700,
+  };
+}
+
+function miniChipStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    color: theme === 'dark' ? '#cbd5e1' : '#475569',
+    background: theme === 'dark' ? '#1e293b' : '#ffffff',
+    border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1',
+    borderRadius: 4,
+    padding: '4px 7px',
+    fontSize: 10,
+    fontWeight: 800,
   };
 }
 
