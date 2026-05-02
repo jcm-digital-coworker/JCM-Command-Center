@@ -15,11 +15,12 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 
 ### 2. Dashboard order metrics not fully runtime-truth aligned
 
-- Status: OPEN
+- Status: STAGED
 - Location: `src/pages/DashboardPage.tsx`
 - Why it exists: Dashboard metrics still calculate from `productionOrders` directly in at least part of the page.
-- Risk: Prompt cards and station cards can reflect runtime state while dashboard metric cards still reflect base simulated data.
-- Corrective action: Use `getRuntimeProductionOrders(productionOrders)` as the dashboard order source for open, blocked, material issue, QA hold, runnable, and due-soon calculations.
+- Current safer state: `src/logic/dashboardRuntimeSelectors.ts` now centralizes runtime-adjusted dashboard order truth for open orders, blocked orders, material issues, QA holds, runnable orders, due-soon orders, and plant criticals.
+- Risk: Until `DashboardPage.tsx` consumes the selector, prompt cards and station cards can reflect runtime state while dashboard metric cards still reflect base simulated data.
+- Corrective action: Replace local DashboardPage order calculations with `getDashboardRuntimeTruth(alerts.length)` or `selectDashboardRuntimeTruth(...)`.
 
 ### 3. First-order runtime targeting
 
