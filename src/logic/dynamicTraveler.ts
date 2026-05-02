@@ -142,6 +142,7 @@ function getCurrentInstruction(
   if (department === 'Material Handling') return `Stage material for order #${order.orderNumber}.${handoffLabel}`;
   if (department === 'QA') return `Inspect or release order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
   if (department === 'Shipping') return `Stage and ship order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
+  if (department === 'Machine Shop') return `Run order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
 
   return `Work order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
 }
@@ -191,8 +192,8 @@ function getTravelerPriorityScore(
   bestResource: TravelerResource | undefined,
 ): number {
   let score = 0;
-  if (stepStatus === 'BLOCKED' || stepStatus === 'HOLD') score += 100;
-  if (stepStatus === 'READY') score += 60;
+  if (stepStatus === 'READY' || stepStatus === 'ACTIVE') score += 120;
+  if (stepStatus === 'BLOCKED' || stepStatus === 'HOLD') score += 40;
   if (!bestResource) score += 35;
   if (order.priority === 'critical' || order.priority === 'CRITICAL') score += 30;
   if (order.priority === 'hot' || order.priority === 'HOT') score += 20;
