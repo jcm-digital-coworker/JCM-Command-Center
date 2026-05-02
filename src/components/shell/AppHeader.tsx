@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
 
+const JCM_NAVIGATE_EVENT = 'jcm:navigate';
+
 interface AppHeaderProps {
   onMenuClick: () => void;
   onBackClick?: () => void;
@@ -34,14 +36,17 @@ export default function AppHeader({
       </div>
 
       <button
-        onClick={onHomeClick}
+        onClick={onHomeClick ?? dispatchCommandHome}
         style={getHomeButtonStyle(theme)}
-        disabled={!onHomeClick}
       >
         HOME
       </button>
     </div>
   );
+}
+
+function dispatchCommandHome() {
+  window.dispatchEvent(new CustomEvent(JCM_NAVIGATE_EVENT, { detail: { tab: 'dashboard' } }));
 }
 
 function getHeaderStyle(theme: 'dark' | 'light'): CSSProperties {
