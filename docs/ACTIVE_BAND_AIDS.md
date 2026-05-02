@@ -41,17 +41,19 @@ None currently logged.
 
 - Status: WATCH
 - Location: `src/pages/DashboardPage.tsx`
-- Risk: the page still owns dashboard composition, quick-action role logic, section content, and several small helper renderers.
+- Risk: the page still owns dashboard composition, section content, and several small helper renderers.
 - Current reason for leaving it: recent changes are green and demo-focused; splitting too early could churn stable behavior.
-- Future corrective action: extract dashboard role quick-action rules, dashboard section rows, and mission cards if this page keeps growing or becomes hard to patch safely.
+- Recently improved: role-aware Quick Action rules moved to `src/logic/dashboardQuickActions.ts`; Plant Signals panel now imports directly as `PlantSignalsPanel`.
+- Future corrective action: extract dashboard section rows, mission cards, and status metrics if this page keeps growing or becomes hard to patch safely.
 
 ### Plant Signals priority model is intentionally basic
 
 - Status: WATCH
-- Location: `src/components/dashboard/EmbeddedPromptCards.tsx`
+- Logic location: `src/logic/plantSignals.ts`
+- UI location: `src/components/dashboard/PlantSignalsPanel.tsx`
 - Current behavior: collapsed Plant Signals strip shows top 3 signals ranked by QA hold, blocked flow, material issue, and order priority.
 - Risk: scoring is useful but still simple. It does not yet factor due dates, department impact, crew availability, or maintenance impact.
-- Future corrective action: move Plant Signal scoring into a dedicated selector module when more signal types are added.
+- Future corrective action: expand the independent Plant Signals scoring module when more signal types are added.
 
 ### Drawer accordion remains separate from shared AccordionSection
 
@@ -63,11 +65,32 @@ None currently logged.
 ### Mobile dashboard needs real phone review
 
 - Status: WATCH
-- Current state: navigation wraps, Quick Actions show top 3, Plant Signals collapse, and secondary dashboard sections collapse.
+- Current state: navigation wraps, Quick Actions show top 3, Plant Signals collapse, secondary dashboard sections collapse, metrics/mission cards are visually lighter, and smart empty states are present.
 - Risk: actual Android/browser viewport may still reveal spacing, tap-target, or scroll friction that desktop CI cannot catch.
 - Future corrective action: test live GitHub Pages build on Android after each mobile UI cleanup checkpoint.
 
 ## Recently Retired Band-Aids
+
+### EmbeddedPromptCards compatibility shim
+
+- Status: RETIRED
+- Former location: `src/components/dashboard/EmbeddedPromptCards.tsx`
+- Retired by: direct `PlantSignalsPanel` import in `src/pages/DashboardPage.tsx`, followed by deletion of the old shim file.
+- Notes: The old Prompt Cards name is fully retired. Plant Signals now has a named UI panel and independent scoring logic.
+
+### Plant Signals logic trapped inside UI component
+
+- Status: RETIRED
+- Former location: `src/components/dashboard/EmbeddedPromptCards.tsx`
+- Retired by: `src/logic/plantSignals.ts` and `src/components/dashboard/PlantSignalsPanel.tsx`.
+- Notes: Signal scoring is now logic-owned; the dashboard component only renders the panel.
+
+### Quick Action role logic inside DashboardPage
+
+- Status: RETIRED
+- Former location: `src/pages/DashboardPage.tsx`
+- Retired by: `src/logic/dashboardQuickActions.ts`.
+- Notes: Role-aware dashboard action rules can now evolve without patching the large dashboard page.
 
 ### Local dashboard accordion behavior
 
@@ -122,8 +145,8 @@ None currently logged.
 
 - Status: RETIRED
 - Former location: `src/logic/dashboardQuickActionRuntimeBridge.ts`
-- Retired by: direct `<EmbeddedPromptCards onNavigate={onGoToTab} />` render inside `src/pages/DashboardPage.tsx`.
-- Notes: Prompt cards are now owned by DashboardPage. The global bridge side-effect import in `src/main.tsx` should remain removed.
+- Retired by: React-owned dashboard signal rendering.
+- Notes: Prompt cards/Plant Signals are owned by React. The global bridge side-effect import in `src/main.tsx` should remain removed.
 
 ### First-order runtime targeting
 
@@ -143,14 +166,14 @@ None currently logged.
 
 - Status: RETIRED
 - Former location: `src/logic/dashboardQuickActionRuntimeBridge.ts`
-- Retired by: `src/components/dashboard/EmbeddedPromptCards.tsx`
-- Notes: Prompt card rendering is now owned by React. The remaining adapter is only a mount shim.
+- Retired by: React dashboard components.
+- Notes: Prompt card rendering is now owned by React.
 
 ### Visible-label runtime intent matching
 
 - Status: RETIRED
 - Former behavior: bridge inferred runtime actions from visible button text.
-- Retired by: stable runtime intent handling in prompt-card data flow.
+- Retired by: stable runtime intent handling in prompt-card / Plant Signal data flow.
 
 ### Prompt route label fallback
 
