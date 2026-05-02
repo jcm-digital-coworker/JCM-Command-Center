@@ -25,9 +25,9 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 - Status: STAGED
 - Location: dashboard pages/components
 - Why it exists: Fast UI iteration used inline style objects.
-- Current safer state: `src/components/dashboard/dashboardStyles.ts` now contains shared dashboard prompt/card style helpers, and `EmbeddedPromptCards.tsx` consumes those helpers instead of owning local inline style definitions.
-- Risk: `DashboardPage.tsx` still contains many local inline style objects and helper functions, so dashboard styling is not fully standardized yet.
-- Corrective action: Continue extracting shared dashboard card, metric, section, button, and list style primitives from `DashboardPage.tsx` into reusable dashboard style helpers/components.
+- Current safer state: `src/components/dashboard/dashboardStyles.ts` now contains shared dashboard prompt/card/metric/section/list style helpers. `EmbeddedPromptCards.tsx` consumes those helpers, and `DashboardPage.tsx` now consumes shared dashboard style primitives for its major reusable structures.
+- Risk: `DashboardPage.tsx` still has a few local style helpers for work-center-specific badges/cards and small one-off composed layout styles.
+- Corrective action: Extract remaining work-center-specific dashboard styles into shared helpers or a dedicated `DashboardWorkCenterCard` component.
 
 ## Recently Retired Band-Aids
 
