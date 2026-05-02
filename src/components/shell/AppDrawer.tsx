@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { AppTab, DepartmentFilter, RoleView } from '../../types/app';
 import type { WorkCenter } from '../../types/plant';
+import type { NavigationGroupId } from '../../logic/navigationAccess';
 import {
   getHomeTabForRole,
   getVisibleNavigationGroups,
@@ -33,14 +35,27 @@ export default function AppDrawer({
   theme,
   onToggleTheme,
 }: AppDrawerProps) {
-  if (!open) return null;
-
   const visibleGroups = getVisibleNavigationGroups(roleView);
   const homeTab = getHomeTabForRole(roleView);
+  const activeGroupId = getActiveGroupId(tab, visibleGroups);
+  const [openGroupId, setOpenGroupId] = useState<NavigationGroupId | null>(activeGroupId);
+  const [workCentersOpen, setWorkCentersOpen] = useState(departmentFilter !== 'All');
+
+  useEffect(() => {
+    if (!open) return;
+    setOpenGroupId(activeGroupId);
+    setWorkCentersOpen(departmentFilter !== 'All');
+  }, [activeGroupId, departmentFilter, open]);
+
+  if (!open) return null;
 
   function goToTab(nextTab: AppTab) {
     setTab(nextTab);
     onClose();
+  }
+
+  function toggleGroup(groupId: NavigationGroupId) {
+    setOpenGroupId((current) => (current === groupId ? null : groupId));
   }
 
   return (
@@ -91,48 +106,80 @@ export default function AppDrawer({
 
         <div style={menuContainerStyle} className="drawer-menu-scroll">
           <div style={menuStyle}>
-            {visibleGroups.map((group) => (
-              <div key={group.id} style={navGroupStyle}>
-                <div style={drawerSectionLabelStyle}>{group.label.toUpperCase()}</div>
-                <div style={groupDescriptionStyle}>{group.description}</div>
-                {group.items.map((item) => (
+            {visibleGroups.map((group) => {
+              const groupOpen = openGroupId === group.id;
+              const groupActive = group.id === activeGroupId;
+              return (
+                <div key={group.id} style={accordionGroupStyle}>
                   <button
-                    key={item.id}
-                    onClick={() => goToTab(item.id)}
-                    style={tab === item.id ? activeTabStyle : tabStyle}
-                    title={item.description}
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    style={groupActive ? activeAccordionHeaderStyle : accordionHeaderStyle}
                   >
-                    <div style={indicatorStyle(tab === item.id)} />
-                    <span>{item.label.toUpperCase()}</span>
+                    <span>{group.label.toUpperCase()}</span>
+                    <span style={accordionMetaStyle}>
+                      {group.items.length} {group.items.length === 1 ? 'PAGE' : 'PAGES'} {groupOpen ? '-' : '+'}
+                    </span>
                   </button>
-                ))}
-              </div>
-            ))}
+                  {groupOpen && (
+                    <div style={accordionBodyStyle}>
+                      <div style={groupDescriptionStyle}>{group.description}</div>
+                      {group.items.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => goToTab(item.id)}
+                          style={tab === item.id ? activeTabStyle : tabStyle}
+                          title={item.description}
+                        >
+                          <div style={indicatorStyle(tab === item.id)} />
+                          <span>{item.label.toUpperCase()}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
-            <div style={drawerSectionLabelStyle}>WORK CENTERS</div>
-            <button
-              onClick={() => {
-                setDepartmentFilter('All');
-                onClose();
-              }}
-              style={departmentFilter === 'All' ? activeWorkCenterStyle : workCenterStyle}
-            >
-              <div style={indicatorStyle(departmentFilter === 'All')} />
-              ALL DEPARTMENTS
-            </button>
-            {workCenters.map((center) => (
+            <div style={accordionGroupStyle}>
               <button
-                key={center.id}
-                onClick={() => {
-                  setDepartmentFilter(center.department);
-                  onClose();
-                }}
-                style={departmentFilter === center.department ? activeWorkCenterStyle : workCenterStyle}
+                type="button"
+                onClick={() => setWorkCentersOpen((current) => !current)}
+                style={departmentFilter !== 'All' ? activeAccordionHeaderStyle : accordionHeaderStyle}
               >
-                <div style={indicatorStyle(departmentFilter === center.department)} />
-                {center.name.toUpperCase()}
+                <span>WORK CENTERS</span>
+                <span style={accordionMetaStyle}>
+                  {workCenters.length + 1} ITEMS {workCentersOpen ? '-' : '+'}
+                </span>
               </button>
-            ))}
+              {workCentersOpen && (
+                <div style={accordionBodyStyle}>
+                  <button
+                    onClick={() => {
+                      setDepartmentFilter('All');
+                      onClose();
+                    }}
+                    style={departmentFilter === 'All' ? activeWorkCenterStyle : workCenterStyle}
+                  >
+                    <div style={indicatorStyle(departmentFilter === 'All')} />
+                    ALL DEPARTMENTS
+                  </button>
+                  {workCenters.map((center) => (
+                    <button
+                      key={center.id}
+                      onClick={() => {
+                        setDepartmentFilter(center.department);
+                        onClose();
+                      }}
+                      style={departmentFilter === center.department ? activeWorkCenterStyle : workCenterStyle}
+                    >
+                      <div style={indicatorStyle(departmentFilter === center.department)} />
+                      {center.name.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -202,6 +249,10 @@ export default function AppDrawer({
       </div>
     </>
   );
+}
+
+function getActiveGroupId(tab: AppTab, groups: ReturnType<typeof getVisibleNavigationGroups>): NavigationGroupId | null {
+  return groups.find((group) => group.items.some((item) => item.id === tab))?.id ?? null;
 }
 
 function getHomeLabel(homeTab: AppTab) {
@@ -311,32 +362,63 @@ const menuStyle: CSSProperties = {
   padding: '12px 12px 16px',
   display: 'flex',
   flexDirection: 'column',
-  gap: 6,
+  gap: 8,
 };
 
-const navGroupStyle: CSSProperties = {
-  paddingBottom: 8,
+const accordionGroupStyle: CSSProperties = {
+  border: '1px solid #334155',
+  borderRadius: 5,
+  overflow: 'hidden',
+  background: 'rgba(15, 23, 42, 0.45)',
 };
 
-const drawerSectionLabelStyle: CSSProperties = {
-  color: '#f97316',
+const accordionHeaderStyle: CSSProperties = {
+  width: '100%',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 10,
+  padding: '11px 12px',
+  background: 'transparent',
+  border: 'none',
+  color: '#94a3b8',
+  cursor: 'pointer',
   fontSize: 11,
   fontWeight: 900,
-  letterSpacing: '1.5px',
-  margin: '12px 0 2px 16px',
+  letterSpacing: '1px',
+  textAlign: 'left',
+};
+
+const activeAccordionHeaderStyle: CSSProperties = {
+  ...accordionHeaderStyle,
+  background: 'rgba(249, 115, 22, 0.15)',
+  color: '#f97316',
+};
+
+const accordionMetaStyle: CSSProperties = {
+  color: '#64748b',
+  fontSize: 9,
+  fontWeight: 900,
+  whiteSpace: 'nowrap',
+};
+
+const accordionBodyStyle: CSSProperties = {
+  padding: '4px 4px 8px',
+  borderTop: '1px solid #334155',
 };
 
 const groupDescriptionStyle: CSSProperties = {
   color: '#64748b',
   fontSize: 10,
   lineHeight: 1.35,
-  margin: '0 10px 4px 16px',
+  margin: '6px 10px 6px 12px',
 };
 
 const tabStyle: CSSProperties = {
+  width: '100%',
   background: 'transparent',
   border: 'none',
-  padding: '11px 16px',
+  padding: '11px 12px',
   borderRadius: 4,
   textAlign: 'left',
   cursor: 'pointer',
@@ -357,7 +439,7 @@ const activeTabStyle: CSSProperties = {
 
 const workCenterStyle: CSSProperties = {
   ...tabStyle,
-  padding: '9px 16px',
+  padding: '9px 12px',
   fontSize: 11,
 };
 
