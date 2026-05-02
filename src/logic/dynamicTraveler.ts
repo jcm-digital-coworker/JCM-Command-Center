@@ -110,7 +110,7 @@ function getPlantRoute(order: ProductionOrder): Department[] {
 
   const route = [...DEFAULT_PLANT_ROUTE];
   if (order.currentDepartment && !route.includes(order.currentDepartment)) route.splice(1, 0, order.currentDepartment);
-  if (order.nextDepartment && order.nextDepartment !== 'Complete' && !route.includes(order.nextDepartment)) route.push(order.nextDepartment);
+  if (order.nextDepartment && !route.includes(order.nextDepartment)) route.push(order.nextDepartment);
   return dedupeRoute(route);
 }
 
