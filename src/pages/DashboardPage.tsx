@@ -11,6 +11,7 @@ import { getDashboardRuntimeTruth } from '../logic/dashboardRuntimeSelectors';
 import { getCommandRecommendation } from '../logic/commandRecommendations';
 import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import AccordionSection from '../components/common/AccordionSection';
+import SmartEmptyState from '../components/common/SmartEmptyState';
 import EmbeddedPromptCards from '../components/dashboard/EmbeddedPromptCards';
 import DashboardWorkCenterCard from '../components/dashboard/DashboardWorkCenterCard';
 import CommandRecommendationCard from '../components/dashboard/CommandRecommendationCard';
@@ -161,57 +162,74 @@ export default function DashboardPage({
         <MissionCard title="Plant Criticals" value={plantCriticals.toString()} detail="Orders, material, QA, maintenance, and equipment alerts combined." color={plantCriticals > 0 ? '#dc2626' : '#10b981'} theme={theme} onClick={() => onGoToTab(plantCriticals > 0 ? 'orders' : 'plantMap')} />
       </div>
 
-      {blockedOrders.length > 0 && (
-        <AccordionSection title="BLOCKED ORDERS" count={blockedOrders.length} color="#dc2626" expanded={expandedSection === 'blockedOrders'} onToggle={() => toggleSection('blockedOrders')} onViewAll={() => onGoToTab('orders')} theme={theme}>
+      <AccordionSection title="BLOCKED ORDERS" count={blockedOrders.length} color="#dc2626" expanded={expandedSection === 'blockedOrders'} onToggle={() => toggleSection('blockedOrders')} onViewAll={() => onGoToTab('orders')} theme={theme}>
+        {blockedOrders.length > 0 ? (
           <div style={dashboardListStyle}>{blockedOrders.slice(0, expandedSection === 'blockedOrders' ? undefined : 3).map((order) => <OrderRow key={order.orderNumber} order={order} theme={theme} />)}</div>
-        </AccordionSection>
-      )}
+        ) : (
+          <SmartEmptyState title="No blocked orders" detail="Flow is clear in the current sample set. Next best check is runnable work and due-soon pressure." actionLabel="Review Workflow" onAction={() => onGoToTab('workflow')} theme={theme} />
+        )}
+      </AccordionSection>
 
       <AccordionSection title="ORDERS DUE SOON" count={dueSoonOrders.length} color="#3b82f6" expanded={expandedSection === 'dueSoon'} onToggle={() => toggleSection('dueSoon')} onViewAll={() => onGoToTab('orders')} theme={theme}>
-        <div style={dashboardListStyle}>{dueSoonOrders.map((order) => <OrderRow key={order.orderNumber} order={order} theme={theme} compact />)}</div>
+        {dueSoonOrders.length > 0 ? (
+          <div style={dashboardListStyle}>{dueSoonOrders.map((order) => <OrderRow key={order.orderNumber} order={order} theme={theme} compact />)}</div>
+        ) : (
+          <SmartEmptyState title="No due-soon pressure" detail="No open order is currently driving the near-term ship window. Use this space to check department readiness." actionLabel="Open Plant Map" onAction={() => onGoToTab('plantMap')} theme={theme} />
+        )}
       </AccordionSection>
 
       <AccordionSection title="DEPARTMENT FOCUS" count={workCenters.length} color="#f97316" expanded={expandedSection === 'workCenters'} onToggle={() => toggleSection('workCenters')} onViewAll={() => toggleSection('workCenters')} theme={theme}>
-        <div style={dashboardGridStyle}>
-          {workCenters.slice(0, expandedSection === 'workCenters' ? undefined : 8).map((workCenter) => (
-            <DashboardWorkCenterCard key={workCenter.id} workCenter={workCenter} theme={theme} onOpen={onOpenWorkCenter} />
-          ))}
-        </div>
+        {workCenters.length > 0 ? (
+          <div style={dashboardGridStyle}>
+            {workCenters.slice(0, expandedSection === 'workCenters' ? undefined : 8).map((workCenter) => (
+              <DashboardWorkCenterCard key={workCenter.id} workCenter={workCenter} theme={theme} onOpen={onOpenWorkCenter} />
+            ))}
+          </div>
+        ) : (
+          <SmartEmptyState title="No work centers loaded" detail="Department focus needs work-center data before it can guide local action." actionLabel="Open Production" onAction={() => onGoToTab('plantMap')} theme={theme} />
+        )}
       </AccordionSection>
 
       <AccordionSection title="QA / SAFETY / MAINTENANCE SIGNALS" count={openRisks.length + activeTasks.length + qaHolds.length} color="#f59e0b" expanded={expandedSection === 'signals'} onToggle={() => toggleSection('signals')} onViewAll={() => onGoToTab('risk')} theme={theme}>
-        <div style={dashboardListStyle}>
-          {qaHolds.slice(0, 2).map((order) => (
-            <div key={order.orderNumber} style={getDashboardItemStyle(theme)}>
-              <div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} quality hold</div><div style={dashboardMutedTextStyle}>{order.assemblyPartNumber} - {order.qaStatus}</div></div>
-              <span style={getPriorityBadge('CRITICAL')}>{order.qaStatus}</span>
-            </div>
-          ))}
-          {openRisks.slice(0, 3).map((risk) => (
-            <div key={risk.id} style={getDashboardItemStyle(theme)}>
-              <div><div style={getDashboardItemTitleStyle(theme)}>{risk.title}</div><div style={dashboardMutedTextStyle}>{risk.department} - {risk.category ?? risk.source}</div></div>
-              <span style={getPriorityBadge(risk.severity ?? risk.level)}>{risk.severity ?? risk.level}</span>
-            </div>
-          ))}
-          {activeTasks.slice(0, 3).map((task) => (
-            <div key={task.id} style={getDashboardItemStyle(theme)}>
-              <div><div style={getDashboardItemTitleStyle(theme)}>{task.title}</div><div style={dashboardMutedTextStyle}>Maintenance - Due {task.nextDue}</div></div>
-              <span style={getPriorityBadge(task.status)}>{task.status.replace('_', ' ')}</span>
-            </div>
-          ))}
-        </div>
+        {openRisks.length + activeTasks.length + qaHolds.length > 0 ? (
+          <div style={dashboardListStyle}>
+            {qaHolds.slice(0, 2).map((order) => (
+              <div key={order.orderNumber} style={getDashboardItemStyle(theme)}>
+                <div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} quality hold</div><div style={dashboardMutedTextStyle}>{order.assemblyPartNumber} - {order.qaStatus}</div></div>
+                <span style={getPriorityBadge('CRITICAL')}>{order.qaStatus}</span>
+              </div>
+            ))}
+            {openRisks.slice(0, 3).map((risk) => (
+              <div key={risk.id} style={getDashboardItemStyle(theme)}>
+                <div><div style={getDashboardItemTitleStyle(theme)}>{risk.title}</div><div style={dashboardMutedTextStyle}>{risk.department} - {risk.category ?? risk.source}</div></div>
+                <span style={getPriorityBadge(risk.severity ?? risk.level)}>{risk.severity ?? risk.level}</span>
+              </div>
+            ))}
+            {activeTasks.slice(0, 3).map((task) => (
+              <div key={task.id} style={getDashboardItemStyle(theme)}>
+                <div><div style={getDashboardItemTitleStyle(theme)}>{task.title}</div><div style={dashboardMutedTextStyle}>Maintenance - Due {task.nextDue}</div></div>
+                <span style={getPriorityBadge(task.status)}>{task.status.replace('_', ' ')}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <SmartEmptyState title="No active support signals" detail="No QA hold, open risk, or active maintenance pressure is leading the current dashboard signal." actionLabel="Review Support" onAction={() => onGoToTab('risk')} theme={theme} />
+        )}
       </AccordionSection>
 
       <AccordionSection title="EQUIPMENT INTELLIGENCE" count={machines.length} color="#64748b" expanded={expandedSection === 'machines'} onToggle={() => toggleSection('machines')} onViewAll={() => onGoToTab('machines')} theme={theme}>
         <div style={dashboardListStyle}>
           <div style={getDashboardPlantNoteStyle(theme)}>Equipment data stays powerful, but it is now one module inside the plant command model.</div>
-          {alerts.slice(0, expandedSection === 'machines' ? undefined : 3).map((machine) => (
-            <div key={machine.id} style={getDashboardItemStyle(theme)} onClick={() => onOpenMachine(machine)}>
-              <div><div style={getDashboardItemTitleStyle(theme)}>{machine.name}</div><div style={dashboardMutedTextStyle}>{machine.department} - {machine.lastActivity}</div></div>
-              <StatusBadge state={machine.state} priority={machine.alarmPriority} />
-            </div>
-          ))}
-          {alerts.length === 0 && <div style={getDashboardPlantNoteStyle(theme)}>No active equipment alerts in the current view.</div>}
+          {alerts.length > 0 ? (
+            alerts.slice(0, expandedSection === 'machines' ? undefined : 3).map((machine) => (
+              <div key={machine.id} style={getDashboardItemStyle(theme)} onClick={() => onOpenMachine(machine)}>
+                <div><div style={getDashboardItemTitleStyle(theme)}>{machine.name}</div><div style={dashboardMutedTextStyle}>{machine.department} - {machine.lastActivity}</div></div>
+                <StatusBadge state={machine.state} priority={machine.alarmPriority} />
+              </div>
+            ))
+          ) : (
+            <SmartEmptyState title="No active equipment alerts" detail="Equipment is not currently leading the command signal. Next useful check is maintenance requests or plant flow." actionLabel="Open Maintenance" onAction={() => onGoToTab('maintenance')} theme={theme} />
+          )}
         </div>
       </AccordionSection>
     </div>
@@ -270,6 +288,6 @@ function getQuickActionsToggleStyle(theme: DashboardTheme): CSSProperties { retu
 function formatRoleLabel(roleView: RoleView): string { return roleView === 'Forklift / Receiving' ? 'Receiving' : roleView; }
 function formatOrderBlock(order: ProductionOrder) { const blockReason = getOrderBlockReason(order); return blockReason ? formatBlockedReason(blockReason) : 'No blocker listed'; }
 function OrderRow({ order, theme, compact = false }: { order: ProductionOrder; theme: DashboardTheme; compact?: boolean }) { return <div style={getDashboardItemStyle(theme)}><div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} - {order.assemblyPartNumber}</div><div style={dashboardMutedTextStyle}>{order.customer} - Qty {order.quantity} - Ship {order.projectedShipDate}</div>{!compact && <div style={dashboardMutedTextStyle}>{formatOrderBlock(order)}</div>}</div><span style={getPriorityBadge(order.status)}>{getOrderStatusLabel(order)}</span></div>; }
-function StatusMetric({ label, value, total, color, highlight, theme }: { label: string; value: number; total: number; color: string; highlight?: boolean; theme: DashboardTheme }) { const percentage = total > 0 ? Math.round((value / total) * 100) : 0; return <div style={{ ...getDashboardMetricStyle(theme), borderLeft: `4px solid ${color}`, background: highlight ? `${color}15` : theme === 'dark' ? '#1e293b' : '#ffffff' }}><div style={dashboardMetricLabelStyle}>{label}</div><div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}><span style={{ fontSize: 28, fontWeight: 700, color }}>{value}</span><span style={{ fontSize: 14, color: '#475569' }}>/ {total}</span></div><div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>{percentage}%</div></div>; }
-function MissionCard({ title, value, detail, color, theme, onClick }: { title: string; value: string; detail: string; color: string; theme: DashboardTheme; onClick: () => void }) { return <button style={getDashboardMissionCardStyle(theme, color)} onClick={onClick}><div style={{ fontSize: 11, color, fontWeight: 900, letterSpacing: '0.8px', textTransform: 'uppercase' }}>{title}</div><div style={getDashboardMissionValueStyle(theme)}>{value}</div><div style={dashboardMutedTextStyle}>{detail}</div></button>; }
+function StatusMetric({ label, value, total, color, highlight, theme }: { label: string; value: number; total: number; color: string; highlight?: boolean; theme: DashboardTheme }) { const percentage = total > 0 ? Math.round((value / total) * 100) : 0; return <div style={{ ...getDashboardMetricStyle(theme), borderLeft: `3px solid ${color}`, background: highlight ? `${color}12` : undefined }}><div style={dashboardMetricLabelStyle}>{label}</div><div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}><span style={{ fontSize: 23, fontWeight: 800, color }}>{value}</span><span style={{ fontSize: 12, color: '#475569' }}>/ {total}</span></div><div style={{ fontSize: 11, color: '#475569', marginTop: 3 }}>{percentage}%</div></div>; }
+function MissionCard({ title, value, detail, color, theme, onClick }: { title: string; value: string; detail: string; color: string; theme: DashboardTheme; onClick: () => void }) { return <button style={getDashboardMissionCardStyle(theme, color)} onClick={onClick}><div style={{ fontSize: 10, color, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase' }}>{title}</div><div style={getDashboardMissionValueStyle(theme)}>{value}</div><div style={dashboardMutedTextStyle}>{detail}</div></button>; }
 function getPriorityBadge(priority: string): CSSProperties { const colors: Record<string, string> = { blocked: '#dc2626', hold: '#dc2626', ready: '#10b981', runnable: '#10b981', BLOCKED: '#dc2626', HOLD: '#dc2626', FAILED: '#dc2626', HIGH: '#dc2626', CRITICAL: '#dc2626', READY: '#10b981', IN_PROGRESS: '#3b82f6', MEDIUM: '#f59e0b', LOW: '#3b82f6', NORMAL: '#10b981', WAITING: '#f59e0b', DONE: '#64748b' }; const color = colors[priority] || '#64748b'; return { padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 800, background: `${color}25`, color, textTransform: 'uppercase', letterSpacing: '0.5px', border: `1px solid ${color}50`, whiteSpace: 'nowrap' }; }
