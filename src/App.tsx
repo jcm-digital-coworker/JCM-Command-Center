@@ -51,7 +51,21 @@ type CoverageView = 'hub' | 'signin' | 'available' | 'assigned' | 'break' | 'off
 const departmentOrder = plantDepartmentOrder;
 const JCM_NAVIGATE_EVENT = 'jcm:navigate';
 const ROLE_STORAGE_KEY = 'jcm_role_view';
-const ROLE_OPTIONS: RoleView[] = ['Operator', 'Lead / Supervisor', 'Manager', 'Maintenance', 'Forklift / Receiving', 'QA'];
+const ROLE_OPTIONS: RoleView[] = ['Production', 'Department Lead', 'Department Supervisor', 'Management', 'Maintenance', 'Support'];
+const LEGACY_ROLE_MAP: Record<string, RoleView> = {
+  Operator: 'Production',
+  operator: 'Production',
+  'Lead / Supervisor': 'Department Lead',
+  lead: 'Department Lead',
+  supervisor: 'Department Supervisor',
+  Manager: 'Management',
+  management: 'Management',
+  Maintenance: 'Maintenance',
+  maintenance: 'Maintenance',
+  'Forklift / Receiving': 'Support',
+  QA: 'Support',
+  qa: 'Support',
+};
 
 function priorityRank(priority: Machine['alarmPriority']) {
   if (priority === 'ESTOP') return 0;
@@ -66,8 +80,15 @@ function filterByDepartment<T extends { department: Department }>(items: T[], fi
 }
 
 function getSavedRoleView(): RoleView {
-  const savedRole = localStorage.getItem(ROLE_STORAGE_KEY) as RoleView | null;
-  return savedRole && ROLE_OPTIONS.includes(savedRole) ? savedRole : 'Manager';
+  const savedRole = localStorage.getItem(ROLE_STORAGE_KEY);
+  if (!savedRole) return 'Management';
+  if (ROLE_OPTIONS.includes(savedRole as RoleView)) return savedRole as RoleView;
+  const migratedRole = LEGACY_ROLE_MAP[savedRole];
+  if (migratedRole) {
+    localStorage.setItem(ROLE_STORAGE_KEY, migratedRole);
+    return migratedRole;
+  }
+  return 'Management';
 }
 
 export default function App() {
@@ -174,7 +195,7 @@ export default function App() {
     setSimulatorMachine(null);
     setSelectedWorkCenter(null);
 
-    if (nextRole === 'Forklift / Receiving') {
+    if (nextRole === 'Support') {
       setDepartmentFilter('Receiving');
       setReceivingInitialView('ready');
       navigateTo('receiving');
