@@ -20,16 +20,7 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 
 ## Open Band-Aids
 
-### 1. Embedded prompt mount adapter
-
-- Status: OPEN
-- Location: `src/logic/dashboardQuickActionRuntimeBridge.ts`
-- Why it exists: `DashboardPage.tsx` has been difficult/risky to patch safely through the current connector because it is a large file. The old direct DOM prompt creation has been replaced by a real React component, but the component is still mounted through a small adapter.
-- Current safer state: Prompt cards now live in `src/components/dashboard/EmbeddedPromptCards.tsx` and are rendered by React. The adapter only finds the Quick Actions section and mounts the component.
-- Risk: The adapter still finds Quick Actions by section text. A future label change from `QUICK ACTIONS` could break prompt placement.
-- Corrective action: Render `<EmbeddedPromptCards />` directly inside `DashboardPage.tsx` under `<QuickActionsPanel />`, then remove `dashboardQuickActionRuntimeBridge.ts` and the side-effect import from `src/main.tsx`.
-
-### 2. Inline dashboard styling
+### 1. Inline dashboard styling
 
 - Status: OPEN
 - Location: dashboard pages/components
@@ -38,6 +29,13 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 - Corrective action: Extract shared dashboard card/button/prompt styles or component primitives after behavior is stable.
 
 ## Recently Retired Band-Aids
+
+### Embedded prompt mount adapter
+
+- Status: RETIRED
+- Former location: `src/logic/dashboardQuickActionRuntimeBridge.ts`
+- Retired by: direct `<EmbeddedPromptCards onNavigate={onGoToTab} />` render inside `src/pages/DashboardPage.tsx`.
+- Notes: Prompt cards are now owned by DashboardPage. The global bridge side-effect import in `src/main.tsx` should remain removed.
 
 ### First-order runtime targeting
 
