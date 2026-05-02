@@ -8,6 +8,7 @@ import type { WorkCenter } from '../types/plant';
 import type { ProductionOrder } from '../types/productionOrder';
 import { getOrderStatusLabel, getOrderBlockReason, formatBlockedReason } from '../logic/orderReadiness';
 import { getDashboardRuntimeTruth } from '../logic/dashboardRuntimeSelectors';
+import { getQuickActionsForRole, formatRoleLabel, type QuickAction } from '../logic/dashboardQuickActions';
 import { getCommandRecommendation } from '../logic/commandRecommendations';
 import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import AccordionSection from '../components/common/AccordionSection';
@@ -40,7 +41,6 @@ import {
   getDashboardQuickActionsTitleStyle,
   getDashboardTitleStyle,
   type DashboardTheme,
-  type DashboardTone,
 } from '../components/dashboard/dashboardStyles';
 import StatusBadge from '../components/StatusBadge';
 
@@ -57,24 +57,6 @@ interface DashboardPageProps {
   departmentFilter: string;
   theme?: DashboardTheme;
 }
-
-type QuickAction = {
-  label: string;
-  detail: string;
-  target: AppTab;
-  tone: DashboardTone;
-  count?: number;
-  priority: number;
-};
-
-type QuickActionState = {
-  alertCount: number;
-  activeTaskCount: number;
-  openRiskCount: number;
-  qaHoldCount: number;
-  blockedOrderCount: number;
-  materialIssueCount: number;
-};
 
 export default function DashboardPage({
   machines,
@@ -236,25 +218,6 @@ export default function DashboardPage({
   );
 }
 
-function getQuickActionsForRole(roleView: RoleView, state: QuickActionState): QuickAction[] {
-  const alertAction = createLiveAction('View Equipment Alerts', 'No active equipment alerts in current view', 'Open active equipment alarms and offline status', 'alerts', state.alertCount, 'red', 'green', 5);
-  const maintenanceAction = createLiveAction('Open Maintenance', 'No active maintenance pressure in current view', 'Review active maintenance requests and scheduled task pressure', 'maintenance', state.activeTaskCount, 'orange', 'slate', 4);
-  const qaAction = createLiveAction('Review QA / Safety', 'No open QA / safety signal in current view', 'Review quality holds, safety signals, and risk items', 'risk', state.openRiskCount + state.qaHoldCount, 'red', 'slate', 5);
-  const blockerAction = createLiveAction('Resolve Blockers', 'No blocked orders in current view', 'Review blocked flow before assigning labor', 'orders', state.blockedOrderCount, 'red', 'orange', 6);
-  const materialAction = createLiveAction('Resolve Material Issues', 'Material is clear in current view', 'Open receiving and material readiness issues', 'receiving', state.materialIssueCount, 'orange', 'green', 5);
-
-  if (roleView === 'Operator') return sortQuickActions([{ label: 'View Work Queue', detail: 'Open assigned work and current station priorities', target: 'workflow', tone: 'orange', priority: 3 }, { ...blockerAction, label: state.blockedOrderCount > 0 ? 'Report Blocked Work' : 'Review Blocker Status', target: 'workflow' }, { ...materialAction, label: state.materialIssueCount > 0 ? 'Request Material' : 'Check Material Status' }, { ...maintenanceAction, label: state.activeTaskCount > 0 ? 'Call Maintenance' : 'Maintenance Status' }, qaAction, { label: 'Open Documents', detail: 'Access procedures, standards, and references', target: 'documents', tone: 'slate', priority: 1 }]);
-  if (roleView === 'Lead / Supervisor') return sortQuickActions([blockerAction, { label: 'Check Crew Coverage', detail: 'See available crew and coverage gaps', target: 'coverage', tone: state.blockedOrderCount > 0 ? 'orange' : 'slate', priority: 3 }, { label: 'Open Departments', detail: 'Review work-center focus and department status', target: 'plantMap', tone: 'green', priority: 2 }, alertAction, { label: 'Escalate Engineering', detail: state.blockedOrderCount > 0 ? 'Check blueprint, routing, or release blockers' : 'Review engineering release status', target: 'orders', tone: 'blue', priority: state.blockedOrderCount > 0 ? 4 : 2 }, maintenanceAction]);
-  if (roleView === 'Manager') return sortQuickActions([{ label: 'Plant Command Review', detail: 'Review plant criticals, flow, and department status', target: 'dashboard', tone: state.blockedOrderCount + state.alertCount > 0 ? 'orange' : 'slate', priority: 2 }, blockerAction, { label: 'Check Crew Coverage', detail: 'Review staffing status across departments', target: 'coverage', tone: 'slate', priority: 2 }, { label: 'Open Departments', detail: 'Review department focus and work-center status', target: 'plantMap', tone: 'green', priority: 2 }, alertAction, qaAction, maintenanceAction, { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate', priority: 1 }]);
-  if (roleView === 'Maintenance') return sortQuickActions([maintenanceAction, alertAction, { ...blockerAction, label: 'Review Work Queue', detail: state.blockedOrderCount > 0 ? 'Check workflow impact before taking equipment down' : 'Check production impact before maintenance work', target: 'workflow' }, { label: 'Open Equipment', detail: 'Review equipment status and detail cards', target: 'machines', tone: 'blue', priority: 3 }, qaAction, { label: 'Open Documents', detail: 'Access procedures, standards, and references', target: 'documents', tone: 'slate', priority: 1 }]);
-  if (roleView === 'Forklift / Receiving') return sortQuickActions([{ ...materialAction, label: state.materialIssueCount > 0 ? 'Open Material Issues' : 'Open Receiving' }, { label: 'Request Queue', detail: 'Check material requests from production departments', target: 'receiving', tone: state.materialIssueCount > 0 ? 'orange' : 'slate', priority: state.materialIssueCount > 0 ? 4 : 2 }, { ...blockerAction, label: 'View Work Queue', detail: state.blockedOrderCount > 0 ? 'Review orders waiting on receiving or movement' : 'Review orders near receiving handoff', target: 'workflow' }, { label: 'Check Crew Coverage', detail: 'Review receiving and forklift coverage status', target: 'coverage', tone: 'slate', priority: 2 }, { label: 'Open Orders', detail: 'Review material status by order', target: 'orders', tone: 'blue', priority: 2 }, alertAction]);
-  if (roleView === 'QA') return sortQuickActions([qaAction, { label: 'Open QA Department', detail: 'Review QA department cards and station signals', target: 'qa', tone: 'blue', priority: 3 }, blockerAction, { label: 'Open Documents', detail: 'Access standards, inspection references, and procedures', target: 'documents', tone: 'slate', priority: 2 }, { label: 'Check Crew Coverage', detail: 'Review QA coverage and available support', target: 'coverage', tone: 'slate', priority: 2 }, alertAction]);
-
-  return sortQuickActions([{ label: 'View Work Queue', detail: 'Open current workflow and station priorities', target: 'workflow', tone: 'orange', priority: 3 }, blockerAction, materialAction, { label: 'Open Departments', detail: 'Use department focus cards and work-center view', target: 'plantMap', tone: 'green', priority: 2 }, { label: 'Check Crew Coverage', detail: 'See available crew and coverage status', target: 'coverage', tone: 'slate', priority: 2 }, alertAction, maintenanceAction, qaAction, { label: 'Open Documents', detail: 'Access standards, procedures, and references', target: 'documents', tone: 'slate', priority: 1 }]);
-}
-
-function createLiveAction(label: string, clearDetail: string, activeDetail: string, target: AppTab, count: number, activeTone: DashboardTone, clearTone: DashboardTone, activePriority: number): QuickAction { return { label, detail: count > 0 ? `${count} active - ${activeDetail}` : clearDetail, target, count: count > 0 ? count : undefined, tone: count > 0 ? activeTone : clearTone, priority: count > 0 ? activePriority : 1 }; }
-function sortQuickActions(actions: QuickAction[]): QuickAction[] { return [...actions].sort((a, b) => b.priority - a.priority); }
 function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: RoleView; actions: QuickAction[]; onGoToTab: (tab: AppTab) => void; theme: DashboardTheme }) {
   const [showAllActions, setShowAllActions] = useState(false);
   const visibleActions = showAllActions ? actions : actions.slice(0, 3);
@@ -284,8 +247,8 @@ function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: 
     </section>
   );
 }
+
 function getQuickActionsToggleStyle(theme: DashboardTheme): CSSProperties { return { border: theme === 'dark' ? '1px dashed #475569' : '1px dashed #cbd5e1', background: theme === 'dark' ? 'rgba(15, 23, 42, 0.55)' : '#f8fafc', color: '#94a3b8', borderRadius: 4, padding: '12px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase', minHeight: 54 }; }
-function formatRoleLabel(roleView: RoleView): string { return roleView === 'Forklift / Receiving' ? 'Receiving' : roleView; }
 function formatOrderBlock(order: ProductionOrder) { const blockReason = getOrderBlockReason(order); return blockReason ? formatBlockedReason(blockReason) : 'No blocker listed'; }
 function OrderRow({ order, theme, compact = false }: { order: ProductionOrder; theme: DashboardTheme; compact?: boolean }) { return <div style={getDashboardItemStyle(theme)}><div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} - {order.assemblyPartNumber}</div><div style={dashboardMutedTextStyle}>{order.customer} - Qty {order.quantity} - Ship {order.projectedShipDate}</div>{!compact && <div style={dashboardMutedTextStyle}>{formatOrderBlock(order)}</div>}</div><span style={getPriorityBadge(order.status)}>{getOrderStatusLabel(order)}</span></div>; }
 function StatusMetric({ label, value, total, color, highlight, theme }: { label: string; value: number; total: number; color: string; highlight?: boolean; theme: DashboardTheme }) { const percentage = total > 0 ? Math.round((value / total) * 100) : 0; return <div style={{ ...getDashboardMetricStyle(theme), borderLeft: `3px solid ${color}`, background: highlight ? `${color}12` : undefined }}><div style={dashboardMetricLabelStyle}>{label}</div><div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}><span style={{ fontSize: 23, fontWeight: 800, color }}>{value}</span><span style={{ fontSize: 12, color: '#475569' }}>/ {total}</span></div><div style={{ fontSize: 11, color: '#475569', marginTop: 3 }}>{percentage}%</div></div>; }
