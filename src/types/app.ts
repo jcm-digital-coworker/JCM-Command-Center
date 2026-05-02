@@ -25,10 +25,25 @@ export type AppTab =
 
 export type DepartmentFilter = 'All' | Department;
 
-export type RoleView =
+type CurrentRoleView =
   | 'Production'
   | 'Department Lead'
   | 'Department Supervisor'
   | 'Management'
   | 'Maintenance'
   | 'Support';
+
+type LegacyRoleView =
+  | 'Operator'
+  | 'Lead / Supervisor'
+  | 'Manager'
+  | 'Forklift / Receiving'
+  | 'QA'
+  | 'operator'
+  | 'lead'
+  | 'supervisor'
+  | 'management'
+  | 'maintenance'
+  | 'qa';
+
+export type RoleView = CurrentRoleView | LegacyRoleView;
