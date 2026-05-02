@@ -2,6 +2,22 @@
 
 Purpose: track temporary implementation bridges so they do not quietly become permanent architecture.
 
+## Repo Operation Protocols
+
+### Large-file update protocol: use Git tree path, not contents update
+
+- Status: ACTIVE PROTOCOL
+- Applies to: large/high-churn files such as `src/pages/DashboardPage.tsx` and `src/App.tsx`.
+- Problem discovered: GitHub contents updates require the exact target file blob SHA. For large files, connector output can be truncated or expose misleading SHA-looking values, causing `409: SHA does not match` failures.
+- Corrective protocol: bypass the contents API for large-file replacements and use Git data operations instead:
+  1. Find the latest known main commit SHA.
+  2. Use `create_tree` with `base_tree_sha` set to the latest main commit SHA and `tree_elements` containing the replacement file content.
+  3. Use `create_commit` with the new tree SHA and parent set to the latest main commit SHA.
+  4. Use `update_ref` to move `main` to the new commit SHA with `force: false`.
+  5. Verify GitHub Actions before stacking more changes.
+- Proven working example: commit `68160453ad41d5fe831621a872331106ae8034ae` used this path to update `src/pages/DashboardPage.tsx` and retire dashboard runtime-truth drift.
+- Rule: use `update_file` for small files when the blob SHA is available. Use the Git tree path for large files or any file where the contents API SHA becomes unreliable.
+
 ## Open Band-Aids
 
 ### 1. Embedded prompt mount adapter
