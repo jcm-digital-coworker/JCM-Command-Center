@@ -19,7 +19,7 @@ import AppDrawer from './components/shell/AppDrawer';
 import CommandNavigationBar from './components/shell/CommandNavigationBar';
 import { getHomeTabForRole } from './logic/navigationAccess';
 
-import WorkflowPage from './pages/WorkflowPage';
+import WorkflowPage from './pages/WorkflowMobilePage';
 import DashboardPage from './pages/DashboardPage';
 import MachinesPage, { AlertsPage } from './pages/MachinesPage';
 import SimulationPage from './pages/SimulationPage';
