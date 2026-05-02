@@ -47,7 +47,18 @@ export function getCommandRecommendation(
     };
   }
 
-  if (roleView === 'Forklift / Receiving') {
+  if (roleView === 'Support') {
+    if (runtime.qaHolds.length > 0) {
+      return {
+        severity: 'critical',
+        title: 'Clear QA holds before downstream work moves',
+        detail: `${runtime.qaHolds.length} order${runtime.qaHolds.length === 1 ? ' has' : 's have'} QA hold or failed status.`,
+        reason: 'A QA hold can make otherwise runnable work unsafe to release or ship.',
+        targetTab: 'risk',
+        actionLabel: 'Review QA / Safety',
+      };
+    }
+
     if (runtime.materialIssues.length > 0) {
       return {
         severity: 'watch',
@@ -60,34 +71,12 @@ export function getCommandRecommendation(
     }
 
     return {
-      severity: 'normal',
-      title: 'Keep receiving lanes clear',
-      detail: 'No major material readiness issue is currently leading the plant signal.',
-      reason: 'A clear receiving queue protects downstream workflow from surprise delays.',
-      targetTab: 'receiving',
-      actionLabel: 'Open Receiving',
-    };
-  }
-
-  if (roleView === 'QA') {
-    if (runtime.qaHolds.length > 0) {
-      return {
-        severity: 'critical',
-        title: 'Clear QA holds before downstream work moves',
-        detail: `${runtime.qaHolds.length} order${runtime.qaHolds.length === 1 ? ' has' : 's have'} QA hold or failed status.`,
-        reason: 'A QA hold can make otherwise runnable work unsafe to release or ship.',
-        targetTab: 'risk',
-        actionLabel: 'Review QA / Safety',
-      };
-    }
-
-    return {
       severity,
-      title: 'Review QA readiness signals',
-      detail: 'No QA hold is currently leading the plant signal.',
-      reason: 'QA visibility helps catch release risk before it becomes rework or shipping delay.',
-      targetTab: 'qa',
-      actionLabel: 'Open QA',
+      title: 'Review support readiness signals',
+      detail: 'No QA hold or major material readiness issue is currently leading the support signal.',
+      reason: 'Support keeps production moving by clearing material, QA, release, and handoff friction.',
+      targetTab: 'receiving',
+      actionLabel: 'Open Support Flow',
     };
   }
 
