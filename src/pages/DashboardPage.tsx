@@ -27,6 +27,7 @@ import {
   dashboardQuickActionsHeaderStyle,
   dashboardQuickActionsSubtitleStyle,
   dashboardSubtitleStyle,
+  getDashboardActionItemStyle,
   getDashboardItemStyle,
   getDashboardItemTitleStyle,
   getDashboardPlantNoteStyle,
@@ -196,7 +197,7 @@ export default function DashboardPage({
           <div style={getDashboardPlantNoteStyle(theme)}>Equipment data stays powerful, but it is now one module inside the plant command model.</div>
           {alerts.length > 0 ? (
             alerts.slice(0, expandedSection === 'machines' ? undefined : 3).map((machine) => (
-              <div key={machine.id} style={getDashboardItemStyle(theme)} onClick={() => onOpenMachine(machine)}>
+              <div key={machine.id} style={getDashboardActionItemStyle(theme)} onClick={() => onOpenMachine(machine)}>
                 <div><div style={getDashboardItemTitleStyle(theme)}>{machine.name}</div><div style={dashboardMutedTextStyle}>{machine.department} - {machine.lastActivity}</div></div>
                 <StatusBadge state={machine.state} priority={machine.alarmPriority} />
               </div>
