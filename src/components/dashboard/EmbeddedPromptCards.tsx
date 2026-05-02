@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { AppTab } from '../../types/app';
+import type { ProductionOrder } from '../../types/productionOrder';
 import { productionOrders } from '../../data/productionOrders';
 import {
   applyQuickActionRuntimeIntent,
@@ -20,10 +21,11 @@ import {
   type DashboardTone,
 } from './dashboardStyles';
 
-type EmbeddedPrompt = {
+type PlantSignal = {
   title: string;
   detail: string;
   actionLabel: string;
+  priority: number;
   intent?: QuickActionRuntimeIntent;
   routeTarget: AppTab;
   tone: DashboardTone;
@@ -47,32 +49,32 @@ export default function EmbeddedPromptCards({ onNavigate }: EmbeddedPromptCardsP
     };
   }, []);
 
-  const prompts = useMemo(() => {
+  const signals = useMemo(() => {
     void runtimeVersion;
-    return getEmbeddedPrompts();
+    return getPlantSignals();
   }, [runtimeVersion]);
 
-  const activePromptCount = prompts.filter((prompt) => prompt.intent || prompt.tone !== 'green').length;
-  const summary = activePromptCount > 0
-    ? `${activePromptCount} active prompt${activePromptCount === 1 ? '' : 's'} available`
-    : 'No active prompt pressure';
+  const activeSignalCount = signals.filter((signal) => signal.intent || signal.tone !== 'green').length;
+  const summary = activeSignalCount > 0
+    ? `${activeSignalCount} priority signal${activeSignalCount === 1 ? '' : 's'} available`
+    : 'No active signal pressure';
 
   return (
-    <section style={promptShellStyle}>
-      <button type="button" style={promptToggleStyle} onClick={() => setExpanded((current) => !current)}>
+    <section style={signalShellStyle}>
+      <button type="button" style={signalToggleStyle} onClick={() => setExpanded((current) => !current)}>
         <span>
-          <span style={promptEyebrowStyle}>PROMPT CARDS</span>
-          <span style={promptSummaryStyle}>{summary}</span>
+          <span style={signalEyebrowStyle}>PLANT SIGNALS</span>
+          <span style={signalSummaryStyle}>{summary}</span>
         </span>
-        <span style={promptToggleMetaStyle}>{expanded ? 'COLLAPSE' : 'OPEN PROMPTS'}</span>
+        <span style={signalToggleMetaStyle}>{expanded ? 'COLLAPSE' : 'OPEN SIGNALS'}</span>
       </button>
 
       {expanded && (
         <div style={dashboardPromptGridStyle}>
-          {prompts.map((prompt) => (
-            <PromptCard
-              key={`${prompt.title}-${prompt.actionLabel}`}
-              prompt={prompt}
+          {signals.map((signal) => (
+            <PlantSignalCard
+              key={`${signal.title}-${signal.actionLabel}-${signal.priority}`}
+              signal={signal}
               onNavigate={onNavigate}
             />
           ))}
@@ -82,92 +84,112 @@ export default function EmbeddedPromptCards({ onNavigate }: EmbeddedPromptCardsP
   );
 }
 
-function PromptCard({ prompt, onNavigate }: { prompt: EmbeddedPrompt; onNavigate: (tab: AppTab) => void }) {
-  const color = getDashboardToneColor(prompt.tone);
+function PlantSignalCard({ signal, onNavigate }: { signal: PlantSignal; onNavigate: (tab: AppTab) => void }) {
+  const color = getDashboardToneColor(signal.tone);
 
   return (
     <div style={getDashboardPromptCardStyle(color)}>
-      <div style={getDashboardPromptTitleStyle(color)}>{prompt.title.toUpperCase()}</div>
-      <div style={dashboardPromptDetailStyle}>{prompt.detail}</div>
+      <div style={getDashboardPromptTitleStyle(color)}>{signal.title.toUpperCase()}</div>
+      <div style={dashboardPromptDetailStyle}>{signal.detail}</div>
       <button
         type="button"
         style={getDashboardPromptButtonStyle(color)}
         onClick={() => {
-          if (prompt.intent) {
-            applyQuickActionRuntimeIntent(prompt.intent, getRuntimeProductionOrders(productionOrders));
+          if (signal.intent) {
+            applyQuickActionRuntimeIntent(signal.intent, getRuntimeProductionOrders(productionOrders));
           }
-          onNavigate(prompt.routeTarget);
+          onNavigate(signal.routeTarget);
         }}
       >
-        {prompt.actionLabel.toUpperCase()}
+        {signal.actionLabel.toUpperCase()}
       </button>
     </div>
   );
 }
 
-function getEmbeddedPrompts(): EmbeddedPrompt[] {
+function getPlantSignals(): PlantSignal[] {
   const orders = getRuntimeProductionOrders(productionOrders);
-  const openOrders = orders.filter((order) => order.status !== 'DONE');
-  const blockedOrder = openOrders.find((order) =>
-    order.status === 'BLOCKED' ||
-    order.flowStatus === 'blocked' ||
-    order.blockers.length > 0,
-  );
-  const materialIssue = openOrders.find((order) => order.materialStatus !== 'RECEIVED');
-  const qaHold = openOrders.find((order) => order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED');
+  const openOrders = orders.filter((order) => order.status !== 'DONE' && order.status !== 'COMPLETE' && order.status !== 'complete');
+  const signals: PlantSignal[] = [];
 
-  const prompts: EmbeddedPrompt[] = [];
+  openOrders.forEach((order) => {
+    if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED') {
+      signals.push({
+        title: `QA hold ${order.orderNumber}`,
+        detail: `Priority ${formatOrderPriority(order)} quality signal. Review release risk before this order moves downstream.`,
+        actionLabel: 'Review QA / Safety',
+        priority: 100 + getOrderPriorityScore(order),
+        routeTarget: 'risk',
+        tone: 'red',
+      });
+    }
 
-  if (blockedOrder) {
-    prompts.push({
-      title: `Blocked order ${blockedOrder.orderNumber}`,
-      detail: 'Workflow is blocked. Resolve the first blocker or escalate before labor is assigned.',
-      actionLabel: 'Resolve first blocker',
-      intent: 'RESOLVE_FIRST_BLOCKER',
-      routeTarget: 'orders',
-      tone: 'red',
-    });
-  }
+    if (isBlockedOrder(order)) {
+      signals.push({
+        title: `Blocked order ${order.orderNumber}`,
+        detail: `Priority ${formatOrderPriority(order)} blocked flow. Resolve the first blocker before labor is assigned.`,
+        actionLabel: 'Resolve first blocker',
+        intent: 'RESOLVE_FIRST_BLOCKER',
+        priority: 80 + getOrderPriorityScore(order),
+        routeTarget: 'orders',
+        tone: 'red',
+      });
+    }
 
-  if (materialIssue) {
-    prompts.push({
-      title: `Material issue ${materialIssue.orderNumber}`,
-      detail: 'Material is not fully received. Stage the first material issue before pushing work forward.',
-      actionLabel: 'Stage material issue',
-      intent: 'STAGE_FIRST_MATERIAL_ISSUE',
-      routeTarget: 'receiving',
-      tone: 'orange',
-    });
-  }
+    if (isMaterialIssue(order)) {
+      signals.push({
+        title: `Material issue ${order.orderNumber}`,
+        detail: `Priority ${formatOrderPriority(order)} material gap. Stage or receive material before pushing work forward.`,
+        actionLabel: 'Stage material issue',
+        intent: 'STAGE_FIRST_MATERIAL_ISSUE',
+        priority: 60 + getOrderPriorityScore(order),
+        routeTarget: 'receiving',
+        tone: 'orange',
+      });
+    }
+  });
 
-  if (qaHold) {
-    prompts.push({
-      title: `QA hold ${qaHold.orderNumber}`,
-      detail: 'Quality status needs review before the order can flow cleanly.',
-      actionLabel: 'Review QA / Safety',
-      routeTarget: 'risk',
-      tone: 'blue',
-    });
-  }
-
-  if (prompts.length === 0) {
-    prompts.push({
-      title: 'No embedded prompts active',
+  if (signals.length === 0) {
+    signals.push({
+      title: 'No plant signals active',
       detail: 'No blocked order, material issue, or QA hold is currently driving dashboard action.',
       actionLabel: 'Review workflow',
+      priority: 0,
       routeTarget: 'workflow',
       tone: 'green',
     });
   }
 
-  return prompts.slice(0, 3);
+  return signals
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 3);
 }
 
-const promptShellStyle: CSSProperties = {
+function isBlockedOrder(order: ProductionOrder): boolean {
+  return order.status === 'BLOCKED' || order.status === 'blocked' || order.flowStatus === 'blocked' || order.flowStatus === 'BLOCKED' || (order.blockers?.length ?? 0) > 0;
+}
+
+function isMaterialIssue(order: ProductionOrder): boolean {
+  return order.materialStatus !== undefined && order.materialStatus !== 'RECEIVED' && order.materialStatus !== 'STAGED';
+}
+
+function getOrderPriorityScore(order: ProductionOrder): number {
+  if (order.priority === 'critical' || order.priority === 'CRITICAL') return 30;
+  if (order.priority === 'hot' || order.priority === 'HOT') return 20;
+  return 10;
+}
+
+function formatOrderPriority(order: ProductionOrder): string {
+  if (order.priority === 'critical' || order.priority === 'CRITICAL') return 'critical';
+  if (order.priority === 'hot' || order.priority === 'HOT') return 'hot';
+  return 'normal';
+}
+
+const signalShellStyle: CSSProperties = {
   marginBottom: 16,
 };
 
-const promptToggleStyle: CSSProperties = {
+const signalToggleStyle: CSSProperties = {
   width: '100%',
   display: 'flex',
   justifyContent: 'space-between',
@@ -184,7 +206,7 @@ const promptToggleStyle: CSSProperties = {
   boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
 };
 
-const promptEyebrowStyle: CSSProperties = {
+const signalEyebrowStyle: CSSProperties = {
   display: 'block',
   color: '#3b82f6',
   fontSize: 11,
@@ -193,7 +215,7 @@ const promptEyebrowStyle: CSSProperties = {
   textTransform: 'uppercase',
 };
 
-const promptSummaryStyle: CSSProperties = {
+const signalSummaryStyle: CSSProperties = {
   display: 'block',
   marginTop: 4,
   color: '#94a3b8',
@@ -201,7 +223,7 @@ const promptSummaryStyle: CSSProperties = {
   fontWeight: 700,
 };
 
-const promptToggleMetaStyle: CSSProperties = {
+const signalToggleMetaStyle: CSSProperties = {
   color: '#93c5fd',
   fontSize: 11,
   fontWeight: 900,
