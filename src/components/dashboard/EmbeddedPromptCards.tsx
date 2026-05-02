@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import type { AppTab } from '../../types/app';
 import { productionOrders } from '../../data/productionOrders';
@@ -10,6 +9,15 @@ import {
   getRuntimeProductionOrders,
   WORKFLOW_RUNTIME_UPDATED_EVENT,
 } from '../../logic/workflowRuntimeState';
+import {
+  dashboardPromptDetailStyle,
+  dashboardPromptGridStyle,
+  getDashboardPromptButtonStyle,
+  getDashboardPromptCardStyle,
+  getDashboardPromptTitleStyle,
+  getDashboardToneColor,
+  type DashboardTone,
+} from './dashboardStyles';
 
 type EmbeddedPrompt = {
   title: string;
@@ -17,7 +25,7 @@ type EmbeddedPrompt = {
   actionLabel: string;
   intent?: QuickActionRuntimeIntent;
   routeTarget: AppTab;
-  tone: 'red' | 'orange' | 'blue' | 'green' | 'slate';
+  tone: DashboardTone;
 };
 
 type EmbeddedPromptCardsProps = {
@@ -43,7 +51,7 @@ export default function EmbeddedPromptCards({ onNavigate }: EmbeddedPromptCardsP
   }, [runtimeVersion]);
 
   return (
-    <div style={promptGridStyle}>
+    <div style={dashboardPromptGridStyle}>
       {prompts.map((prompt) => (
         <PromptCard
           key={`${prompt.title}-${prompt.actionLabel}`}
@@ -56,15 +64,15 @@ export default function EmbeddedPromptCards({ onNavigate }: EmbeddedPromptCardsP
 }
 
 function PromptCard({ prompt, onNavigate }: { prompt: EmbeddedPrompt; onNavigate: (tab: AppTab) => void }) {
-  const color = getPromptColor(prompt.tone);
+  const color = getDashboardToneColor(prompt.tone);
 
   return (
-    <div style={getCardStyle(color)}>
-      <div style={getTitleStyle(color)}>{prompt.title.toUpperCase()}</div>
-      <div style={detailStyle}>{prompt.detail}</div>
+    <div style={getDashboardPromptCardStyle(color)}>
+      <div style={getDashboardPromptTitleStyle(color)}>{prompt.title.toUpperCase()}</div>
+      <div style={dashboardPromptDetailStyle}>{prompt.detail}</div>
       <button
         type="button"
-        style={getButtonStyle(color)}
+        style={getDashboardPromptButtonStyle(color)}
         onClick={() => {
           if (prompt.intent) {
             applyQuickActionRuntimeIntent(prompt.intent, getRuntimeProductionOrders(productionOrders));
@@ -134,60 +142,4 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
   }
 
   return prompts.slice(0, 3);
-}
-
-function getPromptColor(tone: EmbeddedPrompt['tone']): string {
-  if (tone === 'red') return '#dc2626';
-  if (tone === 'orange') return '#f97316';
-  if (tone === 'blue') return '#3b82f6';
-  if (tone === 'green') return '#10b981';
-  return '#64748b';
-}
-
-const promptGridStyle: CSSProperties = {
-  marginTop: 14,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-  gap: 10,
-};
-
-const detailStyle: CSSProperties = {
-  color: '#64748b',
-  fontSize: 12,
-  lineHeight: 1.35,
-  marginTop: 6,
-};
-
-function getCardStyle(color: string): CSSProperties {
-  return {
-    padding: 12,
-    borderRadius: 5,
-    border: `1px solid ${color}55`,
-    borderLeft: `4px solid ${color}`,
-    background: '#0f172a',
-  };
-}
-
-function getTitleStyle(color: string): CSSProperties {
-  return {
-    color,
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: '0.7px',
-  };
-}
-
-function getButtonStyle(color: string): CSSProperties {
-  return {
-    marginTop: 10,
-    padding: '7px 9px',
-    borderRadius: 4,
-    border: `1px solid ${color}`,
-    background: `${color}22`,
-    color,
-    fontSize: 11,
-    fontWeight: 900,
-    letterSpacing: '0.6px',
-    cursor: 'pointer',
-  };
 }
