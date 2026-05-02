@@ -1,0 +1,210 @@
+import { departmentResources } from '../data/departmentResources';
+import type { Department } from '../types/machine';
+import type { ProductionOrder, ProductLane } from '../types/productionOrder';
+import type {
+  DynamicTraveler,
+  TravelerAction,
+  TravelerCapability,
+  TravelerResource,
+  TravelerStepStatus,
+} from '../types/dynamicTraveler';
+
+export function generateDynamicTravelers(
+  orders: ProductionOrder[],
+  department: Department | 'All',
+): DynamicTraveler[] {
+  const scopedOrders = department === 'All'
+    ? orders
+    : orders.filter((order) => order.currentDepartment === department || order.requiredDepartments?.includes(department));
+
+  return scopedOrders
+    .map((order) => generateDynamicTraveler(order, department === 'All' ? order.currentDepartment : department))
+    .sort((a, b) => b.priorityScore - a.priorityScore);
+}
+
+export function generateDynamicTraveler(order: ProductionOrder, department: Department): DynamicTraveler {
+  const materialStatus = order.materialStatus ?? 'UNKNOWN';
+  const qaStatus = order.qaStatus ?? 'UNKNOWN';
+  const blockers = order.blockers ?? [];
+  const requiredCapabilities = getRequiredCapabilities(order, department);
+  const capableResources = getCapableResources(department, requiredCapabilities);
+  const bestResource = pickBestResource(capableResources);
+  const stepStatus = getTravelerStepStatus(order, department, capableResources);
+  const nextHandoff = getNextHandoff(order, department);
+  const currentInstruction = getCurrentInstruction(order, department, stepStatus, bestResource, nextHandoff);
+
+  return {
+    id: `${order.id}-${department.replaceAll(' ', '-').toLowerCase()}`,
+    order,
+    department,
+    stepStatus,
+    currentInstruction,
+    nextHandoff,
+    capableResources,
+    bestResource,
+    blockers,
+    materialStatus,
+    qaStatus,
+    actions: getTravelerActions(order, stepStatus, bestResource, nextHandoff),
+    priorityScore: getTravelerPriorityScore(order, stepStatus, bestResource),
+    visualSignal: getVisualSignal(stepStatus),
+  };
+}
+
+export function getRequiredCapabilities(order: ProductionOrder, department: Department): TravelerCapability[] {
+  if (department === 'Receiving') return ['receiving', 'material-staging'];
+  if (department === 'Material Handling') return ['material-staging'];
+  if (department === 'Fab') return ['fabrication'];
+  if (department === 'Coating') return ['coating-prep'];
+  if (department === 'Assembly') return ['assembly'];
+  if (department === 'QA') return ['inspection'];
+  if (department === 'Shipping') return ['shipping'];
+
+  if (department === 'Machine Shop') {
+    return getMachineShopCapabilities(order);
+  }
+
+  return [];
+}
+
+function getMachineShopCapabilities(order: ProductionOrder): TravelerCapability[] {
+  const lane = order.productLane as ProductLane | undefined;
+  const family = String(order.productFamily ?? '').toUpperCase();
+
+  if (lane === 'SERVICE_SADDLE' || family.includes('SERVICE_SADDLE')) return ['service-saddle', 'large-turning'];
+  if (lane === 'TAPPING_SLEEVE' || family.includes('TAPPING_SLEEVE')) return ['tapping-sleeve', 'large-turning'];
+  if (lane === 'COUPLING' || family.includes('COUPLING')) return ['coupling', 'turning'];
+  if (lane === 'PIPE_FABRICATION' || family.includes('PIPE_FABRICATION')) return ['pipe-fabrication', 'large-turning'];
+  if (lane === 'ENGINEERED_FITTING' || family.includes('ENGINEERED')) return ['engineered-fitting', 'large-turning'];
+  if (lane === 'CLAMP' || lane === 'PATCH_CLAMP' || family.includes('REPAIR')) return ['repair-fitting', 'turning'];
+  if (lane === 'OTHER') return ['turning'];
+
+  return ['turning'];
+}
+
+function getCapableResources(department: Department, capabilities: TravelerCapability[]): TravelerResource[] {
+  const departmentMatches = departmentResources.filter((resource) => resource.department === department);
+  if (capabilities.length === 0) return departmentMatches;
+
+  return departmentMatches.filter((resource) =>
+    capabilities.some((capability) => resource.capabilities.includes(capability)),
+  );
+}
+
+function pickBestResource(resources: TravelerResource[]): TravelerResource | undefined {
+  return resources.find((resource) => resource.status === 'AVAILABLE') ?? resources[0];
+}
+
+function getTravelerStepStatus(
+  order: ProductionOrder,
+  department: Department,
+  capableResources: TravelerResource[],
+): TravelerStepStatus {
+  if (order.status === 'DONE' || order.status === 'COMPLETE' || order.status === 'complete') return 'DONE';
+  if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED' || order.status === 'HOLD' || order.status === 'hold') return 'HOLD';
+  if ((order.blockers ?? []).length > 0 || order.status === 'BLOCKED' || order.status === 'blocked') return 'BLOCKED';
+  if (capableResources.length === 0) return 'BLOCKED';
+  if (order.currentDepartment !== department && !order.requiredDepartments?.includes(department)) return 'NOT_READY';
+  if (order.status === 'IN_PROGRESS' || order.status === 'running') return 'ACTIVE';
+  return 'READY';
+}
+
+function getNextHandoff(order: ProductionOrder, department: Department): Department | 'Complete' | undefined {
+  if (order.nextDepartment && order.nextDepartment !== department) return order.nextDepartment;
+
+  const route = order.requiredDepartments ?? [];
+  const currentIndex = route.indexOf(department);
+  if (currentIndex >= 0 && currentIndex < route.length - 1) return route[currentIndex + 1];
+  if (currentIndex === route.length - 1) return 'Complete';
+  return order.nextDepartment;
+}
+
+function getCurrentInstruction(
+  order: ProductionOrder,
+  department: Department,
+  stepStatus: TravelerStepStatus,
+  bestResource: TravelerResource | undefined,
+  nextHandoff: Department | 'Complete' | undefined,
+): string {
+  if (stepStatus === 'DONE') return `Order #${order.orderNumber} is complete for ${department}.`;
+  if (stepStatus === 'HOLD') return `Hold order #${order.orderNumber}. Review QA, engineering, or management hold before moving.`;
+  if (stepStatus === 'BLOCKED') {
+    const blocker = order.blockers?.[0]?.message;
+    if (blocker) return `Do not start order #${order.orderNumber}. Blocked: ${blocker}`;
+    if (!bestResource) return `Do not start order #${order.orderNumber}. No capable ${department} resource is mapped yet.`;
+    return `Do not start order #${order.orderNumber}. Resolve blocker before work begins.`;
+  }
+
+  const resourceLabel = bestResource ? ` on ${bestResource.label}` : '';
+  const handoffLabel = nextHandoff ? ` After this step, send it to ${nextHandoff}.` : '';
+
+  if (department === 'Receiving') return `Receive and stage order #${order.orderNumber}.${handoffLabel}`;
+  if (department === 'Material Handling') return `Stage material for order #${order.orderNumber}.${handoffLabel}`;
+  if (department === 'QA') return `Inspect or release order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
+  if (department === 'Shipping') return `Stage and ship order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
+
+  return `Work order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
+}
+
+function getTravelerActions(
+  order: ProductionOrder,
+  stepStatus: TravelerStepStatus,
+  bestResource: TravelerResource | undefined,
+  nextHandoff: Department | 'Complete' | undefined,
+): TravelerAction[] {
+  const materialNeedsAction = order.materialStatus === 'MISSING' || order.materialStatus === 'NOT_RECEIVED' || order.materialStatus === 'ORDER_REQUIRED';
+
+  return [
+    { type: 'OPEN_DETAIL', label: 'Open traveler detail', enabled: true },
+    {
+      type: 'REQUEST_MATERIAL',
+      label: 'Request material for this order',
+      enabled: materialNeedsAction,
+      reason: materialNeedsAction ? undefined : 'Material is not currently flagged as missing.',
+    },
+    { type: 'REPORT_ISSUE', label: 'Report issue on this order', enabled: true },
+    {
+      type: 'REPORT_RESOURCE_MISMATCH',
+      label: 'Report resource cannot run this order',
+      enabled: Boolean(bestResource),
+      reason: bestResource ? undefined : 'No resource is mapped to report against.',
+    },
+    {
+      type: 'MARK_READY_FOR_HANDOFF',
+      label: 'Mark ready for next department',
+      enabled: stepStatus === 'READY' || stepStatus === 'ACTIVE',
+      reason: stepStatus === 'READY' || stepStatus === 'ACTIVE' ? undefined : 'Traveler is not ready for handoff.',
+    },
+    {
+      type: 'SEND_TO_NEXT_DEPARTMENT',
+      label: nextHandoff ? `Send to ${nextHandoff}` : 'Send to next department',
+      enabled: Boolean(nextHandoff) && (stepStatus === 'READY' || stepStatus === 'ACTIVE'),
+      reason: nextHandoff ? undefined : 'No next handoff is available.',
+    },
+    { type: 'OPEN_FULL_ORDER', label: 'Open full order', enabled: true },
+  ];
+}
+
+function getTravelerPriorityScore(
+  order: ProductionOrder,
+  stepStatus: TravelerStepStatus,
+  bestResource: TravelerResource | undefined,
+): number {
+  let score = 0;
+  if (stepStatus === 'BLOCKED' || stepStatus === 'HOLD') score += 100;
+  if (stepStatus === 'READY') score += 60;
+  if (!bestResource) score += 35;
+  if (order.priority === 'critical' || order.priority === 'CRITICAL') score += 30;
+  if (order.priority === 'hot' || order.priority === 'HOT') score += 20;
+  if (order.materialStatus === 'MISSING' || order.materialStatus === 'NOT_RECEIVED' || order.materialStatus === 'ORDER_REQUIRED') score += 15;
+  if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED') score += 15;
+  return score;
+}
+
+function getVisualSignal(stepStatus: TravelerStepStatus): DynamicTraveler['visualSignal'] {
+  if (stepStatus === 'BLOCKED') return 'BLOCKED';
+  if (stepStatus === 'HOLD') return 'HOLD';
+  if (stepStatus === 'DONE') return 'DONE';
+  if (stepStatus === 'READY' || stepStatus === 'ACTIVE') return 'READY';
+  return 'WATCH';
+}
