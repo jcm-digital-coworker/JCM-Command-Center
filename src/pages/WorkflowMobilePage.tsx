@@ -7,7 +7,7 @@ import { productionOrders } from '../data/productionOrders';
 import { seedCoverage } from '../data/coverage';
 import { workCenters } from '../data/workCenters';
 import { generateDynamicTravelers } from '../logic/dynamicTraveler';
-import OrderDetailModal from '../components/orders/OrderDetailModal';
+import TravelerDetailModal from '../components/travelers/TravelerDetailModal';
 
 interface WorkflowMobilePageProps {
   roleView: RoleView;
@@ -143,8 +143,8 @@ export default function WorkflowMobilePage({
       </div>
 
       {selectedTraveler ? (
-        <OrderDetailModal
-          order={selectedTraveler.order}
+        <TravelerDetailModal
+          traveler={selectedTraveler}
           theme={theme}
           onClose={() => setSelectedTraveler(null)}
           onOpenOrders={() => {
