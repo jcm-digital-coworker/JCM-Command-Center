@@ -1,4 +1,5 @@
 import type { Department } from './machine';
+import type { AppTab } from './app';
 
 export type RoleFamily =
   | 'MACHINE'
@@ -18,6 +19,6 @@ export type WorkRole = {
   label: string;
   family: RoleFamily;
   appliesTo: Department[] | 'ALL';
-  defaultTab: 'dashboard' | 'machines' | 'maintenance' | 'receiving' | 'coverage' | 'orders' | 'plantMap' | 'flow' | 'risk';
+  defaultTab: AppTab;
   description: string;
 };
