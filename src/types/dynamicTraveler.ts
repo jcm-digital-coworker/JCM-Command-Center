@@ -49,6 +49,8 @@ export type TravelerResource = {
 
 export type TravelerActionType =
   | 'OPEN_DETAIL'
+  | 'OPEN_DEPARTMENT_TRAVELER'
+  | 'OPEN_PLANT_TRAVELER'
   | 'REQUEST_MATERIAL'
   | 'REPORT_ISSUE'
   | 'REPORT_RESOURCE_MISMATCH'
@@ -78,4 +80,21 @@ export type DynamicTraveler = {
   actions: TravelerAction[];
   priorityScore: number;
   visualSignal: 'READY' | 'BLOCKED' | 'WATCH' | 'HOLD' | 'DONE';
+};
+
+export type PlantTravelerStatus = 'NOT_RELEASED' | 'READY' | 'ACTIVE' | 'BLOCKED' | 'HOLD' | 'COMPLETE';
+
+export type PlantTraveler = {
+  id: string;
+  order: ProductionOrder;
+  route: Department[];
+  departmentSteps: DynamicTraveler[];
+  activeDepartment?: Department;
+  nextDepartment?: Department | 'Complete';
+  overallStatus: PlantTravelerStatus;
+  completionPercent: number;
+  completedStepCount: number;
+  totalStepCount: number;
+  blockers: FlowBlocker[];
+  currentInstruction: string;
 };
