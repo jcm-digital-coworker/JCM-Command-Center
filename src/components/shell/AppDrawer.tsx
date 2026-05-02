@@ -22,6 +22,15 @@ interface AppDrawerProps {
   onToggleTheme: () => void;
 }
 
+const roleOptions: RoleView[] = [
+  'Production',
+  'Department Lead',
+  'Department Supervisor',
+  'Management',
+  'Maintenance',
+  'Support',
+];
+
 export default function AppDrawer({
   open,
   tab,
@@ -204,7 +213,7 @@ export default function AppDrawer({
         </div>
 
         <div style={devToolsSectionStyle}>
-          <div style={devToolsHeaderStyle}>DEV TOOLS</div>
+          <div style={devToolsHeaderStyle}>CO-WORKER VIEW</div>
           <button
             onClick={() => goToTab('warRoomContext')}
             style={tab === 'warRoomContext' ? devTabActiveStyle : devTabStyle}
@@ -218,12 +227,9 @@ export default function AppDrawer({
               onChange={(e) => setRoleView(e.target.value as RoleView)}
               style={devSelectStyle}
             >
-              <option value="Operator">Operator</option>
-              <option value="Lead / Supervisor">Lead / Supervisor</option>
-              <option value="Manager">Manager</option>
-              <option value="Maintenance">Maintenance</option>
-              <option value="Forklift / Receiving">Forklift / Receiving</option>
-              <option value="QA">QA</option>
+              {roleOptions.map((role) => (
+                <option key={role} value={role}>{role}</option>
+              ))}
             </select>
           </div>
           <div style={devToolsItemStyle}>
