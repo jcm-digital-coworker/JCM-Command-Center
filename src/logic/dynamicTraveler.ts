@@ -34,11 +34,13 @@ export function generatePlantTravelers(orders: ProductionOrder[]): PlantTraveler
 
 export function generatePlantTraveler(order: ProductionOrder): PlantTraveler {
   const route = getPlantRoute(order);
-  const departmentSteps = route.map((department) => generateDynamicTraveler(order, department));
+  const rawDepartmentSteps = route.map((department) => generateDynamicTraveler(order, department));
+  const activeIndex = Math.max(route.indexOf(order.currentDepartment), 0);
+  const departmentSteps = rawDepartmentSteps.map((step, index) => normalizePlantStepForRoute(step, index, activeIndex));
   const completedStepCount = departmentSteps.filter((step) => step.stepStatus === 'DONE').length;
   const totalStepCount = departmentSteps.length;
   const completionPercent = totalStepCount === 0 ? 0 : Math.round((completedStepCount / totalStepCount) * 100);
-  const activeStep = departmentSteps.find((step) => step.department === order.currentDepartment) ?? departmentSteps.find((step) => step.stepStatus === 'READY' || step.stepStatus === 'ACTIVE');
+  const activeStep = departmentSteps[activeIndex] ?? departmentSteps.find((step) => step.stepStatus === 'READY' || step.stepStatus === 'ACTIVE');
   const overallStatus = getPlantTravelerStatus(order, departmentSteps);
   const nextDepartment = activeStep?.nextHandoff ?? order.nextDepartment;
 
@@ -118,12 +120,37 @@ function dedupeRoute(route: Department[]): Department[] {
   return route.filter((department, index) => route.indexOf(department) === index);
 }
 
+function normalizePlantStepForRoute(step: DynamicTraveler, index: number, activeIndex: number): DynamicTraveler {
+  if (index < activeIndex) {
+    return {
+      ...step,
+      stepStatus: 'DONE',
+      visualSignal: 'DONE',
+      blockers: [],
+      currentInstruction: `Plant route checkpoint complete for ${step.department}.`,
+    };
+  }
+
+  if (index > activeIndex) {
+    return {
+      ...step,
+      stepStatus: 'NOT_READY',
+      visualSignal: 'WATCH',
+      blockers: [],
+      currentInstruction: `${step.department} is waiting on upstream handoff before this department can act.`,
+    };
+  }
+
+  return step;
+}
+
 function getPlantTravelerStatus(order: ProductionOrder, steps: DynamicTraveler[]): PlantTravelerStatus {
   if (order.status === 'DONE' || order.status === 'COMPLETE' || order.status === 'complete') return 'COMPLETE';
-  if (steps.some((step) => step.stepStatus === 'HOLD')) return 'HOLD';
-  if (steps.some((step) => step.stepStatus === 'BLOCKED')) return 'BLOCKED';
-  if (steps.some((step) => step.stepStatus === 'ACTIVE')) return 'ACTIVE';
-  if (steps.some((step) => step.stepStatus === 'READY')) return 'READY';
+  const activeStep = steps.find((step) => step.stepStatus !== 'DONE' && step.stepStatus !== 'NOT_READY');
+  if (activeStep?.stepStatus === 'HOLD') return 'HOLD';
+  if (activeStep?.stepStatus === 'BLOCKED') return 'BLOCKED';
+  if (activeStep?.stepStatus === 'ACTIVE') return 'ACTIVE';
+  if (activeStep?.stepStatus === 'READY') return 'READY';
   return 'NOT_RELEASED';
 }
 
@@ -134,8 +161,8 @@ function getPlantTravelerInstruction(
   completionPercent: number,
 ): string {
   if (status === 'COMPLETE') return `Order #${order.orderNumber} is complete through the plant.`;
-  if (status === 'HOLD') return `Order #${order.orderNumber} is on hold. Review the active department traveler before moving.`;
-  if (status === 'BLOCKED') return `Order #${order.orderNumber} is blocked. Resolve the active blocker before the route can advance.`;
+  if (status === 'HOLD') return `Order #${order.orderNumber} is on hold at ${activeStep?.department ?? 'the active route step'}. Review that department traveler before moving.`;
+  if (status === 'BLOCKED') return `Order #${order.orderNumber} is blocked at ${activeStep?.department ?? 'the active route step'}. Resolve the active blocker before the route can advance.`;
   if (activeStep) return `Order #${order.orderNumber} is ${completionPercent}% complete. Current plant step: ${activeStep.department}.`;
   return `Order #${order.orderNumber} has no active plant step mapped yet.`;
 }
