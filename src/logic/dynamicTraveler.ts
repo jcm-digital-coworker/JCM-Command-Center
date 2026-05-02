@@ -87,7 +87,7 @@ function getCapableResources(department: Department, capabilities: TravelerCapab
   if (capabilities.length === 0) return departmentMatches;
 
   return departmentMatches.filter((resource) =>
-    capabilities.some((capability) => resource.capabilities.includes(capability)),
+    capabilities.every((capability) => resource.capabilities.includes(capability)),
   );
 }
 
