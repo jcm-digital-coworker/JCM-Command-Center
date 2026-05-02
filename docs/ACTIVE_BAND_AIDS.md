@@ -43,7 +43,7 @@ None currently logged.
 - Location: `src/pages/DashboardPage.tsx`
 - Risk: the page still owns dashboard composition, section content, and several small helper renderers.
 - Current reason for leaving it: recent changes are green and demo-focused; splitting too early could churn stable behavior.
-- Recently improved: role-aware Quick Action rules moved to `src/logic/dashboardQuickActions.ts`; Plant Signals panel now imports directly as `PlantSignalsPanel`.
+- Recently improved: role-aware Quick Action rules moved to `src/logic/dashboardQuickActions.ts`; Plant Signals panel now imports directly as `PlantSignalsPanel`; retired DOM bridge removed.
 - Future corrective action: extract dashboard section rows, mission cards, and status metrics if this page keeps growing or becomes hard to patch safely.
 
 ### Plant Signals priority model is intentionally basic
@@ -70,6 +70,13 @@ None currently logged.
 - Future corrective action: test live GitHub Pages build on Android after each mobile UI cleanup checkpoint.
 
 ## Recently Retired Band-Aids
+
+### Dashboard runtime DOM bridge
+
+- Status: RETIRED
+- Former location: `src/logic/dashboardQuickActionRuntimeBridge.ts`
+- Retired by: direct React rendering of `PlantSignalsPanel` inside `src/pages/DashboardPage.tsx`; file deleted after confirming `src/main.tsx` and `src/App.tsx` no longer import it.
+- Notes: This removes the old MutationObserver/DOM-mount bridge path and prevents future hidden imports from retired Prompt Card names.
 
 ### EmbeddedPromptCards compatibility shim
 
@@ -145,7 +152,7 @@ None currently logged.
 
 - Status: RETIRED
 - Former location: `src/logic/dashboardQuickActionRuntimeBridge.ts`
-- Retired by: React-owned dashboard signal rendering.
+- Retired by: React-owned dashboard signal rendering and deletion of the bridge file.
 - Notes: Prompt cards/Plant Signals are owned by React. The global bridge side-effect import in `src/main.tsx` should remain removed.
 
 ### First-order runtime targeting
@@ -166,7 +173,7 @@ None currently logged.
 
 - Status: RETIRED
 - Former location: `src/logic/dashboardQuickActionRuntimeBridge.ts`
-- Retired by: React dashboard components.
+- Retired by: React dashboard components and deletion of the bridge file.
 - Notes: Prompt card rendering is now owned by React.
 
 ### Visible-label runtime intent matching
