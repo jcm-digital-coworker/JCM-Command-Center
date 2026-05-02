@@ -1,6 +1,10 @@
 import type { CSSProperties } from 'react';
 import type { AppTab, DepartmentFilter, RoleView } from '../../types/app';
 import type { WorkCenter } from '../../types/plant';
+import {
+  getHomeTabForRole,
+  getVisibleNavigationGroups,
+} from '../../logic/navigationAccess';
 
 interface AppDrawerProps {
   open: boolean;
@@ -31,50 +35,32 @@ export default function AppDrawer({
 }: AppDrawerProps) {
   if (!open) return null;
 
-  const tabs: { id: AppTab; label: string }[] = [
-    { id: 'workflow', label: 'MY WORKFLOW' },
-    { id: 'dashboard', label: 'COMMAND CENTER' },
-    { id: 'orders', label: 'ORDERS' },
-    { id: 'coverage', label: 'CREW / COVERAGE' },
-    { id: 'plantMap', label: 'PLANT MAP' },
-    { id: 'sales', label: 'SALES' },
-    { id: 'engineering', label: 'ENGINEERING' },
-    { id: 'materialHandling', label: 'MATERIAL HANDLING' },
-    { id: 'fab', label: 'FAB' },
-    { id: 'coating', label: 'COATING' },
-    { id: 'assembly', label: 'ASSEMBLY' },
-    { id: 'shipping', label: 'SHIPPING' },
-    { id: 'qa', label: 'QA' },
-    { id: 'maintenance', label: 'MAINTENANCE' },
-    { id: 'receiving', label: 'RECEIVING' },
-    { id: 'risk', label: 'QA / SAFETY' },
-    { id: 'machines', label: 'EQUIPMENT' },
-    { id: 'alerts', label: 'EQUIPMENT ALERTS' },
-    { id: 'simulation', label: 'SIMULATION' },
-    { id: 'documents', label: 'DOCUMENTS' },
-  ];
+  const visibleGroups = getVisibleNavigationGroups(roleView);
+  const homeTab = getHomeTabForRole(roleView);
+
+  function goToTab(nextTab: AppTab) {
+    setTab(nextTab);
+    onClose();
+  }
 
   return (
     <>
       <style>
         {`
           .drawer-menu-scroll {
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none; /* IE/Edge */
+            scrollbar-width: none;
+            -ms-overflow-style: none;
           }
           .drawer-menu-scroll::-webkit-scrollbar {
-            display: none; /* Chrome/Safari/Opera */
+            display: none;
           }
         `}
       </style>
       <div style={overlayStyle} onClick={onClose} />
       <div style={drawerStyle}>
-        {/* Fixed Header */}
         <div style={headerStyle}>
           <div>
-            <div
-              style={{ fontSize: 18, fontWeight: 800, letterSpacing: '1px' }}
-            >
+            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '1px' }}>
               JCM
             </div>
             <div
@@ -93,22 +79,34 @@ export default function AppDrawer({
           </button>
         </div>
 
-        {/* Scrollable Menu Area - NO VISIBLE SCROLLBAR */}
+        <div style={homeSectionStyle}>
+          <button
+            onClick={() => goToTab(homeTab)}
+            style={tab === homeTab ? homeButtonActiveStyle : homeButtonStyle}
+          >
+            <div style={indicatorStyle(tab === homeTab)} />
+            HOME / {getHomeLabel(homeTab)}
+          </button>
+        </div>
+
         <div style={menuContainerStyle} className="drawer-menu-scroll">
           <div style={menuStyle}>
-            <div style={drawerSectionLabelStyle}>PRIMARY</div>
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => {
-                  setTab(t.id);
-                  onClose();
-                }}
-                style={tab === t.id ? activeTabStyle : tabStyle}
-              >
-                <div style={indicatorStyle(tab === t.id)} />
-                {t.label}
-              </button>
+            {visibleGroups.map((group) => (
+              <div key={group.id} style={navGroupStyle}>
+                <div style={drawerSectionLabelStyle}>{group.label.toUpperCase()}</div>
+                <div style={groupDescriptionStyle}>{group.description}</div>
+                {group.items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => goToTab(item.id)}
+                    style={tab === item.id ? activeTabStyle : tabStyle}
+                    title={item.description}
+                  >
+                    <div style={indicatorStyle(tab === item.id)} />
+                    <span>{item.label.toUpperCase()}</span>
+                  </button>
+                ))}
+              </div>
             ))}
 
             <div style={drawerSectionLabelStyle}>WORK CENTERS</div>
@@ -138,7 +136,6 @@ export default function AppDrawer({
           </div>
         </div>
 
-        {/* Fixed Settings Section */}
         <div style={settingsSectionStyle}>
           <div style={settingsHeaderStyle}>SETTINGS</div>
 
@@ -159,11 +156,10 @@ export default function AppDrawer({
           </div>
         </div>
 
-        {/* Dev Tools */}
         <div style={devToolsSectionStyle}>
           <div style={devToolsHeaderStyle}>DEV TOOLS</div>
           <button
-            onClick={() => { setTab('warRoomContext'); onClose(); }}
+            onClick={() => goToTab('warRoomContext')}
             style={tab === 'warRoomContext' ? devTabActiveStyle : devTabStyle}
           >
             WAR ROOM CONTEXT
@@ -200,13 +196,20 @@ export default function AppDrawer({
           </div>
         </div>
 
-        {/* Fixed Footer */}
         <div style={footerStyle}>
           <div style={{ fontSize: 11, color: '#94a3b8' }}>Nash, Texas</div>
         </div>
       </div>
     </>
   );
+}
+
+function getHomeLabel(homeTab: AppTab) {
+  if (homeTab === 'workflow') return 'WORKFLOW';
+  if (homeTab === 'maintenance') return 'MAINTENANCE';
+  if (homeTab === 'receiving') return 'RECEIVING';
+  if (homeTab === 'risk') return 'QA / SAFETY';
+  return 'COMMAND';
 }
 
 function indicatorStyle(active: boolean): CSSProperties {
@@ -268,6 +271,35 @@ const closeButtonStyle: CSSProperties = {
   justifyContent: 'center',
 };
 
+const homeSectionStyle: CSSProperties = {
+  padding: '12px 12px',
+  borderBottom: '1px solid #334155',
+  flexShrink: 0,
+};
+
+const homeButtonStyle: CSSProperties = {
+  width: '100%',
+  background: 'rgba(15, 23, 42, 0.8)',
+  border: '1px solid #334155',
+  padding: '13px 14px',
+  borderRadius: 4,
+  textAlign: 'left',
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 900,
+  color: '#e2e8f0',
+  display: 'flex',
+  alignItems: 'center',
+  letterSpacing: '0.6px',
+};
+
+const homeButtonActiveStyle: CSSProperties = {
+  ...homeButtonStyle,
+  background: 'rgba(249, 115, 22, 0.15)',
+  border: '1px solid #f97316',
+  color: '#f97316',
+};
+
 const menuContainerStyle: CSSProperties = {
   flex: 1,
   overflowY: 'auto',
@@ -276,28 +308,39 @@ const menuContainerStyle: CSSProperties = {
 };
 
 const menuStyle: CSSProperties = {
-  padding: '16px 12px',
+  padding: '12px 12px 16px',
   display: 'flex',
   flexDirection: 'column',
-  gap: 4,
+  gap: 6,
+};
+
+const navGroupStyle: CSSProperties = {
+  paddingBottom: 8,
 };
 
 const drawerSectionLabelStyle: CSSProperties = {
-  color: '#64748b',
-  fontSize: 10,
+  color: '#f97316',
+  fontSize: 11,
   fontWeight: 900,
   letterSpacing: '1.5px',
-  margin: '12px 0 4px 16px',
+  margin: '12px 0 2px 16px',
+};
+
+const groupDescriptionStyle: CSSProperties = {
+  color: '#64748b',
+  fontSize: 10,
+  lineHeight: 1.35,
+  margin: '0 10px 4px 16px',
 };
 
 const tabStyle: CSSProperties = {
   background: 'transparent',
   border: 'none',
-  padding: '14px 16px',
+  padding: '11px 16px',
   borderRadius: 4,
   textAlign: 'left',
   cursor: 'pointer',
-  fontSize: 13,
+  fontSize: 12,
   fontWeight: 700,
   color: '#94a3b8',
   display: 'flex',
@@ -314,8 +357,8 @@ const activeTabStyle: CSSProperties = {
 
 const workCenterStyle: CSSProperties = {
   ...tabStyle,
-  padding: '10px 16px',
-  fontSize: 12,
+  padding: '9px 16px',
+  fontSize: 11,
 };
 
 const activeWorkCenterStyle: CSSProperties = {
