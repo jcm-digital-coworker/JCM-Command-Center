@@ -9,6 +9,10 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+  actions: read
+
 jobs:
   build:
     name: Typecheck and build
@@ -35,3 +39,25 @@ jobs:
         with:
           name: jcm-command-center-demo
           path: dist
+
+      - name: Record latest action run
+        if: always() && github.event_name != 'pull_request'
+        run: |
+          mkdir -p docs
+          cat > docs/LATEST_ACTION_RUN.md <<EOF
+          # Latest Action Run
+
+          Run ID: ${GITHUB_RUN_ID}
+          Run Attempt: ${GITHUB_RUN_ATTEMPT}
+          Run URL: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          Commit: ${GITHUB_SHA}
+          Branch: ${GITHUB_REF_NAME}
+          Workflow: ${GITHUB_WORKFLOW}
+          Updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/LATEST_ACTION_RUN.md
+          git commit -m "Record latest action run [skip ci]" || echo "No run record changes"
+          git push
