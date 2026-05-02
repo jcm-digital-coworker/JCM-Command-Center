@@ -29,15 +29,7 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 - Risk: The adapter still finds Quick Actions by section text. A future label change from `QUICK ACTIONS` could break prompt placement.
 - Corrective action: Render `<EmbeddedPromptCards />` directly inside `DashboardPage.tsx` under `<QuickActionsPanel />`, then remove `dashboardQuickActionRuntimeBridge.ts` and the side-effect import from `src/main.tsx`.
 
-### 2. First-order runtime targeting
-
-- Status: OPEN
-- Location: `src/logic/quickActionRuntimeTargets.ts`
-- Why it exists: The first safe version targeted the first blocked order or first material issue.
-- Risk: May act on a low-priority issue before a hot or critical order.
-- Corrective action: Add priority-aware selectors using priority, projected ship date, hard blockers, and department/role relevance.
-
-### 3. Inline dashboard styling
+### 2. Inline dashboard styling
 
 - Status: OPEN
 - Location: dashboard pages/components
@@ -46,6 +38,13 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 - Corrective action: Extract shared dashboard card/button/prompt styles or component primitives after behavior is stable.
 
 ## Recently Retired Band-Aids
+
+### First-order runtime targeting
+
+- Status: RETIRED
+- Former location: `src/logic/quickActionRuntimeTargets.ts`
+- Retired by: priority-aware runtime target scoring.
+- Notes: Quick actions now rank blocked/material targets by order priority, projected ship date urgency, blocker severity, material condition, QA state, and flow status instead of selecting the first matching order.
 
 ### Dashboard order metrics not fully runtime-truth aligned
 
