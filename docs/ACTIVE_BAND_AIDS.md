@@ -43,8 +43,8 @@ None currently logged.
 - Location: `src/pages/DashboardPage.tsx`
 - Risk: the page still owns dashboard composition, section content, and several small helper renderers.
 - Current reason for leaving it: recent changes are green and demo-focused; splitting too early could churn stable behavior.
-- Recently improved: role-aware Quick Action rules moved to `src/logic/dashboardQuickActions.ts`; Plant Signals panel now imports directly as `PlantSignalsPanel`; retired DOM bridge removed.
-- Future corrective action: extract dashboard section rows, mission cards, and status metrics if this page keeps growing or becomes hard to patch safely.
+- Recently improved: role-aware Quick Action rules moved to `src/logic/dashboardQuickActions.ts`; Plant Signals panel now imports directly as `PlantSignalsPanel`; retired DOM bridge removed; overview metrics and mission cards moved to `src/components/dashboard/DashboardOverviewPanels.tsx`.
+- Future corrective action: extract dashboard section rows and priority badge helpers if this page keeps growing or becomes hard to patch safely.
 
 ### Plant Signals priority model is intentionally basic
 
@@ -70,6 +70,13 @@ None currently logged.
 - Future corrective action: test live GitHub Pages build on Android after each mobile UI cleanup checkpoint.
 
 ## Recently Retired Band-Aids
+
+### Dashboard overview metrics and mission cards inside DashboardPage
+
+- Status: RETIRED
+- Former location: local `StatusMetric` and `MissionCard` helpers inside `src/pages/DashboardPage.tsx`
+- Retired by: `src/components/dashboard/DashboardOverviewPanels.tsx`
+- Notes: DashboardPage now delegates overview metrics and mission cards to a focused dashboard component.
 
 ### Dashboard runtime DOM bridge
 
