@@ -20,16 +20,16 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 
 ## Open Band-Aids
 
-### 1. Inline dashboard styling
-
-- Status: STAGED
-- Location: dashboard pages/components
-- Why it exists: Fast UI iteration used inline style objects.
-- Current safer state: `src/components/dashboard/dashboardStyles.ts` now contains shared dashboard prompt/card/metric/section/list style helpers. `EmbeddedPromptCards.tsx` consumes those helpers, and `DashboardPage.tsx` now consumes shared dashboard style primitives for its major reusable structures.
-- Risk: `DashboardPage.tsx` still has a few local style helpers for work-center-specific badges/cards and small one-off composed layout styles.
-- Corrective action: Extract remaining work-center-specific dashboard styles into shared helpers or a dedicated `DashboardWorkCenterCard` component.
+None currently logged.
 
 ## Recently Retired Band-Aids
+
+### Inline dashboard styling
+
+- Status: RETIRED
+- Former location: dashboard pages/components
+- Retired by: shared `src/components/dashboard/dashboardStyles.ts` helpers and `src/components/dashboard/DashboardWorkCenterCard.tsx`.
+- Notes: DashboardPage now consumes shared style primitives for major reusable structures, while the remaining work-center card style pocket has been extracted into a dedicated component. Small one-off composed layout objects may still exist where they are local to a single JSX structure, but no active dashboard styling band-aid remains logged.
 
 ### Embedded prompt mount adapter
 
