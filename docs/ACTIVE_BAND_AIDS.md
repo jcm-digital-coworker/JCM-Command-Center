@@ -17,10 +17,31 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
   4. Verify Checkout, Setup Node, Install dependencies, Build, Upload demo build, and Record latest action run.
 - Rule: do not manually edit `docs/LATEST_ACTION_RUN.md` unless repairing the breadcrumb system. It is CI-generated.
 
+### Dropped tool / unknown operation protocol
+
+- Status: ACTIVE PROTOCOL
+- Applies to: any GitHub create/update/delete call that does not return a clean commit SHA, appears to hang, times out, gets interrupted, or otherwise leaves the landing state unclear.
+- Core rule: silence is `UNKNOWN`, not success.
+- Procedure:
+  1. Stop stacking dependent changes immediately.
+  2. Verify the exact target path before continuing:
+     - For `create_file`, fetch the new file path and confirm expected content exists.
+     - For `update_file`, fetch the edited file and confirm the expected change exists.
+     - For `delete_file`, fetch the deleted path and confirm a 404 / not-found result.
+  3. Classify the state explicitly as `LANDED`, `NOT LANDED`, or `UNKNOWN`.
+  4. Only proceed with dependent changes after the dependency is confirmed `LANDED`.
+  5. If the operation is still unknown after inspection, retry once with a smaller/simpler change or switch strategy.
+- Reporting format after recovery:
+  - `LANDED:` list confirmed changes.
+  - `NOT LANDED:` list changes confirmed absent.
+  - `UNKNOWN:` list anything still unclear.
+  - `NEXT SAFE STEP:` name the exact next action.
+- Rule: never wire a dependent import, route, or reference to a file that has not been confirmed to exist. Example: do not update `App.tsx` to import `WorkflowMobilePage.tsx` until `src/pages/WorkflowMobilePage.tsx` is confirmed present on `main`.
+
 ### Large-file update protocol: use Git tree path, not contents update
 
 - Status: ACTIVE PROTOCOL
-- Applies to: large/high-churn files such as `src/pages/DashboardPage.tsx` and `src/App.tsx`.
+- Applies to: large/high-churn files such as `src/pages/DashboardPage.tsx`, `src/pages/WorkflowPage.tsx`, and `src/App.tsx`.
 - Problem discovered: GitHub contents updates require the exact target file blob SHA. For large files, connector output can be truncated or expose misleading SHA-looking values, causing `409: SHA does not match` failures.
 - Corrective protocol: bypass the contents API for large-file replacements and use Git data operations instead:
   1. Find the latest known main commit SHA.
@@ -30,6 +51,7 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
   5. Verify GitHub Actions before stacking more changes.
 - Proven working example: commit `68160453ad41d5fe831621a872331106ae8034ae` used this path to update `src/pages/DashboardPage.tsx` and retire dashboard runtime-truth drift.
 - Rule: use `update_file` for small files when the blob SHA is available. Use the Git tree path for large files or any file where the contents API SHA becomes unreliable.
+- Escalation rule: one SHA mismatch means refetch and retry only if the file is small enough to verify. Two SHA mismatches means stop using contents update and switch to the Git tree path, a new smaller component/page, or a smaller mission split.
 
 ## Open Band-Aids
 
