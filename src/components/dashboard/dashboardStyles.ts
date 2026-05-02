@@ -70,11 +70,12 @@ export const dashboardSubtitleStyle: CSSProperties = {
 };
 
 export const dashboardMetricLabelStyle: CSSProperties = {
-  fontSize: 11,
+  fontSize: 10,
   color: '#94a3b8',
-  fontWeight: 700,
-  marginBottom: 6,
-  letterSpacing: '1px',
+  fontWeight: 800,
+  marginBottom: 4,
+  letterSpacing: '0.8px',
+  textTransform: 'uppercase',
 };
 
 export const dashboardSectionHeaderStyle: CSSProperties = {
@@ -141,16 +142,16 @@ export const dashboardQuickActionDetailStyle: CSSProperties = {
 
 export const dashboardOverviewBarStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-  gap: 16,
-  marginBottom: 16,
+  gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
+  gap: 10,
+  marginBottom: 12,
 };
 
 export const dashboardMissionGridStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-  gap: 12,
-  marginBottom: 16,
+  gridTemplateColumns: 'repeat(auto-fit, minmax(172px, 1fr))',
+  gap: 10,
+  marginBottom: 14,
 };
 
 export const dashboardViewAllButtonStyle: CSSProperties = {
@@ -222,32 +223,32 @@ export function getDashboardQuickActionLabelStyle(tone: DashboardTone): CSSPrope
 
 export function getDashboardMetricStyle(theme: DashboardTheme): CSSProperties {
   return {
-    background: theme === 'dark' ? '#1e293b' : '#ffffff',
-    padding: '18px 20px',
-    borderRadius: 6,
+    background: theme === 'dark' ? 'rgba(30, 41, 59, 0.72)' : '#ffffff',
+    padding: '12px 14px',
+    borderRadius: 5,
     border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.14)',
   };
 }
 
 export function getDashboardMissionCardStyle(theme: DashboardTheme, color: string): CSSProperties {
   return {
     textAlign: 'left',
-    background: theme === 'dark' ? '#1e293b' : '#ffffff',
-    padding: 16,
-    borderRadius: 6,
-    border: `1px solid ${color}55`,
-    borderLeft: `4px solid ${color}`,
+    background: theme === 'dark' ? 'rgba(30, 41, 59, 0.76)' : '#ffffff',
+    padding: 13,
+    borderRadius: 5,
+    border: `1px solid ${color}40`,
+    borderLeft: `3px solid ${color}`,
     cursor: 'pointer',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.14)',
   };
 }
 
 export function getDashboardMissionValueStyle(theme: DashboardTheme): CSSProperties {
   return {
-    marginTop: 8,
-    marginBottom: 6,
-    fontSize: 18,
+    marginTop: 6,
+    marginBottom: 5,
+    fontSize: 16,
     fontWeight: 900,
     color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
   };
