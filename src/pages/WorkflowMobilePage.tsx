@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { RoleView, DepartmentFilter, AppTab } from '../types/app';
 import type { Machine } from '../types/machine';
-import type { ProductionOrder } from '../types/productionOrder';
+import type { DynamicTraveler } from '../types/dynamicTraveler';
 import { productionOrders } from '../data/productionOrders';
 import { seedCoverage } from '../data/coverage';
 import { workCenters } from '../data/workCenters';
+import { generateDynamicTravelers } from '../logic/dynamicTraveler';
 import OrderDetailModal from '../components/orders/OrderDetailModal';
 
 interface WorkflowMobilePageProps {
@@ -27,22 +28,20 @@ export default function WorkflowMobilePage({
   onGoToMaintenance,
   onGoToTab,
 }: WorkflowMobilePageProps) {
-  const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
-  const [showAllOrders, setShowAllOrders] = useState(false);
+  const [selectedTraveler, setSelectedTraveler] = useState<DynamicTraveler | null>(null);
+  const [showAllTravelers, setShowAllTravelers] = useState(false);
   const workflowMode = getWorkflowMode(roleView);
   const deptLabel = departmentFilter === 'All' ? 'All Departments' : departmentFilter;
 
-  const scopedOrders = useMemo(() => {
-    const all = workflowMode === 'management' || departmentFilter === 'All'
-      ? productionOrders
-      : productionOrders.filter((order) => order.currentDepartment === departmentFilter);
-    return sortWorkflowOrders(all);
+  const travelers = useMemo(() => {
+    return generateDynamicTravelers(productionOrders, workflowMode === 'management' ? 'All' : departmentFilter);
   }, [departmentFilter, workflowMode]);
 
-  const visibleOrders = showAllOrders ? scopedOrders : scopedOrders.slice(0, 3);
-  const hiddenOrderCount = Math.max(scopedOrders.length - visibleOrders.length, 0);
-  const runnableCount = scopedOrders.filter((order) => String(order.flowStatus).toLowerCase() === 'runnable').length;
-  const blockedCount = scopedOrders.filter((order) => (order.blockers ?? []).length > 0).length;
+  const visibleTravelers = showAllTravelers ? travelers : travelers.slice(0, 3);
+  const hiddenTravelerCount = Math.max(travelers.length - visibleTravelers.length, 0);
+  const nextTraveler = travelers[0];
+  const readyCount = travelers.filter((traveler) => traveler.visualSignal === 'READY').length;
+  const blockedCount = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
   const crew = departmentFilter === 'All' ? seedCoverage : seedCoverage.filter((person) => person.department === departmentFilter);
   const assignedCount = crew.filter((person) => person.status === 'ASSIGNED').length;
   const availableCount = crew.filter((person) => person.status === 'AVAILABLE').length;
@@ -59,31 +58,50 @@ export default function WorkflowMobilePage({
 
       <section style={getSectionStyle(theme)}>
         <div style={getSectionTitleStyle(theme)}>
-          NEXT WORK THAT MATTERS
-          <span style={getCountBadge(blockedCount > 0 ? 'red' : runnableCount > 0 ? 'green' : 'gray')}>
-            {blockedCount > 0 ? `${blockedCount} BLOCKED` : `${runnableCount} RUNNABLE`}
+          YOUR NEXT TRAVELER
+          <span style={getCountBadge(blockedCount > 0 ? 'red' : readyCount > 0 ? 'green' : 'gray')}>
+            {blockedCount > 0 ? `${blockedCount} BLOCKED / HOLD` : `${readyCount} READY`}
           </span>
         </div>
+        {nextTraveler ? (
+          <NextTravelerCard traveler={nextTraveler} theme={theme} onOpen={() => setSelectedTraveler(nextTraveler)} />
+        ) : (
+          <div style={getEmptyStyle(theme)}>No travelers are currently assigned to this workflow view.</div>
+        )}
+      </section>
+
+      <section style={getSectionStyle(theme)}>
+        <div style={getSectionTitleStyle(theme)}>
+          TRAVELER QUEUE
+          <span style={getCountBadge('blue')}>{travelers.length} ACTIVE</span>
+        </div>
         <p style={getIntroTextStyle(theme)}>
-          Compact cards show the work signal only. Tap an order for traveler detail, blockers, material, QA, and routing.
+          Travelers are order-specific work instructions. Each one shows what to work on, the recommended resource, blocker signal, and next handoff.
         </p>
 
-        {scopedOrders.length === 0 ? (
-          <div style={getEmptyStyle(theme)}>No orders assigned to this workflow view.</div>
+        {travelers.length === 0 ? (
+          <div style={getEmptyStyle(theme)}>No travelers assigned to this workflow view.</div>
         ) : (
           <div style={orderListStyle}>
-            {visibleOrders.map((order) => (
-              <CompactOrderButton key={order.id} order={order} theme={theme} onOpen={() => setSelectedOrder(order)} />
+            {visibleTravelers.map((traveler) => (
+              <CompactTravelerButton key={traveler.id} traveler={traveler} theme={theme} onOpen={() => setSelectedTraveler(traveler)} />
             ))}
           </div>
         )}
 
-        {scopedOrders.length > 3 ? (
-          <button type="button" style={getShowMoreButtonStyle(theme)} onClick={() => setShowAllOrders((current) => !current)}>
-            {showAllOrders ? 'SHOW FEWER ORDERS' : `SHOW ${hiddenOrderCount} MORE ORDER${hiddenOrderCount === 1 ? '' : 'S'}`}
+        {travelers.length > 3 ? (
+          <button type="button" style={getShowMoreButtonStyle(theme)} onClick={() => setShowAllTravelers((current) => !current)}>
+            {showAllTravelers ? 'SHOW FEWER TRAVELERS' : `SHOW ${hiddenTravelerCount} MORE TRAVELER${hiddenTravelerCount === 1 ? '' : 'S'}`}
           </button>
         ) : null}
       </section>
+
+      {nextTraveler ? (
+        <section style={getSectionStyle(theme)}>
+          <div style={getSectionTitleStyle(theme)}>RESOURCE MATCH</div>
+          <ResourceMatch traveler={nextTraveler} theme={theme} />
+        </section>
+      ) : null}
 
       {workflowMode !== 'production' ? (
         <section style={getSectionStyle(theme)}>
@@ -104,33 +122,16 @@ export default function WorkflowMobilePage({
         <section style={getSectionStyle(theme)}>
           <div style={getSectionTitleStyle(theme)}>DEPARTMENT SNAPSHOT</div>
           <div style={deptStripStyle}>
-            {workCenters.slice(0, showAllOrders ? undefined : 6).map((workCenter) => {
-              const deptOrders = productionOrders.filter((order) => order.currentDepartment === workCenter.department);
-              const deptBlocked = deptOrders.filter((order) => (order.blockers ?? []).length > 0).length;
+            {workCenters.slice(0, showAllTravelers ? undefined : 6).map((workCenter) => {
+              const deptTravelers = generateDynamicTravelers(productionOrders, workCenter.department);
+              const deptBlocked = deptTravelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
               return (
                 <div key={workCenter.id} style={getDeptTileStyle(workCenter.status, theme)}>
                   <div style={getDeptTileNameStyle(theme)}>{workCenter.department}</div>
-                  <div style={deptTileStatsStyle}>{deptOrders.length} orders · {deptBlocked} blocked</div>
+                  <div style={deptTileStatsStyle}>{deptTravelers.length} travelers · {deptBlocked} blocked/hold</div>
                 </div>
               );
             })}
-          </div>
-        </section>
-      ) : null}
-
-      {workflowMode !== 'management' && machines.length > 0 ? (
-        <section style={getSectionStyle(theme)}>
-          <div style={getSectionTitleStyle(theme)}>MACHINE SNAPSHOT</div>
-          <div style={machineGridStyle}>
-            {machines.slice(0, 6).map((machine) => (
-              <div key={machine.id} style={getMachineChipStyle(machine.state, theme)}>
-                <div style={getMachineDot(machine.state)} />
-                <div>
-                  <div style={getMachineNameStyle(theme)}>{machine.name}</div>
-                  <div style={getMachineStateStyle(machine.state)}>{machine.state}</div>
-                </div>
-              </div>
-            ))}
           </div>
         </section>
       ) : null}
@@ -141,13 +142,13 @@ export default function WorkflowMobilePage({
         <button onClick={() => onGoToTab('risk')} style={getActionBtn('red', theme)}>QA / SAFETY</button>
       </div>
 
-      {selectedOrder ? (
+      {selectedTraveler ? (
         <OrderDetailModal
-          order={selectedOrder}
+          order={selectedTraveler.order}
           theme={theme}
-          onClose={() => setSelectedOrder(null)}
+          onClose={() => setSelectedTraveler(null)}
           onOpenOrders={() => {
-            setSelectedOrder(null);
+            setSelectedTraveler(null);
             onGoToTab('orders');
           }}
         />
@@ -156,22 +157,70 @@ export default function WorkflowMobilePage({
   );
 }
 
-function CompactOrderButton({ order, theme, onOpen }: { order: ProductionOrder; theme: 'dark' | 'light'; onOpen: () => void }) {
-  const isBlocked = (order.blockers ?? []).length > 0;
-  const isRunnable = String(order.flowStatus).toLowerCase() === 'runnable';
-  const blockerText = isBlocked ? order.blockers[0]?.message ?? 'Blocked' : order.lastAction ?? nextActionForOrder(order);
+function NextTravelerCard({ traveler, theme, onOpen }: { traveler: DynamicTraveler; theme: 'dark' | 'light'; onOpen: () => void }) {
+  return (
+    <button type="button" style={getNextTravelerStyle(traveler.visualSignal, theme)} onClick={onOpen}>
+      <div style={rowStyle}>
+        <span style={getOrderNumStyle(theme)}>#{traveler.order.orderNumber}</span>
+        <span style={getPriorityChip(traveler.order.priority)}>{String(traveler.order.priority ?? 'normal').toUpperCase()}</span>
+        <span style={getVisualChip(traveler.visualSignal)}>{traveler.visualSignal}</span>
+      </div>
+      <div style={getTravelerInstructionStyle(theme)}>{traveler.currentInstruction}</div>
+      <div style={travelerMetaGridStyle}>
+        <TravelerMeta label="Resource" value={traveler.bestResource?.label ?? 'No capable resource mapped'} theme={theme} />
+        <TravelerMeta label="Next" value={traveler.nextHandoff ?? 'Not assigned'} theme={theme} />
+        <TravelerMeta label="Material" value={formatToken(traveler.materialStatus)} theme={theme} />
+        <TravelerMeta label="QA" value={formatToken(traveler.qaStatus)} theme={theme} />
+      </div>
+      <div style={getTapHintStyle(theme)}>Tap for traveler detail</div>
+    </button>
+  );
+}
+
+function CompactTravelerButton({ traveler, theme, onOpen }: { traveler: DynamicTraveler; theme: 'dark' | 'light'; onOpen: () => void }) {
+  return (
+    <button type="button" style={getOrderCardStyle(traveler.visualSignal, theme)} onClick={onOpen}>
+      <div style={rowStyle}>
+        <span style={getOrderNumStyle(theme)}>#{traveler.order.orderNumber}</span>
+        <span style={getPriorityChip(traveler.order.priority)}>{String(traveler.order.priority ?? 'normal').toUpperCase()}</span>
+        <span style={getVisualChip(traveler.visualSignal)}>{traveler.visualSignal}</span>
+      </div>
+      <div style={getOrderFamilyStyle(theme)}>{traveler.order.productFamily}</div>
+      <div style={getCompactReasonStyle(theme, traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD')}>
+        {traveler.bestResource ? `Use: ${traveler.bestResource.label}` : 'No capable resource mapped'}
+        {traveler.nextHandoff ? ` · Next: ${traveler.nextHandoff}` : ''}
+      </div>
+      <div style={getTapHintStyle(theme)}>Tap for traveler detail</div>
+    </button>
+  );
+}
+
+function ResourceMatch({ traveler, theme }: { traveler: DynamicTraveler; theme: 'dark' | 'light' }) {
+  if (traveler.capableResources.length === 0) {
+    return <div style={getEmptyStyle(theme)}>No capable resource has been mapped for this traveler yet.</div>;
+  }
 
   return (
-    <button type="button" style={getOrderCardStyle(isRunnable, isBlocked, theme)} onClick={onOpen}>
-      <div style={rowStyle}>
-        <span style={getOrderNumStyle(theme)}>#{order.orderNumber}</span>
-        <span style={getPriorityChip(order.priority)}>{String(order.priority ?? 'normal').toUpperCase()}</span>
-        <span style={getStatusChip(isRunnable, isBlocked)}>{isBlocked ? 'BLOCKED' : isRunnable ? 'READY' : 'WATCH'}</span>
-      </div>
-      <div style={getOrderFamilyStyle(theme)}>{order.productFamily}</div>
-      <div style={getCompactReasonStyle(theme, isBlocked)}>{blockerText}</div>
-      <div style={getTapHintStyle(theme)}>Tap for order detail</div>
-    </button>
+    <div style={machineGridStyle}>
+      {traveler.capableResources.slice(0, 6).map((resource) => (
+        <div key={resource.id} style={getResourceChipStyle(resource.id === traveler.bestResource?.id, theme)}>
+          <div style={getMachineDot(resource.status === 'AVAILABLE' ? 'RUNNING' : 'IDLE')} />
+          <div>
+            <div style={getMachineNameStyle(theme)}>{resource.label}</div>
+            <div style={getMachineStateStyle(resource.status)}>{resource.id === traveler.bestResource?.id ? 'BEST MATCH' : resource.status}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TravelerMeta({ label, value, theme }: { label: string; value: string; theme: 'dark' | 'light' }) {
+  return (
+    <div>
+      <div style={getMetaLabelStyle(theme)}>{label}</div>
+      <div style={getMetaValueStyle(theme)}>{value}</div>
+    </div>
   );
 }
 
@@ -187,29 +236,8 @@ function getWorkflowRoleLabel(mode: WorkflowMode): string {
   return 'MANAGEMENT VIEW';
 }
 
-function sortWorkflowOrders(orders: ProductionOrder[]): ProductionOrder[] {
-  return [...orders].sort((a, b) => {
-    const scoreDiff = getWorkflowOrderScore(b) - getWorkflowOrderScore(a);
-    if (scoreDiff !== 0) return scoreDiff;
-    return String(a.projectedShipDate ?? '').localeCompare(String(b.projectedShipDate ?? ''));
-  });
-}
-
-function getWorkflowOrderScore(order: ProductionOrder): number {
-  let score = 0;
-  if ((order.blockers ?? []).length > 0) score += 100;
-  if (String(order.flowStatus).toLowerCase() === 'runnable') score += 40;
-  if (order.priority === 'critical' || order.priority === 'CRITICAL') score += 30;
-  if (order.priority === 'hot' || order.priority === 'HOT') score += 20;
-  if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED') score += 20;
-  return score;
-}
-
-function nextActionForOrder(order: ProductionOrder): string {
-  if (String(order.flowStatus).toLowerCase() === 'runnable') return 'Ready for the next useful action.';
-  if (order.materialStatus && order.materialStatus !== 'RECEIVED' && order.materialStatus !== 'STAGED') return 'Check material readiness.';
-  if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED') return 'Review QA hold before moving.';
-  return 'Review traveler before acting.';
+function formatToken(value: string) {
+  return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 const pageStyle: CSSProperties = { padding: 0 };
@@ -223,6 +251,7 @@ const deptStripStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'r
 const deptTileStatsStyle: CSSProperties = { fontSize: 11, color: '#64748b', marginTop: 5, lineHeight: 1.4 };
 const machineGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 };
 const actionRowStyle: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 };
+const travelerMetaGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(112px, 1fr))', gap: 8, marginTop: 12 };
 
 function getHeaderStyle(theme: 'dark' | 'light'): CSSProperties { return { background: theme === 'dark' ? '#0f172a' : '#f1f5f9', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', borderLeft: '4px solid #f97316', borderRadius: 6, padding: '14px 16px', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }; }
 function getDeptLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 18, fontWeight: 800, letterSpacing: '1px', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }; }
@@ -230,10 +259,13 @@ function getSectionStyle(theme: 'dark' | 'light'): CSSProperties { return { back
 function getSectionTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', color: theme === 'dark' ? '#64748b' : '#94a3b8', textTransform: 'uppercase', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }; }
 function getIntroTextStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: '0 0 12px', color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12, lineHeight: 1.45 }; }
 function getCountBadge(color: 'green' | 'red' | 'blue' | 'yellow' | 'gray'): CSSProperties { const map: Record<string, string> = { green: '#10b981', red: '#ef4444', blue: '#3b82f6', yellow: '#eab308', gray: '#64748b' }; const picked = map[color] ?? map.gray; return { background: `${picked}22`, color: picked, border: `1px solid ${picked}`, borderRadius: 3, padding: '2px 7px', fontSize: 10, fontWeight: 800, letterSpacing: '0.5px' }; }
-function getOrderCardStyle(isRunnable: boolean, isBlocked: boolean, theme: 'dark' | 'light'): CSSProperties { return { width: '100%', textAlign: 'left', background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: isBlocked ? '1px solid rgba(220,38,38,0.4)' : isRunnable ? '1px solid rgba(16,185,129,0.4)' : theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', borderLeft: isBlocked ? '4px solid #ef4444' : isRunnable ? '4px solid #10b981' : '4px solid #475569', borderRadius: 4, padding: 12, cursor: 'pointer' }; }
+function getOrderCardStyle(signal: DynamicTraveler['visualSignal'], theme: 'dark' | 'light'): CSSProperties { const color = getSignalColor(signal); return { width: '100%', textAlign: 'left', background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}66`, borderLeft: `4px solid ${color}`, borderRadius: 4, padding: 12, cursor: 'pointer' }; }
+function getNextTravelerStyle(signal: DynamicTraveler['visualSignal'], theme: 'dark' | 'light'): CSSProperties { const color = getSignalColor(signal); return { width: '100%', textAlign: 'left', background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}88`, borderLeft: `5px solid ${color}`, borderRadius: 6, padding: 14, cursor: 'pointer' }; }
+function getSignalColor(signal: DynamicTraveler['visualSignal']): string { if (signal === 'BLOCKED' || signal === 'HOLD') return '#ef4444'; if (signal === 'READY') return '#10b981'; if (signal === 'DONE') return '#64748b'; return '#f97316'; }
 function getOrderNumStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 14, fontWeight: 800, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', letterSpacing: '0.5px' }; }
 function getPriorityChip(priority: string | undefined): CSSProperties { const priorityKey = String(priority ?? 'normal').toLowerCase(); const map: Record<string, string> = { critical: '#ef4444', hot: '#f97316', normal: '#64748b' }; const picked = map[priorityKey] ?? '#64748b'; return { fontSize: 9, fontWeight: 800, letterSpacing: '1px', color: picked, background: `${picked}22`, border: `1px solid ${picked}`, borderRadius: 3, padding: '2px 6px' }; }
-function getStatusChip(isRunnable: boolean, isBlocked: boolean): CSSProperties { const color = isBlocked ? '#ef4444' : isRunnable ? '#10b981' : '#f97316'; return { fontSize: 9, fontWeight: 800, letterSpacing: '1px', color, background: `${color}22`, border: `1px solid ${color}`, borderRadius: 3, padding: '2px 6px' }; }
+function getVisualChip(signal: DynamicTraveler['visualSignal']): CSSProperties { const color = getSignalColor(signal); return { fontSize: 9, fontWeight: 800, letterSpacing: '1px', color, background: `${color}22`, border: `1px solid ${color}`, borderRadius: 3, padding: '2px 6px' }; }
+function getTravelerInstructionStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 14, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontWeight: 800, lineHeight: 1.4, marginTop: 8 }; }
 function getOrderFamilyStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 14, color: theme === 'dark' ? '#cbd5e1' : '#475569', fontWeight: 700, marginTop: 4, lineHeight: 1.4 }; }
 function getCompactReasonStyle(theme: 'dark' | 'light', blocked: boolean): CSSProperties { return { marginTop: 6, fontSize: 12, color: blocked ? (theme === 'dark' ? '#fca5a5' : '#dc2626') : '#64748b', lineHeight: 1.35, fontWeight: 700 }; }
 function getTapHintStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 8, color: theme === 'dark' ? '#93c5fd' : '#2563eb', fontSize: 10, fontWeight: 900, letterSpacing: '0.8px', textTransform: 'uppercase' }; }
@@ -241,10 +273,12 @@ function getShowMoreButtonStyle(theme: 'dark' | 'light'): CSSProperties { return
 function getCrewStat(color: 'green' | 'blue' | 'yellow', theme: 'dark' | 'light'): CSSProperties { const map = { green: '#10b981', blue: '#3b82f6', yellow: '#eab308' }; const picked = map[color]; return { flex: '1 1 80px', background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${picked}44`, borderRadius: 4, padding: '10px 8px', textAlign: 'center', fontSize: 12, fontWeight: 700, color: picked, letterSpacing: '0.5px', lineHeight: 1.4 }; }
 function getDeptTileStyle(status: string, theme: 'dark' | 'light'): CSSProperties { const color = status === 'NEEDS_ATTENTION' ? '#ef4444' : status === 'WATCH' ? '#f97316' : '#10b981'; return { padding: 12, borderRadius: 4, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}44`, borderLeft: `3px solid ${color}` }; }
 function getDeptTileNameStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 12, fontWeight: 800, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }; }
-function getMachineChipStyle(state: string, theme: 'dark' | 'light'): CSSProperties { const color = getMachineColor(state); return { background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}44`, borderRadius: 4, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }; }
+function getResourceChipStyle(best: boolean, theme: 'dark' | 'light'): CSSProperties { const color = best ? '#10b981' : '#64748b'; return { background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}55`, borderRadius: 4, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }; }
 function getMachineDot(state: string): CSSProperties { return { width: 8, height: 8, borderRadius: '50%', background: getMachineColor(state), flexShrink: 0 }; }
 function getMachineNameStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 12, fontWeight: 700, color: theme === 'dark' ? '#cbd5e1' : '#0f172a', letterSpacing: '0.3px' }; }
 function getMachineStateStyle(state: string): CSSProperties { return { fontSize: 10, fontWeight: 700, color: getMachineColor(state), letterSpacing: '0.5px' }; }
-function getMachineColor(state: string): string { const map: Record<string, string> = { RUNNING: '#10b981', IDLE: '#64748b', ALARM: '#ef4444', OFFLINE: '#ef4444', SETUP: '#f97316', MAINTENANCE: '#f97316' }; return map[state] ?? '#64748b'; }
+function getMachineColor(state: string): string { const map: Record<string, string> = { RUNNING: '#10b981', AVAILABLE: '#10b981', IDLE: '#64748b', BUSY: '#f97316', UNKNOWN: '#64748b', ALARM: '#ef4444', DOWN: '#ef4444', OFFLINE: '#ef4444', SETUP: '#f97316', MAINTENANCE: '#f97316' }; return map[state] ?? '#64748b'; }
 function getActionBtn(color: 'orange' | 'blue' | 'slate' | 'red', theme: 'dark' | 'light'): CSSProperties { const map = { orange: '#f97316', blue: '#3b82f6', slate: '#64748b', red: '#ef4444' }; const picked = map[color]; return { flex: '1 1 120px', padding: '12px 10px', background: `${picked}20`, border: `1px solid ${picked}`, borderRadius: 4, color: theme === 'light' && color === 'slate' ? '#475569' : picked, fontSize: 11, fontWeight: 900, letterSpacing: '0.7px', cursor: 'pointer' }; }
 function getEmptyStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 16, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px dashed #334155' : '1px dashed #cbd5e1', color: '#64748b', fontSize: 13, fontWeight: 700 }; }
+function getMetaLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 9, fontWeight: 900, letterSpacing: '0.9px', color: theme === 'dark' ? '#64748b' : '#64748b', textTransform: 'uppercase', marginBottom: 3 }; }
+function getMetaValueStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 12, fontWeight: 800, color: theme === 'dark' ? '#cbd5e1' : '#334155', lineHeight: 1.3 }; }
