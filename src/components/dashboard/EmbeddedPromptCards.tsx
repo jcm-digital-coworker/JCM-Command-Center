@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 import type { AppTab } from '../../types/app';
 import { productionOrders } from '../../data/productionOrders';
 import {
@@ -34,6 +35,7 @@ type EmbeddedPromptCardsProps = {
 
 export default function EmbeddedPromptCards({ onNavigate }: EmbeddedPromptCardsProps) {
   const [runtimeVersion, setRuntimeVersion] = useState(0);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const refresh = () => setRuntimeVersion((version) => version + 1);
@@ -50,16 +52,33 @@ export default function EmbeddedPromptCards({ onNavigate }: EmbeddedPromptCardsP
     return getEmbeddedPrompts();
   }, [runtimeVersion]);
 
+  const activePromptCount = prompts.filter((prompt) => prompt.intent || prompt.tone !== 'green').length;
+  const summary = activePromptCount > 0
+    ? `${activePromptCount} active prompt${activePromptCount === 1 ? '' : 's'} available`
+    : 'No active prompt pressure';
+
   return (
-    <div style={dashboardPromptGridStyle}>
-      {prompts.map((prompt) => (
-        <PromptCard
-          key={`${prompt.title}-${prompt.actionLabel}`}
-          prompt={prompt}
-          onNavigate={onNavigate}
-        />
-      ))}
-    </div>
+    <section style={promptShellStyle}>
+      <button type="button" style={promptToggleStyle} onClick={() => setExpanded((current) => !current)}>
+        <span>
+          <span style={promptEyebrowStyle}>PROMPT CARDS</span>
+          <span style={promptSummaryStyle}>{summary}</span>
+        </span>
+        <span style={promptToggleMetaStyle}>{expanded ? 'COLLAPSE' : 'OPEN PROMPTS'}</span>
+      </button>
+
+      {expanded && (
+        <div style={dashboardPromptGridStyle}>
+          {prompts.map((prompt) => (
+            <PromptCard
+              key={`${prompt.title}-${prompt.actionLabel}`}
+              prompt={prompt}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -143,3 +162,50 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
 
   return prompts.slice(0, 3);
 }
+
+const promptShellStyle: CSSProperties = {
+  marginBottom: 16,
+};
+
+const promptToggleStyle: CSSProperties = {
+  width: '100%',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 12,
+  padding: '13px 14px',
+  borderRadius: 6,
+  border: '1px solid #334155',
+  borderLeft: '4px solid #3b82f6',
+  background: 'rgba(15, 23, 42, 0.72)',
+  color: '#e2e8f0',
+  cursor: 'pointer',
+  textAlign: 'left',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+};
+
+const promptEyebrowStyle: CSSProperties = {
+  display: 'block',
+  color: '#3b82f6',
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: '0.9px',
+  textTransform: 'uppercase',
+};
+
+const promptSummaryStyle: CSSProperties = {
+  display: 'block',
+  marginTop: 4,
+  color: '#94a3b8',
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const promptToggleMetaStyle: CSSProperties = {
+  color: '#93c5fd',
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: '0.7px',
+  textTransform: 'uppercase',
+  whiteSpace: 'nowrap',
+};
