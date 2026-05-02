@@ -17,6 +17,21 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
   4. Verify Checkout, Setup Node, Install dependencies, Build, Upload demo build, and Record latest action run.
 - Rule: do not manually edit `docs/LATEST_ACTION_RUN.md` unless repairing the breadcrumb system. It is CI-generated.
 
+### Repo write auto-verification protocol
+
+- Status: ACTIVE PROTOCOL
+- Applies to: every GitHub create/update/delete operation performed through the connector.
+- Core rule: a repo write is not complete until the target file state is verified. A returned commit SHA is useful, but it is not the end of the operation.
+- Automatic procedure after every repo write:
+  1. Immediately verify the target path before starting another dependent change.
+  2. For `create_file`, fetch the created path and confirm the expected file exists with expected key content.
+  3. For `update_file`, fetch the edited path and confirm the intended change appears in the fetched content.
+  4. For `delete_file`, fetch the deleted path and confirm a 404 / not-found result.
+  5. Only then classify the change as `LANDED`.
+- Dependency rule: never wire imports, routes, references, or follow-on behavior to a file/change that has not been verified `LANDED`.
+- Reporting rule: when a write is part of a multi-step mission, report verified state using `LANDED`, `NOT LANDED`, `UNKNOWN`, and `NEXT SAFE STEP` before continuing if there is any doubt.
+- Failure rule: if verification fails, stop stacking changes and enter the Dropped tool / unknown operation protocol.
+
 ### Dropped tool / unknown operation protocol
 
 - Status: ACTIVE PROTOCOL
