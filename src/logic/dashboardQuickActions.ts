@@ -72,7 +72,7 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
     5,
   );
 
-  if (roleView === 'Operator') {
+  if (roleView === 'Production') {
     return sortQuickActions([
       { label: 'View Work Queue', detail: 'Open assigned work and current station priorities', target: 'workflow', tone: 'orange', priority: 3 },
       { ...blockerAction, label: state.blockedOrderCount > 0 ? 'Report Blocked Work' : 'Review Blocker Status', target: 'workflow' },
@@ -83,7 +83,7 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
     ]);
   }
 
-  if (roleView === 'Lead / Supervisor') {
+  if (roleView === 'Department Lead' || roleView === 'Department Supervisor') {
     return sortQuickActions([
       blockerAction,
       { label: 'Check Crew Coverage', detail: 'See available crew and coverage gaps', target: 'coverage', tone: state.blockedOrderCount > 0 ? 'orange' : 'slate', priority: 3 },
@@ -94,7 +94,7 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
     ]);
   }
 
-  if (roleView === 'Manager') {
+  if (roleView === 'Management') {
     return sortQuickActions([
       { label: 'Plant Command Review', detail: 'Review plant criticals, flow, and department status', target: 'dashboard', tone: state.blockedOrderCount + state.alertCount > 0 ? 'orange' : 'slate', priority: 2 },
       blockerAction,
@@ -118,25 +118,17 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
     ]);
   }
 
-  if (roleView === 'Forklift / Receiving') {
+  if (roleView === 'Support') {
     return sortQuickActions([
       { ...materialAction, label: state.materialIssueCount > 0 ? 'Open Material Issues' : 'Open Receiving' },
-      { label: 'Request Queue', detail: 'Check material requests from production departments', target: 'receiving', tone: state.materialIssueCount > 0 ? 'orange' : 'slate', priority: state.materialIssueCount > 0 ? 4 : 2 },
-      { ...blockerAction, label: 'View Work Queue', detail: state.blockedOrderCount > 0 ? 'Review orders waiting on receiving or movement' : 'Review orders near receiving handoff', target: 'workflow' },
-      { label: 'Check Crew Coverage', detail: 'Review receiving and forklift coverage status', target: 'coverage', tone: 'slate', priority: 2 },
-      { label: 'Open Orders', detail: 'Review material status by order', target: 'orders', tone: 'blue', priority: 2 },
-      alertAction,
-    ]);
-  }
-
-  if (roleView === 'QA') {
-    return sortQuickActions([
       qaAction,
+      { label: 'Request Queue', detail: 'Check material and support requests from production departments', target: 'receiving', tone: state.materialIssueCount > 0 ? 'orange' : 'slate', priority: state.materialIssueCount > 0 ? 4 : 2 },
+      { ...blockerAction, label: 'View Work Queue', detail: state.blockedOrderCount > 0 ? 'Review orders waiting on receiving, QA, or support action' : 'Review orders near support handoff', target: 'workflow' },
       { label: 'Open QA Department', detail: 'Review QA department cards and station signals', target: 'qa', tone: 'blue', priority: 3 },
-      blockerAction,
-      { label: 'Open Documents', detail: 'Access standards, inspection references, and procedures', target: 'documents', tone: 'slate', priority: 2 },
-      { label: 'Check Crew Coverage', detail: 'Review QA coverage and available support', target: 'coverage', tone: 'slate', priority: 2 },
+      { label: 'Check Crew Coverage', detail: 'Review support coverage and available help', target: 'coverage', tone: 'slate', priority: 2 },
+      { label: 'Open Orders', detail: 'Review material, QA, and release status by order', target: 'orders', tone: 'blue', priority: 2 },
       alertAction,
+      { label: 'Open Documents', detail: 'Access standards, inspection references, and procedures', target: 'documents', tone: 'slate', priority: 1 },
     ]);
   }
 
@@ -154,7 +146,7 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
 }
 
 export function formatRoleLabel(roleView: RoleView): string {
-  return roleView === 'Forklift / Receiving' ? 'Receiving' : roleView;
+  return roleView;
 }
 
 function createLiveAction(
