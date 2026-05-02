@@ -3,11 +3,15 @@ import type { Department } from '../types/machine';
 import type { ProductionOrder, ProductLane } from '../types/productionOrder';
 import type {
   DynamicTraveler,
+  PlantTraveler,
+  PlantTravelerStatus,
   TravelerAction,
   TravelerCapability,
   TravelerResource,
   TravelerStepStatus,
 } from '../types/dynamicTraveler';
+
+const DEFAULT_PLANT_ROUTE: Department[] = ['Receiving', 'Machine Shop', 'Assembly', 'QA', 'Shipping'];
 
 export function generateDynamicTravelers(
   orders: ProductionOrder[],
@@ -20,6 +24,38 @@ export function generateDynamicTravelers(
   return scopedOrders
     .map((order) => generateDynamicTraveler(order, department === 'All' ? order.currentDepartment : department))
     .sort((a, b) => b.priorityScore - a.priorityScore);
+}
+
+export function generatePlantTravelers(orders: ProductionOrder[]): PlantTraveler[] {
+  return orders
+    .map((order) => generatePlantTraveler(order))
+    .sort((a, b) => getPlantTravelerSortScore(b) - getPlantTravelerSortScore(a));
+}
+
+export function generatePlantTraveler(order: ProductionOrder): PlantTraveler {
+  const route = getPlantRoute(order);
+  const departmentSteps = route.map((department) => generateDynamicTraveler(order, department));
+  const completedStepCount = departmentSteps.filter((step) => step.stepStatus === 'DONE').length;
+  const totalStepCount = departmentSteps.length;
+  const completionPercent = totalStepCount === 0 ? 0 : Math.round((completedStepCount / totalStepCount) * 100);
+  const activeStep = departmentSteps.find((step) => step.department === order.currentDepartment) ?? departmentSteps.find((step) => step.stepStatus === 'READY' || step.stepStatus === 'ACTIVE');
+  const overallStatus = getPlantTravelerStatus(order, departmentSteps);
+  const nextDepartment = activeStep?.nextHandoff ?? order.nextDepartment;
+
+  return {
+    id: `plant-${order.id}`,
+    order,
+    route,
+    departmentSteps,
+    activeDepartment: activeStep?.department ?? order.currentDepartment,
+    nextDepartment,
+    overallStatus,
+    completionPercent,
+    completedStepCount,
+    totalStepCount,
+    blockers: order.blockers ?? [],
+    currentInstruction: getPlantTravelerInstruction(order, overallStatus, activeStep, completionPercent),
+  };
 }
 
 export function generateDynamicTraveler(order: ProductionOrder, department: Department): DynamicTraveler {
@@ -65,6 +101,53 @@ export function getRequiredCapabilities(order: ProductionOrder, department: Depa
   }
 
   return [];
+}
+
+function getPlantRoute(order: ProductionOrder): Department[] {
+  if (order.requiredDepartments && order.requiredDepartments.length > 0) {
+    return dedupeRoute(order.requiredDepartments);
+  }
+
+  const route = [...DEFAULT_PLANT_ROUTE];
+  if (order.currentDepartment && !route.includes(order.currentDepartment)) route.splice(1, 0, order.currentDepartment);
+  if (order.nextDepartment && order.nextDepartment !== 'Complete' && !route.includes(order.nextDepartment)) route.push(order.nextDepartment);
+  return dedupeRoute(route);
+}
+
+function dedupeRoute(route: Department[]): Department[] {
+  return route.filter((department, index) => route.indexOf(department) === index);
+}
+
+function getPlantTravelerStatus(order: ProductionOrder, steps: DynamicTraveler[]): PlantTravelerStatus {
+  if (order.status === 'DONE' || order.status === 'COMPLETE' || order.status === 'complete') return 'COMPLETE';
+  if (steps.some((step) => step.stepStatus === 'HOLD')) return 'HOLD';
+  if (steps.some((step) => step.stepStatus === 'BLOCKED')) return 'BLOCKED';
+  if (steps.some((step) => step.stepStatus === 'ACTIVE')) return 'ACTIVE';
+  if (steps.some((step) => step.stepStatus === 'READY')) return 'READY';
+  return 'NOT_RELEASED';
+}
+
+function getPlantTravelerInstruction(
+  order: ProductionOrder,
+  status: PlantTravelerStatus,
+  activeStep: DynamicTraveler | undefined,
+  completionPercent: number,
+): string {
+  if (status === 'COMPLETE') return `Order #${order.orderNumber} is complete through the plant.`;
+  if (status === 'HOLD') return `Order #${order.orderNumber} is on hold. Review the active department traveler before moving.`;
+  if (status === 'BLOCKED') return `Order #${order.orderNumber} is blocked. Resolve the active blocker before the route can advance.`;
+  if (activeStep) return `Order #${order.orderNumber} is ${completionPercent}% complete. Current plant step: ${activeStep.department}.`;
+  return `Order #${order.orderNumber} has no active plant step mapped yet.`;
+}
+
+function getPlantTravelerSortScore(traveler: PlantTraveler): number {
+  let score = 0;
+  if (traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD') score += 100;
+  if (traveler.overallStatus === 'READY' || traveler.overallStatus === 'ACTIVE') score += 80;
+  if (traveler.order.priority === 'critical' || traveler.order.priority === 'CRITICAL') score += 30;
+  if (traveler.order.priority === 'hot' || traveler.order.priority === 'HOT') score += 20;
+  score += Math.max(0, 100 - traveler.completionPercent) / 10;
+  return score;
 }
 
 function getMachineShopCapabilities(order: ProductionOrder): TravelerCapability[] {
@@ -157,6 +240,7 @@ function getTravelerActions(
 
   return [
     { type: 'OPEN_DETAIL', label: 'Open traveler detail', enabled: true },
+    { type: 'OPEN_PLANT_TRAVELER', label: 'Open full plant traveler', enabled: true },
     {
       type: 'REQUEST_MATERIAL',
       label: 'Request material for this order',
