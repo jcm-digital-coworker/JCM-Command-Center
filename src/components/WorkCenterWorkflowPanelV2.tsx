@@ -1,11 +1,15 @@
 import { useEffect, useState, useMemo } from 'react';
 import type { WorkCenter } from '../types/plant';
 import type { CoveragePerson } from '../types/coverage';
+import type { DynamicTraveler } from '../types/dynamicTraveler';
 import { seedCoverage } from '../data/coverage';
+import { productionOrders } from '../data/productionOrders';
 import { COVERAGE_STORAGE_KEY } from '../logic/coverage';
 import { getWorkCenterWorkflowGroups } from '../logic/workflowPanelSelectors';
+import { generateDynamicTravelers } from '../logic/dynamicTraveler';
 import { addWorkflowAction } from '../logic/workflowActions';
 import { applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import TravelerDetailModal from './travelers/TravelerDetailModal';
 
 type Props = {
   workCenter: WorkCenter;
@@ -23,6 +27,7 @@ export default function WorkCenterWorkflowPanelV2({
   onOpenMaintenance,
 }: Props) {
   const [runtimeVersion, setRuntimeVersion] = useState(0);
+  const [selectedTraveler, setSelectedTraveler] = useState<DynamicTraveler | null>(null);
   const [coveragePeople] = useState<CoveragePerson[]>(() => loadCoverage());
 
   useEffect(() => {
@@ -40,9 +45,15 @@ export default function WorkCenterWorkflowPanelV2({
     [coveragePeople, workCenter.department],
   );
 
+  const travelers = useMemo(
+    () => generateDynamicTravelers(productionOrders, workCenter.department),
+    [workCenter.department, runtimeVersion],
+  );
+
   const groups = getWorkCenterWorkflowGroups(workCenter);
   const activeCount = groups.reduce((total, group) => total + group.cards.length, 0);
-  void runtimeVersion;
+  const travelerReadyCount = travelers.filter((traveler) => traveler.visualSignal === 'READY').length;
+  const travelerBlockedCount = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
 
   return (
     <section style={panelStyle(theme)}>
@@ -51,7 +62,7 @@ export default function WorkCenterWorkflowPanelV2({
           <div style={{ color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: 1.2 }}>LIVE WORKFLOW</div>
           <h3 style={{ margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }}>Station Order Truth</h3>
         </div>
-        <strong style={{ color: '#f97316', whiteSpace: 'nowrap' }}>{activeCount} VISIBLE</strong>
+        <strong style={{ color: '#f97316', whiteSpace: 'nowrap' }}>{activeCount + travelers.length} VISIBLE</strong>
       </div>
 
       {deptCrew.length > 0 && (
@@ -70,6 +81,45 @@ export default function WorkCenterWorkflowPanelV2({
           </div>
         </div>
       )}
+
+      <div style={travelerPanelStyle(theme)}>
+        <div style={travelerHeaderStyle}>
+          <div>
+            <div style={{ color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase' }}>Dynamic Travelers</div>
+            <div style={{ color: '#64748b', fontSize: 12, fontWeight: 700, marginTop: 3 }}>
+              Department-scoped work instructions: what to run, where to run it, and where it goes next.
+            </div>
+          </div>
+          <div style={travelerCountRowStyle}>
+            <span style={badge('#10b981')}>{travelerReadyCount} READY</span>
+            <span style={badge('#ef4444')}>{travelerBlockedCount} BLOCKED / HOLD</span>
+          </div>
+        </div>
+
+        {travelers.length === 0 ? (
+          <div style={{ color: '#64748b', fontWeight: 700, fontSize: 13 }}>No Dynamic Travelers are mapped for this work center yet.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {travelers.slice(0, 4).map((traveler) => (
+              <button key={traveler.id} type="button" style={travelerCardStyle(traveler.visualSignal, theme)} onClick={() => setSelectedTraveler(traveler)}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+                  <div>
+                    <strong style={{ color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>#{traveler.order.orderNumber} • {traveler.order.productFamily}</strong>
+                    <div style={{ color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 13, fontWeight: 800, lineHeight: 1.4, marginTop: 6 }}>{traveler.currentInstruction}</div>
+                  </div>
+                  <span style={badge(getTravelerSignalColor(traveler.visualSignal))}>{traveler.visualSignal}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginTop: 10 }}>
+                  <Info label="Resource" value={traveler.bestResource?.label ?? 'No capable resource'} theme={theme} />
+                  <Info label="Next" value={String(traveler.nextHandoff ?? 'Not assigned')} theme={theme} />
+                  <Info label="Material" value={formatToken(String(traveler.materialStatus))} theme={theme} />
+                  <Info label="QA" value={formatToken(String(traveler.qaStatus))} theme={theme} />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {groups.length === 0 ? <div style={{ color: '#64748b' }}>No active order signals for this work center.</div> : null}
 
@@ -134,6 +184,14 @@ export default function WorkCenterWorkflowPanelV2({
           </div>
         ))}
       </div>
+
+      {selectedTraveler ? (
+        <TravelerDetailModal
+          traveler={selectedTraveler}
+          theme={theme}
+          onClose={() => setSelectedTraveler(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -194,14 +252,29 @@ function crewDotColor(status: string): string {
   return '#64748b';
 }
 
+function getTravelerSignalColor(signal: DynamicTraveler['visualSignal']): string {
+  if (signal === 'READY') return '#10b981';
+  if (signal === 'BLOCKED' || signal === 'HOLD') return '#ef4444';
+  if (signal === 'DONE') return '#64748b';
+  return '#f97316';
+}
+
+function formatToken(value: string) {
+  return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function crewStripStyle(theme: 'dark' | 'light') { return { padding: '10px 14px', borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0', marginBottom: 14 } as const; }
 function crewChipStyle(status: string, theme: 'dark' | 'light') { const color = crewDotColor(status); return { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 6, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: `1px solid ${color}44`, borderLeft: `3px solid ${color}` } as const; }
 function crewDotStyle(status: string) { return { width: 8, height: 8, borderRadius: 999, background: crewDotColor(status), marginTop: 4, flexShrink: 0 } as const; }
 function crewNameStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 12, fontWeight: 900 } as const; }
+function travelerPanelStyle(theme: 'dark' | 'light') { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', marginBottom: 16 } as const; }
+function travelerCardStyle(signal: DynamicTraveler['visualSignal'], theme: 'dark' | 'light') { const color = getTravelerSignalColor(signal); return { width: '100%', textAlign: 'left', padding: 13, borderRadius: 8, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, cursor: 'pointer' } as const; }
 
 const crewStripLabelStyle = { color: '#f97316', fontSize: 10, fontWeight: 900, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8 } as const;
 const crewRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 } as const;
 const crewStationStyle = { color: '#64748b', fontSize: 11, fontWeight: 700, marginTop: 2 } as const;
+const travelerHeaderStyle = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap' } as const;
+const travelerCountRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' } as const;
 
 function panelStyle(theme: 'dark' | 'light') { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#fff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
 function groupStyle(theme: 'dark' | 'light') { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
