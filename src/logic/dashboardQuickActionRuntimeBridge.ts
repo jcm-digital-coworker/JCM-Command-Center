@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import type { AppTab } from '../types/app';
-import EmbeddedPromptCards from '../components/dashboard/EmbeddedPromptCards';
+import PlantSignalsPanel from '../components/dashboard/PlantSignalsPanel';
 
 export const JCM_NAVIGATE_EVENT = 'jcm:navigate';
 
@@ -35,14 +35,14 @@ function queuePromptMount() {
 
   window.setTimeout(() => {
     mountQueued = false;
-    mountEmbeddedPromptCards();
+    mountPlantSignalsPanel();
   }, 50);
 }
 
-function mountEmbeddedPromptCards() {
+function mountPlantSignalsPanel() {
   const quickActionsSection = findQuickActionsSection();
   if (!quickActionsSection) {
-    unmountEmbeddedPromptCards();
+    unmountPlantSignalsPanel();
     return;
   }
 
@@ -58,13 +58,13 @@ function mountEmbeddedPromptCards() {
   }
 
   promptRoot.render(
-    React.createElement(EmbeddedPromptCards, {
+    React.createElement(PlantSignalsPanel, {
       onNavigate: dispatchNavigation,
     }),
   );
 }
 
-function unmountEmbeddedPromptCards() {
+function unmountPlantSignalsPanel() {
   promptRoot?.unmount();
   promptRoot = null;
   document.getElementById(PROMPT_CONTAINER_ID)?.remove();
