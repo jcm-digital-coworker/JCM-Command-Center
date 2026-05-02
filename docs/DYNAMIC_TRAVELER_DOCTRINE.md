@@ -20,6 +20,84 @@ It answers, for the current co-worker and department:
 
 A Dynamic Traveler is not just a page. It is a data object that can be rendered in Workflow, Orders, Plant Map, Support, QA, Maintenance, and Management views.
 
+## Confirmed Traveler Model
+
+The confirmed working model is:
+
+```text
+Plant Traveler
+↓
+Department Traveler
+↓
+Resource Context
+```
+
+### Plant Traveler
+
+The Plant Traveler is the full order-level route map. It represents the whole order through the plant and shows completion across all department steps.
+
+It must answer:
+
+- What is the full route for this order?
+- What percent of the route is complete?
+- Which department is active now?
+- Which department is next?
+- Which prior steps are done?
+- Which future steps are waiting on upstream handoff?
+- What blocker, if any, is holding the order?
+
+The Plant Traveler must behave as a modal route map. It must not navigate the user into a department card, Engineering card, or generic page. Opening the full Plant Traveler should preserve the current context and show the route in place.
+
+Route behavior:
+
+- Previous route steps show DONE.
+- The current route step shows the real active traveler state.
+- Future route steps show NOT_READY.
+- Engineering may appear as a route checkpoint when applicable, but it must not feel like a teleport into Engineering.
+
+### Department Traveler
+
+The Department Traveler is the worker-facing slice of the Plant Traveler. It answers what one department or co-worker needs to do now.
+
+It should remain the first detail view from Workflow and department cards because production workers need the local next action before they need the whole route.
+
+It must answer:
+
+- What order is this?
+- What department step is active?
+- What is the current instruction?
+- What resource is recommended?
+- What material and QA signals matter right now?
+- What is blocking this step?
+- Where does this order go next?
+
+### Resource Context
+
+Resource Context is the resource-level zoom from inside a Department Traveler.
+
+It must answer:
+
+- Why is this resource shown?
+- Is this resource recommended?
+- What is the resource state?
+- Can this resource run this traveler?
+- What is the current job or queue impact when connected?
+
+Current live equipment job data may be unavailable. In that case the UI must say so plainly, for example: `Current Job: Not connected yet`.
+
+## Resource Eligibility Rule
+
+If a resource cannot run the traveler, it must not appear as an option.
+
+Capable resources must satisfy every required traveler capability for that order and department. The UI should not offer unusable equipment and then expect the worker to sort it out.
+
+This rule protects operator-proof behavior:
+
+```text
+Bad: show every nearby machine and let the worker decide.
+Good: show only resources capable of running the traveler.
+```
+
 ## Proven Model Guardrails
 
 Dynamic Traveler design should borrow from proven manufacturing models without pretending to be a full enterprise MES on day one.
@@ -130,6 +208,8 @@ Build traveler logic from top down:
 ```text
 Order Blueprint
 ↓
+Plant Traveler
+↓
 Department Route
 ↓
 Department Traveler
@@ -209,7 +289,8 @@ Traveler actions must be order-specific.
 
 Starter actions:
 
-- open traveler detail
+- open department traveler
+- open full plant traveler
 - request material for this order
 - report issue on this order
 - report resource cannot run this order
@@ -265,7 +346,7 @@ State labels shown to users should be blunt and visually distinct.
 
 ## Minimum Useful Traveler
 
-A traveler is not useful unless it can answer these seven questions:
+A Department Traveler is not useful unless it can answer these seven questions:
 
 1. What order is this?
 2. What department step is active?
@@ -274,6 +355,16 @@ A traveler is not useful unless it can answer these seven questions:
 5. What is the recommended resource?
 6. Where does the order go next?
 7. What action can the co-worker take?
+
+A Plant Traveler is not useful unless it can answer these seven questions:
+
+1. What order is this?
+2. What is the full route?
+3. What is the completion percent?
+4. Which department is active?
+5. Which prior steps are done?
+6. Which future steps are waiting?
+7. What blocker is stopping route progress?
 
 If a proposed UI or logic change does not improve one of these answers, challenge it.
 
@@ -288,6 +379,9 @@ Avoid these mistakes:
 - Calling something a traveler when it cannot guide action or receive response.
 - Ranking work only by due date.
 - Treating equipment status as useful without tying it to order/resource capability.
+- Showing incapable resources as options.
+- Making Full Plant Traveler navigate into another department page.
+- Treating Engineering route checkpoints like UI destinations unless the user explicitly opens Engineering.
 - Building UI before the traveler object exists.
 
 ## First Implementation Slice
@@ -304,6 +398,18 @@ Recommended first implementation:
 6. Render Workflow from travelers instead of raw orders.
 7. Keep actions demo-safe until writeback flows are defined.
 
+## Confirmed Milestone
+
+The first useful traveler milestone is confirmed working:
+
+- Workflow can show Department Travelers.
+- Machine Shop department/work-center card can show Department Travelers.
+- Department Traveler popup can open a Full Plant Traveler modal.
+- Full Plant Traveler shows route-aware steps and completion percent.
+- Resource Context buttons can explain why capable resources are shown.
+- Incapable resources are filtered out instead of displayed.
+- Full Plant Traveler stays modal-based and does not navigate away.
+
 ## Expansion Plan
 
 Phase 1: Doctrine and types.
@@ -312,13 +418,15 @@ Phase 2: Generic department traveler generator.
 
 Phase 3: Machine Shop proof ground with resource matching.
 
-Phase 4: Order-specific material request action.
+Phase 4: Department Traveler and Full Plant Traveler modal views.
 
-Phase 5: Department rule packs for Receiving, Fab, Coating, Assembly, QA, Shipping, Support, and Maintenance.
+Phase 5: Order-specific material request action.
 
-Phase 6: Bottleneck-aware priority and constraint signals.
+Phase 6: Department rule packs for Receiving, Fab, Coating, Assembly, QA, Shipping, Support, and Maintenance.
 
-Phase 7: Actual status writeback and scan/confirmation flows.
+Phase 7: Bottleneck-aware priority and constraint signals.
+
+Phase 8: Actual status writeback and scan/confirmation flows.
 
 ## Decision Rule
 
@@ -326,6 +434,12 @@ Before changing Workflow, Orders, Plant Map, Material, QA, Maintenance, or depar
 
 ```text
 Does this help the co-worker know what to work on, where to do it, what resource to use, what is blocking it, where it goes next, or what action to take?
+```
+
+For full-route work, also ask:
+
+```text
+Does this help someone understand the whole order route, active department, completion rate, blockers, or next handoff?
 ```
 
 If not, do not build it as part of Dynamic Traveler work.
