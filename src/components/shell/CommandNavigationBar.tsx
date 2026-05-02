@@ -24,37 +24,40 @@ export default function CommandNavigationBar({
 
   return (
     <section style={getBarStyle(theme)}>
-      <div style={statusBlockStyle}>
+      <div style={statusHeaderStyle}>
         <span style={statusLabelStyle}>Command Navigation</span>
         <strong style={getCurrentLabelStyle(theme)}>{currentLabel}</strong>
       </div>
 
-      <div style={groupButtonGridStyle}>
-        {groups.map((group) => {
-          const active = group.items.some((item) => item.id === tab);
-          const target = group.items[0]?.id ?? 'dashboard';
-          return (
-            <button
-              key={group.id}
-              type="button"
-              onClick={() => onNavigate(target)}
-              style={getGroupButtonStyle(active, theme, group.id)}
-              title={group.description}
-            >
-              <span style={groupLabelStyle}>{group.label}</span>
-              <span style={groupDetailStyle}>{getGroupShortDescription(group.id)}</span>
-            </button>
-          );
-        })}
-      </div>
+      <div style={navRowStyle}>
+        <div style={navSpacerStyle} />
+        <div style={groupButtonGridStyle}>
+          {groups.map((group) => {
+            const active = group.items.some((item) => item.id === tab);
+            const target = group.items[0]?.id ?? 'dashboard';
+            return (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => onNavigate(target)}
+                style={getGroupButtonStyle(active, theme, group.id)}
+                title={group.description}
+              >
+                <span style={groupLabelStyle}>{group.label}</span>
+                <span style={groupDetailStyle}>{getGroupShortDescription(group.id)}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      <button
-        type="button"
-        onClick={() => onNavigate('alerts')}
-        style={getAlertsButtonStyle(alertCount, theme)}
-      >
-        {alertCount} {alertCount === 1 ? 'Alert' : 'Alerts'}
-      </button>
+        <button
+          type="button"
+          onClick={() => onNavigate('alerts')}
+          style={getAlertsButtonStyle(alertCount, theme)}
+        >
+          {alertCount} {alertCount === 1 ? 'Alert' : 'Alerts'}
+        </button>
+      </div>
     </section>
   );
 }
@@ -73,19 +76,32 @@ function getBarStyle(theme: 'dark' | 'light'): CSSProperties {
     borderRadius: 0,
     border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
     borderLeft: '4px solid #f97316',
-    display: 'grid',
-    gridTemplateColumns: 'minmax(150px, 220px) 1fr auto',
+    display: 'flex',
+    flexDirection: 'column',
     gap: 12,
     marginBottom: 20,
-    alignItems: 'center',
     boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
   };
 }
 
-const statusBlockStyle: CSSProperties = {
+const statusHeaderStyle: CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
+  justifyContent: 'center',
+  alignItems: 'baseline',
+  gap: 10,
+  textAlign: 'center',
+};
+
+const navRowStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(96px, 120px) minmax(460px, 720px) minmax(96px, 120px)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: 12,
+};
+
+const navSpacerStyle: CSSProperties = {
+  minWidth: 96,
 };
 
 const statusLabelStyle: CSSProperties = {
@@ -109,6 +125,7 @@ const groupButtonGridStyle: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(4, minmax(105px, 1fr))',
   gap: 8,
+  width: '100%',
 };
 
 function getGroupButtonStyle(active: boolean, theme: 'dark' | 'light', groupId: NavigationGroupId): CSSProperties {
@@ -171,5 +188,6 @@ function getAlertsButtonStyle(alertCount: number, theme: 'dark' | 'light'): CSSP
     textTransform: 'uppercase',
     boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
     whiteSpace: 'nowrap',
+    justifySelf: 'stretch',
   };
 }
