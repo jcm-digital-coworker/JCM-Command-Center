@@ -8,9 +8,11 @@ import type { WorkCenter } from '../types/plant';
 import type { ProductionOrder } from '../types/productionOrder';
 import { getOrderStatusLabel, getOrderBlockReason, formatBlockedReason } from '../logic/orderReadiness';
 import { getDashboardRuntimeTruth } from '../logic/dashboardRuntimeSelectors';
+import { getCommandRecommendation } from '../logic/commandRecommendations';
 import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import EmbeddedPromptCards from '../components/dashboard/EmbeddedPromptCards';
 import DashboardWorkCenterCard from '../components/dashboard/DashboardWorkCenterCard';
+import CommandRecommendationCard from '../components/dashboard/CommandRecommendationCard';
 import {
   dashboardGridStyle,
   dashboardHeaderStyle,
@@ -104,6 +106,7 @@ export default function DashboardPage({
 
   const openRisks = risks.filter((risk) => risk.status === 'OPEN' || risk.status === 'IN_PROGRESS');
   const activeTasks = tasks.filter((task) => task.status !== 'OK');
+  const runtimeTruth = getDashboardRuntimeTruth(alerts.length);
   const {
     allOrders,
     openOrders,
@@ -113,7 +116,8 @@ export default function DashboardPage({
     runnableOrders,
     dueSoonOrders,
     plantCriticals,
-  } = getDashboardRuntimeTruth(alerts.length);
+  } = runtimeTruth;
+  const commandRecommendation = getCommandRecommendation(runtimeTruth, roleView);
 
   const quickActions = getQuickActionsForRole(roleView, {
     alertCount: alerts.length,
@@ -137,6 +141,11 @@ export default function DashboardPage({
         </div>
       </div>
 
+      <CommandRecommendationCard
+        recommendation={commandRecommendation}
+        theme={theme}
+        onNavigate={() => onGoToTab(commandRecommendation.targetTab)}
+      />
       <QuickActionsPanel roleView={roleView} actions={quickActions} onGoToTab={onGoToTab} theme={theme} />
       <EmbeddedPromptCards onNavigate={onGoToTab} />
 
