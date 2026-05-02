@@ -265,7 +265,7 @@ export function getDashboardSectionStyle(theme: DashboardTheme): CSSProperties {
   };
 }
 
-export function getDashboardItemStyle(theme: DashboardTheme): CSSProperties {
+function getDashboardItemBaseStyle(theme: DashboardTheme): CSSProperties {
   return {
     display: 'flex',
     justifyContent: 'space-between',
@@ -274,8 +274,18 @@ export function getDashboardItemStyle(theme: DashboardTheme): CSSProperties {
     padding: 14,
     background: theme === 'dark' ? '#0f172a' : '#f8fafc',
     borderRadius: 4,
-    cursor: 'pointer',
     border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0',
+  };
+}
+
+export function getDashboardItemStyle(theme: DashboardTheme): CSSProperties {
+  return getDashboardItemBaseStyle(theme);
+}
+
+export function getDashboardActionItemStyle(theme: DashboardTheme): CSSProperties {
+  return {
+    ...getDashboardItemBaseStyle(theme),
+    cursor: 'pointer',
   };
 }
 
