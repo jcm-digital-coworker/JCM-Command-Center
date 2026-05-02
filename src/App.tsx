@@ -50,6 +50,8 @@ type CoverageView = 'hub' | 'signin' | 'available' | 'assigned' | 'break' | 'off
 
 const departmentOrder = plantDepartmentOrder;
 const JCM_NAVIGATE_EVENT = 'jcm:navigate';
+const ROLE_STORAGE_KEY = 'jcm_role_view';
+const ROLE_OPTIONS: RoleView[] = ['Operator', 'Lead / Supervisor', 'Manager', 'Maintenance', 'Forklift / Receiving', 'QA'];
 
 function priorityRank(priority: Machine['alarmPriority']) {
   if (priority === 'ESTOP') return 0;
@@ -63,6 +65,11 @@ function filterByDepartment<T extends { department: Department }>(items: T[], fi
   return items.filter((item) => item.department === filter);
 }
 
+function getSavedRoleView(): RoleView {
+  const savedRole = localStorage.getItem(ROLE_STORAGE_KEY) as RoleView | null;
+  return savedRole && ROLE_OPTIONS.includes(savedRole) ? savedRole : 'Manager';
+}
+
 export default function App() {
   const [selected, setSelected] = useState<Machine | null>(null);
   const [tab, setTab] = useState<AppTab>('dashboard');
@@ -70,7 +77,7 @@ export default function App() {
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
   const [simulatorMachine, setSimulatorMachine] = useState<Machine | null>(null);
   const [departmentFilter, setDepartmentFilter] = useState<DepartmentFilter>('All');
-  const [roleView, setRoleView] = useState<RoleView>('Manager');
+  const [roleView, setRoleView] = useState<RoleView>(getSavedRoleView);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedWorkCenter, setSelectedWorkCenter] = useState<WorkCenter | null>(null);
   const [receivingInitialView, setReceivingInitialView] = useState<ReceivingView>('hub');
@@ -161,6 +168,7 @@ export default function App() {
   }
 
   function changeRoleView(nextRole: RoleView) {
+    localStorage.setItem(ROLE_STORAGE_KEY, nextRole);
     setRoleView(nextRole);
     setSelected(null);
     setSimulatorMachine(null);
