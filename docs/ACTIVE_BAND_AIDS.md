@@ -22,11 +22,12 @@ Purpose: track temporary implementation bridges so they do not quietly become pe
 
 ### 1. Inline dashboard styling
 
-- Status: OPEN
+- Status: STAGED
 - Location: dashboard pages/components
 - Why it exists: Fast UI iteration used inline style objects.
-- Risk: Styling is harder to standardize, reuse, and tune for mobile.
-- Corrective action: Extract shared dashboard card/button/prompt styles or component primitives after behavior is stable.
+- Current safer state: `src/components/dashboard/dashboardStyles.ts` now contains shared dashboard prompt/card style helpers, and `EmbeddedPromptCards.tsx` consumes those helpers instead of owning local inline style definitions.
+- Risk: `DashboardPage.tsx` still contains many local inline style objects and helper functions, so dashboard styling is not fully standardized yet.
+- Corrective action: Continue extracting shared dashboard card, metric, section, button, and list style primitives from `DashboardPage.tsx` into reusable dashboard style helpers/components.
 
 ## Recently Retired Band-Aids
 
