@@ -36,7 +36,7 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
           <div style={instructionTextStyle(theme)}>{traveler.currentInstruction}</div>
         </div>
 
-        <button type="button" style={plantTravelerButtonStyle(theme)} onClick={() => setShowPlantTraveler(true)}>
+        <button type="button" style={plantTravelerButtonStyle} onClick={() => setShowPlantTraveler(true)}>
           OPEN FULL PLANT TRAVELER · {plantTraveler.completionPercent}% COMPLETE
         </button>
 
