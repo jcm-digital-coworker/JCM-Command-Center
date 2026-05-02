@@ -1,3 +1,4 @@
+import type { AppTab } from '../types/app';
 import { productionOrders } from '../data/productionOrders';
 import {
   applyQuickActionRuntimeIntent,
@@ -7,6 +8,8 @@ import {
   getRuntimeProductionOrders,
   WORKFLOW_RUNTIME_UPDATED_EVENT,
 } from './workflowRuntimeState';
+
+export const JCM_NAVIGATE_EVENT = 'jcm:navigate';
 
 const BRIDGE_FLAG = '__jcm_dashboard_quick_action_bridge__';
 const PROMPT_CONTAINER_ID = 'jcm-dashboard-embedded-prompts';
@@ -20,7 +23,7 @@ type EmbeddedPrompt = {
   detail: string;
   actionLabel: string;
   intent?: QuickActionRuntimeIntent;
-  routeLabel?: string;
+  routeTarget?: AppTab;
   tone: 'red' | 'orange' | 'blue' | 'green' | 'slate';
 };
 
@@ -122,7 +125,7 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
       detail: 'Workflow is blocked. Resolve the first blocker or escalate before labor is assigned.',
       actionLabel: 'Resolve first blocker',
       intent: 'RESOLVE_FIRST_BLOCKER',
-      routeLabel: 'Orders',
+      routeTarget: 'orders',
       tone: 'red',
     });
   }
@@ -133,7 +136,7 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
       detail: 'Material is not fully received. Stage the first material issue before pushing work forward.',
       actionLabel: 'Stage material issue',
       intent: 'STAGE_FIRST_MATERIAL_ISSUE',
-      routeLabel: 'Receiving',
+      routeTarget: 'receiving',
       tone: 'orange',
     });
   }
@@ -143,7 +146,7 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
       title: `QA hold ${qaHold.orderNumber}`,
       detail: 'Quality status needs review before the order can flow cleanly.',
       actionLabel: 'Review QA / Safety',
-      routeLabel: 'QA / Safety',
+      routeTarget: 'risk',
       tone: 'blue',
     });
   }
@@ -153,7 +156,7 @@ function getEmbeddedPrompts(): EmbeddedPrompt[] {
       title: 'No embedded prompts active',
       detail: 'No blocked order, material issue, or QA hold is currently driving dashboard action.',
       actionLabel: 'Review workflow',
-      routeLabel: 'Workflow',
+      routeTarget: 'workflow',
       tone: 'green',
     });
   }
@@ -188,7 +191,7 @@ function createPromptCard(prompt: EmbeddedPrompt): HTMLElement {
   action.type = 'button';
   action.textContent = prompt.actionLabel.toUpperCase();
   if (prompt.intent) action.dataset.runtimeIntent = prompt.intent;
-  if (prompt.routeLabel) action.dataset.routeLabel = prompt.routeLabel;
+  if (prompt.routeTarget) action.dataset.routeTarget = prompt.routeTarget;
   action.style.marginTop = '10px';
   action.style.padding = '7px 9px';
   action.style.borderRadius = '4px';
@@ -220,24 +223,14 @@ function handlePromptActionClick(event: MouseEvent) {
     queuePromptRender();
   }
 
-  const routeLabel = button.dataset.routeLabel;
-  if (routeLabel) {
-    clickQuickActionByLabel(routeLabel);
+  const routeTarget = button.dataset.routeTarget as AppTab | undefined;
+  if (routeTarget) {
+    dispatchNavigation(routeTarget);
   }
 }
 
-function clickQuickActionByLabel(label: string) {
-  const quickActionsSection = findQuickActionsSection();
-  if (!quickActionsSection) return;
-
-  const matchingButton = Array.from(quickActionsSection.querySelectorAll('button')).find((button) => {
-    if (button.closest(`#${PROMPT_CONTAINER_ID}`)) return false;
-    return button.textContent?.includes(label);
-  });
-
-  if (matchingButton instanceof HTMLButtonElement) {
-    matchingButton.click();
-  }
+function dispatchNavigation(tab: AppTab) {
+  window.dispatchEvent(new CustomEvent<{ tab: AppTab }>(JCM_NAVIGATE_EVENT, { detail: { tab } }));
 }
 
 function getPromptColor(tone: EmbeddedPrompt['tone']): string {
