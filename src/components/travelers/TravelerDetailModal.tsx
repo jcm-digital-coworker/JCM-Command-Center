@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { DynamicTraveler, TravelerAction, TravelerResource } from '../../types/dynamicTraveler';
+import { generatePlantTraveler } from '../../logic/dynamicTraveler';
+import PlantTravelerDetailModal from './PlantTravelerDetailModal';
 
 type TravelerDetailModalProps = {
   traveler: DynamicTraveler;
@@ -11,16 +13,18 @@ type TravelerDetailModalProps = {
 
 export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOrders }: TravelerDetailModalProps) {
   const [selectedResource, setSelectedResource] = useState<TravelerResource | null>(traveler.bestResource ?? null);
+  const [showPlantTraveler, setShowPlantTraveler] = useState(false);
   const order = traveler.order;
   const signalColor = getSignalColor(traveler.visualSignal);
-  const visibleActions = traveler.actions.filter((action) => action.type !== 'OPEN_DETAIL' && action.type !== 'OPEN_FULL_ORDER');
+  const visibleActions = traveler.actions.filter((action) => action.type !== 'OPEN_DETAIL' && action.type !== 'OPEN_FULL_ORDER' && action.type !== 'OPEN_PLANT_TRAVELER');
+  const plantTraveler = generatePlantTraveler(order);
 
   return (
     <div style={modalOverlayStyle} onClick={onClose}>
       <div style={modalCardStyle(theme, signalColor)} onClick={(event) => event.stopPropagation()}>
         <div style={modalHeaderStyle}>
           <div>
-            <div style={eyebrowStyle}>DYNAMIC TRAVELER</div>
+            <div style={eyebrowStyle}>DEPARTMENT TRAVELER</div>
             <h3 style={modalTitleStyle(theme)}>#{order.orderNumber}</h3>
             <div style={subTextStyle(theme)}>{traveler.department} · {order.productFamily}</div>
           </div>
@@ -31,6 +35,10 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
           <div style={smallLabelStyle(theme)}>Current Instruction</div>
           <div style={instructionTextStyle(theme)}>{traveler.currentInstruction}</div>
         </div>
+
+        <button type="button" style={plantTravelerButtonStyle(theme)} onClick={() => setShowPlantTraveler(true)}>
+          OPEN FULL PLANT TRAVELER · {plantTraveler.completionPercent}% COMPLETE
+        </button>
 
         <div style={infoGridStyle}>
           <Info label="Signal" value={traveler.visualSignal} theme={theme} />
@@ -98,6 +106,14 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
           <button type="button" style={openOrdersButtonStyle} onClick={onOpenOrders}>OPEN FULL ORDER</button>
         ) : null}
       </div>
+
+      {showPlantTraveler ? (
+        <PlantTravelerDetailModal
+          plantTraveler={plantTraveler}
+          theme={theme}
+          onClose={() => setShowPlantTraveler(false)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -242,6 +258,20 @@ const openOrdersButtonStyle: CSSProperties = {
   border: '1px solid #3b82f6',
   background: 'rgba(59,130,246,0.12)',
   color: '#93c5fd',
+  fontSize: 12,
+  fontWeight: 900,
+  cursor: 'pointer',
+  letterSpacing: '0.7px',
+};
+
+const plantTravelerButtonStyle: CSSProperties = {
+  width: '100%',
+  marginTop: 12,
+  padding: '11px 12px',
+  borderRadius: 6,
+  border: '1px solid #10b981',
+  background: 'rgba(16,185,129,0.12)',
+  color: '#10b981',
   fontSize: 12,
   fontWeight: 900,
   cursor: 'pointer',
