@@ -21,7 +21,6 @@ const operatorRoles: RoleView[] = ['Operator', 'operator'];
 const maintenanceRoles: RoleView[] = ['Maintenance', 'maintenance'];
 const receivingRoles: RoleView[] = ['Forklift / Receiving'];
 const qaRoles: RoleView[] = ['QA', 'qa'];
-const supportRoles: RoleView[] = [...managerRoles, ...maintenanceRoles, ...receivingRoles, ...qaRoles];
 
 export const navigationGroups: NavigationGroup[] = [
   {
