@@ -44,6 +44,7 @@ import WarRoomContextPage from './pages/WarRoomContextPage';
 type DetailTab = 'overview' | 'events' | 'patterns' | 'notes';
 
 const departmentOrder = plantDepartmentOrder;
+const JCM_NAVIGATE_EVENT = 'jcm:navigate';
 
 function priorityRank(priority: Machine['alarmPriority']) {
   if (priority === 'ESTOP') return 0;
@@ -94,7 +95,6 @@ export default function App() {
     localStorage.setItem('jcm_theme', newTheme);
   };
 
-  // Add this useEffect to toggle body class
   useEffect(() => {
     if (theme === 'light') {
       document.body.classList.add('light-mode');
@@ -110,6 +110,17 @@ export default function App() {
     setTabHistory((prev) => [...prev, tab]);
     setTab(nextTab);
   }
+
+  useEffect(() => {
+    const handleNavigationEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ tab?: AppTab }>;
+      const nextTab = customEvent.detail?.tab;
+      if (nextTab) navigateTo(nextTab);
+    };
+
+    window.addEventListener(JCM_NAVIGATE_EVENT, handleNavigationEvent);
+    return () => window.removeEventListener(JCM_NAVIGATE_EVENT, handleNavigationEvent);
+  }, [tab]);
 
   function goBack() {
     if (tabHistory.length === 0) return;
