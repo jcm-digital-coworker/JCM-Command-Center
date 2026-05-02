@@ -239,7 +239,36 @@ function getQuickActionsForRole(roleView: RoleView, state: QuickActionState): Qu
 
 function createLiveAction(label: string, clearDetail: string, activeDetail: string, target: AppTab, count: number, activeTone: DashboardTone, clearTone: DashboardTone, activePriority: number): QuickAction { return { label, detail: count > 0 ? `${count} active - ${activeDetail}` : clearDetail, target, count: count > 0 ? count : undefined, tone: count > 0 ? activeTone : clearTone, priority: count > 0 ? activePriority : 1 }; }
 function sortQuickActions(actions: QuickAction[]): QuickAction[] { return [...actions].sort((a, b) => b.priority - a.priority); }
-function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: RoleView; actions: QuickAction[]; onGoToTab: (tab: AppTab) => void; theme: DashboardTheme }) { return <section style={getDashboardQuickActionsPanelStyle(theme)}><div style={dashboardQuickActionsHeaderStyle}><div><h3 style={getDashboardQuickActionsTitleStyle(theme)}>QUICK ACTIONS</h3><p style={dashboardQuickActionsSubtitleStyle}>{formatRoleLabel(roleView)} action shortcuts based on current plant signals.</p></div></div><div style={dashboardQuickActionsGridStyle}>{actions.map((action) => <button key={action.label} type="button" style={getDashboardQuickActionButtonStyle(theme, action.tone)} onClick={() => onGoToTab(action.target)}><span style={getDashboardQuickActionLabelStyle(action.tone)}>{action.label}{action.count ? ` (${action.count})` : ''}</span><span style={dashboardQuickActionDetailStyle}>{action.detail}</span></button>)}</div></section>; }
+function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: RoleView; actions: QuickAction[]; onGoToTab: (tab: AppTab) => void; theme: DashboardTheme }) {
+  const [showAllActions, setShowAllActions] = useState(false);
+  const visibleActions = showAllActions ? actions : actions.slice(0, 3);
+  const hiddenCount = actions.length - visibleActions.length;
+
+  return (
+    <section style={getDashboardQuickActionsPanelStyle(theme)}>
+      <div style={dashboardQuickActionsHeaderStyle}>
+        <div>
+          <h3 style={getDashboardQuickActionsTitleStyle(theme)}>QUICK ACTIONS</h3>
+          <p style={dashboardQuickActionsSubtitleStyle}>{formatRoleLabel(roleView)} action shortcuts based on current plant signals.</p>
+        </div>
+      </div>
+      <div style={dashboardQuickActionsGridStyle}>
+        {visibleActions.map((action) => (
+          <button key={action.label} type="button" style={getDashboardQuickActionButtonStyle(theme, action.tone)} onClick={() => onGoToTab(action.target)}>
+            <span style={getDashboardQuickActionLabelStyle(action.tone)}>{action.label}{action.count ? ` (${action.count})` : ''}</span>
+            <span style={dashboardQuickActionDetailStyle}>{action.detail}</span>
+          </button>
+        ))}
+        {actions.length > 3 && (
+          <button type="button" style={getQuickActionsToggleStyle(theme)} onClick={() => setShowAllActions((current) => !current)}>
+            {showAllActions ? 'SHOW FEWER ACTIONS' : `SHOW ${hiddenCount} MORE ACTION${hiddenCount === 1 ? '' : 'S'}`}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+function getQuickActionsToggleStyle(theme: DashboardTheme): CSSProperties { return { border: theme === 'dark' ? '1px dashed #475569' : '1px dashed #cbd5e1', background: theme === 'dark' ? 'rgba(15, 23, 42, 0.55)' : '#f8fafc', color: '#94a3b8', borderRadius: 4, padding: '12px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase', minHeight: 54 }; }
 function formatRoleLabel(roleView: RoleView): string { return roleView === 'Forklift / Receiving' ? 'Receiving' : roleView; }
 function formatOrderBlock(order: ProductionOrder) { const blockReason = getOrderBlockReason(order); return blockReason ? formatBlockedReason(blockReason) : 'No blocker listed'; }
 function OrderRow({ order, theme, compact = false }: { order: ProductionOrder; theme: DashboardTheme; compact?: boolean }) { return <div style={getDashboardItemStyle(theme)}><div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} - {order.assemblyPartNumber}</div><div style={dashboardMutedTextStyle}>{order.customer} - Qty {order.quantity} - Ship {order.projectedShipDate}</div>{!compact && <div style={dashboardMutedTextStyle}>{formatOrderBlock(order)}</div>}</div><span style={getPriorityBadge(order.status)}>{getOrderStatusLabel(order)}</span></div>; }
