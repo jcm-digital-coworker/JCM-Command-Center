@@ -26,15 +26,9 @@ export type AppTab =
 export type DepartmentFilter = 'All' | Department;
 
 export type RoleView =
-  | 'Operator'
-  | 'Lead / Supervisor'
-  | 'Manager'
+  | 'Production'
+  | 'Department Lead'
+  | 'Department Supervisor'
+  | 'Management'
   | 'Maintenance'
-  | 'Forklift / Receiving'
-  | 'QA'
-  | 'operator'
-  | 'lead'
-  | 'supervisor'
-  | 'management'
-  | 'maintenance'
-  | 'qa';
+  | 'Support';
