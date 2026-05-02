@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { darkTheme, lightTheme, type ThemeColors } from './theme/theme';
-import { useMemo, useState, useEffect } from 'react';
 
 import { machines } from './data/machine';
 import { maintenanceTasks } from './data/maintenance';
@@ -16,6 +16,8 @@ import MachineDetail from './components/MachineDetail';
 import Lv4500JcmSimulator from './components/Lv4500JcmSimulator';
 import AppHeader from './components/shell/AppHeader';
 import AppDrawer from './components/shell/AppDrawer';
+import CommandNavigationBar from './components/shell/CommandNavigationBar';
+import { getHomeTabForRole } from './logic/navigationAccess';
 
 import WorkflowPage from './pages/WorkflowPage';
 import DashboardPage from './pages/DashboardPage';
@@ -42,6 +44,9 @@ import EngineeringDepartmentPage from './pages/departments/EngineeringDepartment
 import WarRoomContextPage from './pages/WarRoomContextPage';
 
 type DetailTab = 'overview' | 'events' | 'patterns' | 'notes';
+type MaintenanceView = 'tasks' | 'requests' | 'analytics';
+type ReceivingView = 'hub' | 'submit' | 'arriving' | 'ready' | 'claimed' | 'delivered' | 'holds';
+type CoverageView = 'hub' | 'signin' | 'available' | 'assigned' | 'break' | 'offline';
 
 const departmentOrder = plantDepartmentOrder;
 const JCM_NAVIGATE_EVENT = 'jcm:navigate';
@@ -53,10 +58,7 @@ function priorityRank(priority: Machine['alarmPriority']) {
   return 3;
 }
 
-function filterByDepartment<T extends { department: Department }>(
-  items: T[],
-  filter: DepartmentFilter
-) {
+function filterByDepartment<T extends { department: Department }>(items: T[], filter: DepartmentFilter) {
   if (filter === 'All') return items;
   return items.filter((item) => item.department === filter);
 }
@@ -66,34 +68,22 @@ export default function App() {
   const [tab, setTab] = useState<AppTab>('dashboard');
   const [tabHistory, setTabHistory] = useState<AppTab[]>([]);
   const [detailTab, setDetailTab] = useState<DetailTab>('overview');
-  const [simulatorMachine, setSimulatorMachine] = useState<Machine | null>(
-    null
-  );
-  const [departmentFilter, setDepartmentFilter] =
-    useState<DepartmentFilter>('All');
+  const [simulatorMachine, setSimulatorMachine] = useState<Machine | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState<DepartmentFilter>('All');
   const [roleView, setRoleView] = useState<RoleView>('Manager');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedWorkCenter, setSelectedWorkCenter] =
-    useState<WorkCenter | null>(null);
-  const [receivingInitialView, setReceivingInitialView] = useState<
-    'hub' | 'submit' | 'arriving' | 'ready' | 'claimed' | 'delivered' | 'holds'
-  >('hub');
-  const [receivingSubmitDepartment, setReceivingSubmitDepartment] =
-    useState<Department>('Machine Shop');
-  const [coverageInitialView, setCoverageInitialView] = useState<
-    'hub' | 'signin' | 'available' | 'assigned' | 'break' | 'offline'
-  >('hub');
+  const [selectedWorkCenter, setSelectedWorkCenter] = useState<WorkCenter | null>(null);
+  const [receivingInitialView, setReceivingInitialView] = useState<ReceivingView>('hub');
+  const [receivingSubmitDepartment, setReceivingSubmitDepartment] = useState<Department>('Machine Shop');
+  const [coverageInitialView, setCoverageInitialView] = useState<CoverageView>('hub');
+  const [maintenanceView, setMaintenanceView] = useState<MaintenanceView>('requests');
 
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('jcm_theme');
     return (saved as 'dark' | 'light') || 'dark';
   });
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    localStorage.setItem('jcm_theme', newTheme);
-  };
+  const currentTheme: ThemeColors = theme === 'dark' ? darkTheme : lightTheme;
 
   useEffect(() => {
     if (theme === 'light') {
@@ -103,12 +93,24 @@ export default function App() {
     }
   }, [theme]);
 
-  const currentTheme: ThemeColors = theme === 'dark' ? darkTheme : lightTheme;
+  function toggleTheme() {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('jcm_theme', newTheme);
+  }
 
   function navigateTo(nextTab: AppTab) {
     if (nextTab === tab) return;
     setTabHistory((prev) => [...prev, tab]);
     setTab(nextTab);
+  }
+
+  function goHome() {
+    setSelected(null);
+    setSimulatorMachine(null);
+    setSelectedWorkCenter(null);
+    setTabHistory([]);
+    setTab(getHomeTabForRole(roleView));
   }
 
   useEffect(() => {
@@ -125,7 +127,7 @@ export default function App() {
   function goBack() {
     if (tabHistory.length === 0) return;
     const prev = tabHistory[tabHistory.length - 1];
-    setTabHistory((h) => h.slice(0, -1));
+    setTabHistory((history) => history.slice(0, -1));
     setTab(prev);
   }
 
@@ -153,9 +155,7 @@ export default function App() {
       return;
     }
 
-    const matchingWorkCenter = workCenters.find(
-      (workCenter) => workCenter.department === nextDepartment
-    );
+    const matchingWorkCenter = workCenters.find((workCenter) => workCenter.department === nextDepartment);
     setSelectedWorkCenter(matchingWorkCenter ?? null);
     navigateTo('dashboard');
   }
@@ -164,9 +164,9 @@ export default function App() {
     setRoleView(nextRole);
     setSelected(null);
     setSimulatorMachine(null);
+    setSelectedWorkCenter(null);
 
     if (nextRole === 'Forklift / Receiving') {
-      setSelectedWorkCenter(null);
       setDepartmentFilter('Receiving');
       setReceivingInitialView('ready');
       navigateTo('receiving');
@@ -174,73 +174,13 @@ export default function App() {
     }
 
     if (nextRole === 'Maintenance') {
-      setSelectedWorkCenter(null);
       setMaintenanceView('requests');
       navigateTo('maintenance');
       return;
     }
 
-    if (nextRole === 'Lead / Supervisor' || nextRole === 'Manager') {
-      setSelectedWorkCenter(null);
-      navigateTo('workflow');
-      return;
-    }
-
-    if (nextRole === 'Operator') {
-      navigateTo('workflow');
-      return;
-    }
-
-    navigateTo('workflow');
+    navigateTo(getHomeTabForRole(nextRole));
   }
-
-  const statusBarStyle: CSSProperties = {
-    background: currentTheme.card,
-    padding: '16px 20px',
-    borderRadius: 0,
-    border: `1px solid ${currentTheme.border}`,
-    borderLeft: '4px solid #f97316',
-    display: 'flex',
-    gap: 24,
-    marginBottom: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-  };
-
-  const statusLabelStyle: CSSProperties = {
-    color: currentTheme.textMuted,
-    fontSize: 11,
-    fontWeight: 700,
-    textAlign: 'center',
-    letterSpacing: '1px',
-    textTransform: 'uppercase',
-  };
-
-  const getAlertsButtonStyle = (alertCount: number): CSSProperties => {
-    return {
-      padding: '12px 24px',
-      borderRadius: 4,
-      border: alertCount > 0 ? '2px solid #dc2626' : '2px solid #10b981',
-      background:
-        alertCount > 0
-          ? theme === 'dark'
-            ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)'
-            : '#fee2e2'
-          : theme === 'dark'
-          ? 'linear-gradient(135deg, #065f46 0%, #047857 100%)'
-          : '#d1fae5',
-      color:
-        theme === 'dark' ? 'white' : alertCount > 0 ? '#991b1b' : '#065f46',
-      fontWeight: 800,
-      fontSize: 13,
-      cursor: 'pointer',
-      transition: 'all 0.2s',
-      letterSpacing: '1px',
-      textTransform: 'uppercase',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-    };
-  };
 
   const pageStyle: CSSProperties = {
     padding: 16,
@@ -248,19 +188,13 @@ export default function App() {
     background: currentTheme.background,
     minHeight: '100vh',
   };
-  
-  const [maintenanceView, setMaintenanceView] = useState<'tasks' | 'requests' | 'analytics'
->('requests');
 
   const sortedMachines = useMemo(() => {
     return [...machines].sort((a, b) => {
-      const deptDiff =
-        departmentOrder.indexOf(a.department) -
-        departmentOrder.indexOf(b.department);
+      const deptDiff = departmentOrder.indexOf(a.department) - departmentOrder.indexOf(b.department);
       if (deptDiff !== 0) return deptDiff;
 
-      const priorityDiff =
-        priorityRank(a.alarmPriority) - priorityRank(b.alarmPriority);
+      const priorityDiff = priorityRank(a.alarmPriority) - priorityRank(b.alarmPriority);
       if (priorityDiff !== 0) return priorityDiff;
 
       return a.name.localeCompare(b.name);
@@ -269,22 +203,20 @@ export default function App() {
 
   const alerts = useMemo(() => {
     return sortedMachines.filter(
-      (m) =>
-        m.alarmPriority !== 'NORMAL' ||
-        m.state === 'ALARM' ||
-        m.state === 'OFFLINE'
+      (machine) =>
+        machine.alarmPriority !== 'NORMAL' ||
+        machine.state === 'ALARM' ||
+        machine.state === 'OFFLINE',
     );
   }, [sortedMachines]);
 
   const maintenanceWithDepartment = maintenanceTasks.map((task) => {
-    const machine = machines.find((m) => m.id === task.machineId);
+    const machine = machines.find((item) => item.id === task.machineId);
     return { ...task, department: machine?.department ?? 'Machine Shop' };
   });
 
   const serviceMachineIds = new Set(
-    maintenanceWithDepartment
-      .filter((task) => task.status !== 'OK')
-      .map((task) => task.machineId)
+    maintenanceWithDepartment.filter((task) => task.status !== 'OK').map((task) => task.machineId),
   );
 
   const machinesNeedingService = sortedMachines.filter(
@@ -292,7 +224,7 @@ export default function App() {
       machine.state === 'ALARM' ||
       machine.state === 'OFFLINE' ||
       machine.alarmPriority !== 'NORMAL' ||
-      serviceMachineIds.has(machine.id)
+      serviceMachineIds.has(machine.id),
   );
 
   function getVisibleMachinesForRole() {
@@ -317,44 +249,19 @@ export default function App() {
   const filteredMachines = getVisibleMachinesForRole();
   const filteredAlerts = getVisibleAlertsForRole();
   const filteredMaintenanceTasks = getVisibleMaintenanceTasksForRole();
-  const filteredDocuments = filterByDepartment(
-    plantDocuments,
-    departmentFilter
-  );
+  const filteredDocuments = filterByDepartment(plantDocuments, departmentFilter);
   const filteredRisks = filterByDepartment(riskItems, departmentFilter);
 
   if (simulatorMachine) {
     return (
       <div style={{ background: currentTheme.background, minHeight: '100vh' }}>
         <div style={getSimulatorHeaderStyle(theme)}>
-          <button
-            onClick={() => setSimulatorMachine(null)}
-            style={getSimBackButtonStyle(theme)}
-          >
-            ← BACK TO SIMULATION
+          <button onClick={() => setSimulatorMachine(null)} style={getSimBackButtonStyle(theme)}>
+            BACK TO SIMULATION
           </button>
-          <h3
-            style={{
-              marginBottom: 4,
-              marginTop: 16,
-              color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
-              letterSpacing: '0.5px',
-            }}
-          >
-            {simulatorMachine.name}
-          </h3>
-          <p
-            style={{
-              marginTop: 4,
-              color: '#64748b',
-              fontSize: 13,
-              letterSpacing: '0.5px',
-            }}
-          >
-            READ-ONLY EQUIPMENT SIMULATOR
-          </p>
+          <h3 style={getSimulatorTitleStyle(theme)}>{simulatorMachine.name}</h3>
+          <p style={simulatorSubtitleStyle}>READ-ONLY EQUIPMENT SIMULATOR</p>
         </div>
-
         <Lv4500JcmSimulator theme={theme} />
       </div>
     );
@@ -365,21 +272,13 @@ export default function App() {
       <div style={pageStyle}>
         <WorkCenterDetailPage
           workCenter={selectedWorkCenter}
-          machines={
-            selectedWorkCenter.department === 'Maintenance'
-              ? machinesNeedingService
-              : sortedMachines
-          }
+          machines={selectedWorkCenter.department === 'Maintenance' ? machinesNeedingService : sortedMachines}
           tasks={
             selectedWorkCenter.department === 'Maintenance'
               ? maintenanceWithDepartment.filter((task) => task.status !== 'OK')
-              : maintenanceWithDepartment.filter(
-                  (task) => task.department === selectedWorkCenter.department
-                )
+              : maintenanceWithDepartment.filter((task) => task.department === selectedWorkCenter.department)
           }
-          risks={riskItems.filter(
-            (risk) => risk.department === selectedWorkCenter.department
-          )}
+          risks={riskItems.filter((risk) => risk.department === selectedWorkCenter.department)}
           roleView={roleView}
           onBack={() => setSelectedWorkCenter(null)}
           onOpenMachine={setSelected}
@@ -398,11 +297,7 @@ export default function App() {
           onOpenReceiving={(view, requesterDepartment) => {
             setSelectedWorkCenter(null);
             setReceivingSubmitDepartment(requesterDepartment ?? 'Machine Shop');
-            setDepartmentFilter(
-              view === 'submit'
-                ? requesterDepartment ?? 'Machine Shop'
-                : 'Receiving'
-            );
+            setDepartmentFilter(view === 'submit' ? requesterDepartment ?? 'Machine Shop' : 'Receiving');
             setReceivingInitialView(view);
             navigateTo('receiving');
           }}
@@ -457,119 +352,27 @@ export default function App() {
       <AppHeader
         onMenuClick={() => setMenuOpen(true)}
         onBackClick={goBack}
+        onHomeClick={goHome}
         showBack={tabHistory.length > 0}
         theme={theme}
       />
 
-      {/* Command Mode Bar: global navigation is mission-based. Page filters handle local context. */}
-      <div style={statusBarStyle}>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            minWidth: 150,
-          }}
-        >
-          <span style={statusLabelStyle}>Command Mode</span>
-          <strong
-            style={{
-              color: currentTheme.text,
-              fontSize: 14,
-              letterSpacing: '0.7px',
-              textTransform: 'uppercase',
-            }}
-          >
-            {getCommandLabel(tab)}
-          </strong>
-        </div>
+      <CommandNavigationBar
+        tab={tab}
+        roleView={roleView}
+        currentLabel={getCommandLabel(tab)}
+        alertCount={filteredAlerts.length}
+        theme={theme}
+        onNavigate={navigateTo}
+      />
 
-        <div
-          style={{
-            display: 'flex',
-            gap: 8,
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-          }}
-        >
-          <button
-            onClick={() => navigateTo('workflow')}
-            style={getModeButtonStyle(tab === 'workflow', theme)}
-          >
-            Workflow
-          </button>
-          <button
-            onClick={() => navigateTo('dashboard')}
-            style={getModeButtonStyle(tab === 'dashboard', theme)}
-          >
-            Command
-          </button>
-          <button
-            onClick={() => navigateTo('orders')}
-            style={getModeButtonStyle(tab === 'orders', theme)}
-          >
-            Orders
-          </button>
-          <button
-            onClick={() => navigateTo('coverage')}
-            style={getModeButtonStyle(tab === 'coverage', theme)}
-          >
-            Crew
-          </button>
-          <button
-            onClick={() => navigateTo('plantMap')}
-            style={getModeButtonStyle(tab === 'plantMap', theme)}
-          >
-            Plant Map
-          </button>
-          <button
-            onClick={() => navigateTo('fab')}
-            style={getModeButtonStyle(tab === 'fab', theme)}
-          >
-            Fab
-          </button>
-          <button
-            onClick={() => navigateTo('coating')}
-            style={getModeButtonStyle(tab === 'coating', theme)}
-          >
-            Coating
-          </button>
-          <button
-            onClick={() => navigateTo('shipping')}
-            style={getModeButtonStyle(tab === 'shipping', theme)}
-          >
-            Shipping
-          </button>
-          <button
-            onClick={() => navigateTo('maintenance')}
-            style={getModeButtonStyle(tab === 'maintenance', theme)}
-          >
-            Maintenance
-          </button>
-          <button
-            onClick={() => navigateTo('receiving')}
-            style={getModeButtonStyle(tab === 'receiving', theme)}
-          >
-            Receiving
-          </button>
-          <button
-            onClick={() => navigateTo('risk')}
-            style={getModeButtonStyle(tab === 'risk', theme)}
-          >
-            QA / Safety
-          </button>
-        </div>
+      {renderCurrentPage()}
+    </div>
+  );
 
-        <button
-          onClick={() => navigateTo('alerts')}
-          style={getAlertsButtonStyle(filteredAlerts.length)}
-        >
-          {filteredAlerts.length}{' '}
-          {filteredAlerts.length === 1 ? 'Equipment Alert' : 'Equipment Alerts'}
-        </button>
-      </div>
-
-      {tab === 'workflow' && (
+  function renderCurrentPage() {
+    if (tab === 'workflow') {
+      return (
         <WorkflowPage
           roleView={roleView}
           departmentFilter={departmentFilter}
@@ -581,9 +384,11 @@ export default function App() {
           }}
           onGoToTab={navigateTo}
         />
-      )}
+      );
+    }
 
-      {tab === 'dashboard' && (
+    if (tab === 'dashboard') {
+      return (
         <DashboardPage
           machines={filteredMachines}
           alerts={filteredAlerts}
@@ -592,138 +397,61 @@ export default function App() {
           roleView={roleView}
           onOpenMachine={setSelected}
           onOpenWorkCenter={setSelectedWorkCenter}
-          onGoToTab={setTab}
+          onGoToTab={navigateTo}
           workCenters={workCenters}
           departmentFilter={departmentFilter}
           theme={theme}
         />
-      )}
+      );
+    }
 
-      {tab === 'machines' && (
-        <MachinesPage
-          machines={filteredMachines}
-          onOpenMachine={setSelected}
-          theme={theme}
-        />
-      )}
+    if (tab === 'machines') return <MachinesPage machines={filteredMachines} onOpenMachine={setSelected} theme={theme} />;
+    if (tab === 'alerts') return <AlertsPage alerts={filteredAlerts} onOpenMachine={setSelected} theme={theme} />;
+    if (tab === 'simulation') return <SimulationPage machines={filteredMachines} onOpenSimulator={setSimulatorMachine} theme={theme} />;
+    if (tab === 'receiving') return <ReceivingPage initialView={receivingInitialView} submitDepartment={receivingSubmitDepartment} theme={theme} />;
+    if (tab === 'coverage') return <CoveragePage roleView={roleView} departmentFilter={departmentFilter} initialView={coverageInitialView} theme={theme} />;
+    if (tab === 'orders') return <OrdersPage theme={theme} />;
+    if (tab === 'plantMap') return <PlantMapPage theme={theme} />;
+    if (tab === 'sales') return <SalesDepartmentPage theme={theme} />;
+    if (tab === 'engineering') return <EngineeringDepartmentPage theme={theme} />;
+    if (tab === 'materialHandling') return <MaterialHandlingDepartmentPage theme={theme} />;
+    if (tab === 'fab') return <FabDepartmentPage theme={theme} />;
+    if (tab === 'coating') return <CoatingDepartmentPage theme={theme} />;
+    if (tab === 'assembly') return <AssemblyDepartmentPage theme={theme} />;
+    if (tab === 'shipping') return <ShippingDepartmentPage theme={theme} />;
+    if (tab === 'qa') return <QADepartmentPage theme={theme} />;
+    if (tab === 'documents') return <DocumentsPage documents={filteredDocuments} theme={theme} />;
+    if (tab === 'risk') return <RiskPage risks={filteredRisks} roleView={roleView} theme={theme} />;
+    if (tab === 'warRoomContext') return <WarRoomContextPage theme={theme} />;
 
-      {tab === 'alerts' && (
-        <AlertsPage
-          alerts={filteredAlerts}
-          onOpenMachine={setSelected}
-          theme={theme}
-        />
-      )}
-
-      {tab === 'simulation' && (
-        <SimulationPage
-          machines={filteredMachines}
-          onOpenSimulator={setSimulatorMachine}
-          theme={theme}
-        />
-      )}
-
-      {tab === 'maintenance' && (
+    if (tab === 'maintenance') {
+      return (
         <div>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-            <button
-              onClick={() => setMaintenanceView('requests')}
-              style={
-                maintenanceView === 'requests'
-                  ? activeTabButtonStyle
-                  : tabButtonStyle
-              }
-            >
+          <div style={maintenanceTabBarStyle}>
+            <button onClick={() => setMaintenanceView('requests')} style={maintenanceView === 'requests' ? activeTabButtonStyle : tabButtonStyle}>
               Requests
             </button>
-            <button
-              onClick={() => setMaintenanceView('tasks')}
-              style={
-                maintenanceView === 'tasks'
-                  ? activeTabButtonStyle
-                  : tabButtonStyle
-              }
-            >
+            <button onClick={() => setMaintenanceView('tasks')} style={maintenanceView === 'tasks' ? activeTabButtonStyle : tabButtonStyle}>
               Scheduled Tasks
+            </button>
+            <button onClick={() => setMaintenanceView('analytics')} style={maintenanceView === 'analytics' ? activeTabButtonStyle : tabButtonStyle}>
+              Analytics
             </button>
           </div>
 
-<button
-        onClick={() => setMaintenanceView('analytics')}
-        style={
-          maintenanceView === 'analytics'
-            ? activeTabButtonStyle
-            : tabButtonStyle
-        }
-      >
-        Analytics
-      </button>
-
           {maintenanceView === 'requests' ? (
-      <MaintenanceRequestsPage theme={theme} />
-    ) : maintenanceView === 'tasks' ? (
-      <MaintenancePage
-        machines={filteredMachines}
-        tasks={filteredMaintenanceTasks}
-        theme={theme}
-      />
-    ) : (
-      <MaintenanceAnalyticsPage theme={theme} />
-    )}
-  </div>
-)}
+            <MaintenanceRequestsPage theme={theme} />
+          ) : maintenanceView === 'tasks' ? (
+            <MaintenancePage machines={filteredMachines} tasks={filteredMaintenanceTasks} theme={theme} />
+          ) : (
+            <MaintenanceAnalyticsPage theme={theme} />
+          )}
+        </div>
+      );
+    }
 
-
-      {tab === 'receiving' && (
-        <ReceivingPage
-          initialView={receivingInitialView}
-          submitDepartment={receivingSubmitDepartment}
-          theme={theme}
-        />
-      )}
-
-      {tab === 'coverage' && (
-        <CoveragePage
-          roleView={roleView}
-          departmentFilter={departmentFilter}
-          initialView={coverageInitialView}
-          theme={theme}
-        />
-      )}
-
-      {tab === 'orders' && <OrdersPage theme={theme} />}
-
-      {tab === 'plantMap' && <PlantMapPage theme={theme} />}
-
-      {tab === 'sales' && <SalesDepartmentPage theme={theme} />}
-
-      {tab === 'engineering' && <EngineeringDepartmentPage theme={theme} />}
-
-      {tab === 'materialHandling' && (
-        <MaterialHandlingDepartmentPage theme={theme} />
-      )}
-
-      {tab === 'fab' && <FabDepartmentPage theme={theme} />}
-
-      {tab === 'coating' && <CoatingDepartmentPage theme={theme} />}
-
-      {tab === 'assembly' && <AssemblyDepartmentPage theme={theme} />}
-
-      {tab === 'shipping' && <ShippingDepartmentPage theme={theme} />}
-
-      {tab === 'qa' && <QADepartmentPage theme={theme} />}
-
-      {tab === 'documents' && (
-        <DocumentsPage documents={filteredDocuments} theme={theme} />
-      )}
-
-      {tab === 'risk' && (
-        <RiskPage risks={filteredRisks} roleView={roleView} theme={theme} />
-      )}
-
-      {tab === 'warRoomContext' && <WarRoomContextPage theme={theme} />}
-    </div>
-  );
+    return <DashboardPage machines={filteredMachines} alerts={filteredAlerts} tasks={filteredMaintenanceTasks} risks={filteredRisks} roleView={roleView} onOpenMachine={setSelected} onOpenWorkCenter={setSelectedWorkCenter} onGoToTab={navigateTo} workCenters={workCenters} departmentFilter={departmentFilter} theme={theme} />;
+  }
 }
 
 function getCommandLabel(tab: AppTab): string {
@@ -753,42 +481,16 @@ function getCommandLabel(tab: AppTab): string {
   return labels[tab];
 }
 
-function getModeButtonStyle(
-  active: boolean,
-  theme: 'dark' | 'light'
-): CSSProperties {
-  return {
-    padding: '10px 12px',
-    borderRadius: 4,
-    border: active
-      ? '1px solid #f97316'
-      : theme === 'dark'
-      ? '1px solid #334155'
-      : '1px solid #cbd5e1',
-    background: active
-      ? 'rgba(249, 115, 22, 0.18)'
-      : theme === 'dark'
-      ? '#0f172a'
-      : '#ffffff',
-    color: active ? '#f97316' : theme === 'dark' ? '#cbd5e1' : '#475569',
-    fontSize: 11,
-    fontWeight: 900,
-    letterSpacing: '0.7px',
-    textTransform: 'uppercase',
-    cursor: 'pointer',
-  };
-}
-
-const getSimulatorHeaderStyle = (theme: 'dark' | 'light'): CSSProperties => {
+function getSimulatorHeaderStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
     padding: 16,
     background: theme === 'dark' ? '#1e293b' : '#f8fafc',
     textAlign: 'center',
     borderBottom: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
   };
-};
+}
 
-const getSimBackButtonStyle = (theme: 'dark' | 'light'): CSSProperties => {
+function getSimBackButtonStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
     marginBottom: 16,
     padding: '10px 16px',
@@ -801,6 +503,29 @@ const getSimBackButtonStyle = (theme: 'dark' | 'light'): CSSProperties => {
     fontSize: 12,
     letterSpacing: '0.5px',
   };
+}
+
+function getSimulatorTitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    marginBottom: 4,
+    marginTop: 16,
+    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+    letterSpacing: '0.5px',
+  };
+}
+
+const simulatorSubtitleStyle: CSSProperties = {
+  marginTop: 4,
+  color: '#64748b',
+  fontSize: 13,
+  letterSpacing: '0.5px',
+};
+
+const maintenanceTabBarStyle: CSSProperties = {
+  display: 'flex',
+  gap: 12,
+  marginBottom: 20,
+  flexWrap: 'wrap',
 };
 
 const tabButtonStyle: CSSProperties = {
