@@ -203,7 +203,7 @@ function getMachineShopCapabilities(order: ProductionOrder): TravelerCapability[
   if (lane === 'SERVICE_SADDLE' || family.includes('SERVICE_SADDLE')) return ['service-saddle', 'large-turning'];
   if (lane === 'TAPPING_SLEEVE' || family.includes('TAPPING_SLEEVE')) return ['tapping-sleeve', 'large-turning'];
   if (lane === 'COUPLING' || family.includes('COUPLING')) return ['coupling', 'turning'];
-  if (lane === 'PIPE_FABRATION' || family.includes('PIPE_FABRICATION')) return ['pipe-fabrication', 'large-turning'];
+  if (lane === 'PIPE_FABRICATION' || family.includes('PIPE_FABRICATION')) return ['pipe-fabrication', 'large-turning'];
   if (lane === 'ENGINEERED_FITTING' || family.includes('ENGINEERED')) return ['engineered-fitting', 'large-turning'];
   if (lane === 'CLAMP' || lane === 'PATCH_CLAMP' || family.includes('REPAIR')) return ['repair-fitting', 'turning'];
   if (lane === 'OTHER') return ['turning'];
