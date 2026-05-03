@@ -5,6 +5,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { COVERAGE_STORAGE_KEY } from '../../logic/coverage';
 import { getCrewGuidanceForDepartment } from '../../logic/crewGuidance';
 import { getSkillGapAlerts } from '../../logic/skillGapAlerts';
+import { departmentOperatingProfiles } from '../../data/departmentOperatingProfiles';
 import type { Department } from '../../types/machine';
 import type { CoveragePerson } from '../../types/coverage';
 import type { PlantAsset, PlantAssetKind } from '../../types/plantAsset';
@@ -61,16 +62,31 @@ export function PageShell({
   subtitle: string;
   children: ReactNode;
 }) {
+  const profile = getPageDepartmentProfile(title);
+  const summary = profile?.operatingSummary ?? subtitle;
+  const localDetail = profile && subtitle !== profile.operatingSummary ? subtitle : null;
+
   return (
     <div style={shellStyle()}>
       <div style={heroStyle(theme)}>
         <div style={eyebrowStyle(theme)}>Department View</div>
         <h2 style={titleStyle(theme)}>{title}</h2>
-        <p style={subtitleStyle(theme)}>{subtitle}</p>
+        {profile ? (
+          <div style={profileChipRowStyle}>
+            <span style={profileChipStyle(theme)}>{profile.resourceLabel}</span>
+            <span style={truthChipStyle(profile.truthStrength, theme)}>Truth: {profile.truthStrength}</span>
+          </div>
+        ) : null}
+        <p style={subtitleStyle(theme)}>{summary}</p>
+        {localDetail ? <p style={detailSubtitleStyle(theme)}>{localDetail}</p> : null}
       </div>
       {children}
     </div>
   );
+}
+
+function getPageDepartmentProfile(title: string) {
+  return Object.values(departmentOperatingProfiles).find((profile) => profile.department === title) ?? null;
 }
 
 export function Section({
@@ -330,6 +346,7 @@ function heroStyle(theme: 'dark' | 'light'): CSSProperties {
 }
 
 function eyebrowStyle(theme: 'dark' | 'light'): CSSProperties {
+  void theme;
   return {
     color: '#f97316',
     fontSize: 11,
@@ -348,12 +365,58 @@ function titleStyle(theme: 'dark' | 'light'): CSSProperties {
   };
 }
 
+const profileChipRowStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+  margin: '4px 0 8px',
+};
+
+function profileChipStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    border: theme === 'dark' ? '1px solid #475569' : '1px solid #cbd5e1',
+    background: theme === 'dark' ? 'rgba(15,23,42,0.7)' : '#f8fafc',
+    color: theme === 'dark' ? '#cbd5e1' : '#475569',
+    padding: '4px 8px',
+    borderRadius: 4,
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  };
+}
+
+function truthChipStyle(truthStrength: string, theme: 'dark' | 'light'): CSSProperties {
+  const color = truthStrength === 'STRONG' ? '#10b981' : truthStrength === 'PARTIAL' ? '#38bdf8' : '#64748b';
+  return {
+    border: `1px solid ${color}66`,
+    background: theme === 'dark' ? `${color}18` : '#ffffff',
+    color,
+    padding: '4px 8px',
+    borderRadius: 4,
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: '0.6px',
+    textTransform: 'uppercase',
+  };
+}
+
 function subtitleStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
     margin: 0,
-    color: theme === 'dark' ? '#94a3b8' : '#475569',
+    color: theme === 'dark' ? '#cbd5e1' : '#334155',
     lineHeight: 1.5,
     fontSize: 14,
+    fontWeight: 750,
+  };
+}
+
+function detailSubtitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    margin: '8px 0 0',
+    color: theme === 'dark' ? '#94a3b8' : '#475569',
+    lineHeight: 1.45,
+    fontSize: 13,
   };
 }
 
