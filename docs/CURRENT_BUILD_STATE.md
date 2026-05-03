@@ -18,13 +18,14 @@ Current emphasis:
 - Workflow buttons must not imply resolution unless the app actually resolves something.
 - Blocker navigation must land on visible blocker context.
 - Engineering escalation must land on Engineering, not Orders/Production.
+- Navigation contracts need live validation because some callbacks still live in the large App shell.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25292866035
-Commit: 9b66dca93bb2df5629d248d40f2d55e6eb9e5e81
+Run ID: 25292994170
+Commit: 23cf3a02c057f8601411b36ae4c834ac96a088bd
 Status: GREEN
 ```
 
@@ -39,7 +40,7 @@ Passed:
 
 ## Most Recent Completed App Work
 
-### Engineering Escalation Routing Fix
+### Navigation Exterminator Pass: Engineering Escalation
 
 Files:
 
@@ -47,16 +48,42 @@ Files:
 src/logic/workflowActions.ts
 ```
 
-Problem fixed:
+Problem found:
 
-- `Escalate to Engineering` recorded an engineering escalation but app navigation was still landing on the Orders/Production-style surface.
-- The app already has a real `engineering` tab and `EngineeringDepartmentPage`.
+- The root `App.tsx` work-center callback for `onOpenEngineering` still points at `navigateTo('orders')`.
+- That means `Escalate to Engineering` can land on the Orders/Production-style page instead of the Engineering page.
+- A first-pass single navigation event was not strong enough because the existing callback could still win the state race.
 
-Current behavior:
+Current mitigation:
 
-- When a workflow action is recorded with `ENGINEERING_ESCALATION`, it dispatches the existing `jcm:navigate` app event with `tab: engineering`.
-- Engineering escalation should now land on the Engineering page instead of Orders/Production.
-- This is navigation only.
+- `ENGINEERING_ESCALATION` now routes to Engineering more than once shortly after the action is logged.
+- This is intended to reassert the Engineering destination after the work-center tablet closes.
+- Latest build for this mitigation is green.
+
+Important remaining root-wire task:
+
+```text
+Replace the `App.tsx` work-center `onOpenEngineering` callback destination from `orders` to `engineering` when the large App shell can be safely patched.
+```
+
+Known current root snippet to fix:
+
+```text
+onOpenEngineering={() => {
+  setSelectedWorkCenter(null);
+  navigateTo('orders');
+}}
+```
+
+Target behavior:
+
+```text
+onOpenEngineering={() => {
+  setSelectedWorkCenter(null);
+  setDepartmentFilter('Engineering');
+  navigateTo('engineering');
+}}
+```
 
 Guardrail:
 
@@ -231,6 +258,7 @@ Guardrail:
 
 ## Active Risks
 
+- The direct `App.tsx` Engineering callback still needs root-wire correction when the large file can be patched safely.
 - Coating is still partly uncertain.
 - Couplings route relative to Coating is still uncertain.
 - Clamps and Patch Clamps need more detail.
@@ -239,7 +267,7 @@ Guardrail:
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
 - Work Center Tablet lane drill-ins are mostly scroll/navigation; make them smarter only if operators need precise panel/item focus.
 - HELP FIRST priority may need clearer copy if departments also have ready work.
-- Live validation should confirm Engineering escalation lands on the Engineering page and not Orders/Production.
+- Live validation should confirm Engineering escalation lands on the Engineering page and not Orders/Production after the reassertion patch.
 - Live validation should confirm Blocker Focus is obvious enough and `Open traveler detail` is understood as review/visibility only.
 
 ## Repo-First Operating Rule
@@ -283,7 +311,7 @@ Avoid:
 Recommended next move:
 
 ```text
-Run live Work Center Tablet validation on the deployed/tablet view.
+Live-test the Engineering escalation again after redeploy/refresh. If it still lands on Orders/Production, patch the App.tsx root callback directly before any more UI work.
 ```
 
 Use at least:
