@@ -26,6 +26,9 @@ type Props = {
   onOpenMaintenance?: () => void;
 };
 
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
+
 const defaultReviewDraft: ClassificationReviewDraft = {
   question: 'NOT_ENOUGH_INFO',
   answer: 'NEEDS_REVIEW',
@@ -42,6 +45,7 @@ export default function WorkCenterWorkflowPanelV2({
   const [runtimeVersion, setRuntimeVersion] = useState(0);
   const [selectedTraveler, setSelectedTraveler] = useState<DynamicTraveler | null>(null);
   const [selectedReviewTraveler, setSelectedReviewTraveler] = useState<DynamicTraveler | null>(null);
+  const [reviewTargetVersion, setReviewTargetVersion] = useState(0);
   const [reviewDraft, setReviewDraft] = useState<ClassificationReviewDraft>(defaultReviewDraft);
   const [reviewConfirmations, setReviewConfirmations] = useState<ClassificationReviewConfirmation[]>(() => loadClassificationReviewConfirmations());
   const [coveragePeople] = useState<CoveragePerson[]>(() => loadCoverage());
@@ -49,15 +53,20 @@ export default function WorkCenterWorkflowPanelV2({
   useEffect(() => {
     const refresh = () => setRuntimeVersion((version) => version + 1);
     const refreshConfirmations = () => setReviewConfirmations(loadClassificationReviewConfirmations());
+    const refreshTarget = () => setReviewTargetVersion((version) => version + 1);
     window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
     window.addEventListener('storage', refresh);
     window.addEventListener('storage', refreshConfirmations);
+    window.addEventListener('storage', refreshTarget);
     window.addEventListener('jcm-classification-review-confirmations-updated', refreshConfirmations);
+    window.addEventListener(REVIEW_TARGET_EVENT, refreshTarget);
     return () => {
       window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
       window.removeEventListener('storage', refresh);
       window.removeEventListener('storage', refreshConfirmations);
+      window.removeEventListener('storage', refreshTarget);
       window.removeEventListener('jcm-classification-review-confirmations-updated', refreshConfirmations);
+      window.removeEventListener(REVIEW_TARGET_EVENT, refreshTarget);
     };
   }, []);
 
@@ -71,11 +80,21 @@ export default function WorkCenterWorkflowPanelV2({
     [workCenter.department, runtimeVersion],
   );
 
+  const reviewTarget = useMemo(() => loadReviewTarget(), [reviewTargetVersion, workCenter.department]);
+
   const groups = getWorkCenterWorkflowGroups(workCenter);
   const activeCount = groups.reduce((total, group) => total + group.cards.length, 0);
   const travelerReadyCount = travelers.filter((traveler) => traveler.visualSignal === 'READY').length;
   const travelerBlockedCount = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
   const reviewTravelers = travelers.filter((traveler) => needsClassificationReview(traveler));
+
+  useEffect(() => {
+    const targetedTraveler = reviewTarget?.department === workCenter.department
+      ? reviewTravelers.find((traveler) => traveler.order.orderNumber === reviewTarget.orderNumber)
+      : null;
+    if (!targetedTraveler) return;
+    setSelectedReviewTraveler(targetedTraveler);
+  }, [reviewTarget, reviewTravelers, workCenter.department]);
 
   const saveReviewCapture = () => {
     if (!selectedReviewTraveler) return;
@@ -115,6 +134,7 @@ export default function WorkCenterWorkflowPanelV2({
         travelers={reviewTravelers}
         confirmations={reviewConfirmations}
         selectedTraveler={selectedReviewTraveler}
+        targetOrderNumber={reviewTarget?.department === workCenter.department ? reviewTarget.orderNumber : undefined}
         draft={reviewDraft}
         theme={theme}
         onSelectTraveler={(traveler) => {
@@ -248,6 +268,7 @@ function ClassificationReviewSummary({
   travelers,
   confirmations,
   selectedTraveler,
+  targetOrderNumber,
   draft,
   theme,
   onSelectTraveler,
@@ -257,6 +278,7 @@ function ClassificationReviewSummary({
   travelers: DynamicTraveler[];
   confirmations: ClassificationReviewConfirmation[];
   selectedTraveler: DynamicTraveler | null;
+  targetOrderNumber?: string;
   draft: ClassificationReviewDraft;
   theme: 'dark' | 'light';
   onSelectTraveler: (traveler: DynamicTraveler) => void;
@@ -286,6 +308,7 @@ function ClassificationReviewSummary({
         <div>
           <div style={reviewSummaryEyebrowStyle('#f97316')}>Classification Review Needed</div>
           <strong style={reviewSummaryTitleStyle(theme)}>{travelers.length} traveler{travelers.length === 1 ? '' : 's'} need route/product confirmation.</strong>
+          {targetOrderNumber ? <div style={targetNoticeStyle(theme)}>Opened from global queue for order {targetOrderNumber}.</div> : null}
         </div>
         <span style={badge('#f97316')}>{travelers.length} REVIEW</span>
       </div>
@@ -293,8 +316,9 @@ function ClassificationReviewSummary({
         {travelers.slice(0, 3).map((traveler) => {
           const travelerConfirmations = getConfirmationsForTraveler(confirmations, traveler);
           const isSelected = activeTraveler.id === traveler.id;
+          const isTarget = targetOrderNumber === traveler.order.orderNumber;
           return (
-            <button key={traveler.id} type="button" style={reviewItemStyle(theme, isSelected)} onClick={() => onSelectTraveler(traveler)}>
+            <button key={traveler.id} type="button" style={reviewItemStyle(theme, isSelected || isTarget)} onClick={() => onSelectTraveler(traveler)}>
               <div style={reviewItemTopStyle}>
                 <strong>#{traveler.order.orderNumber} • {traveler.productClassification.modelSignal ?? 'No model'}</strong>
                 <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
@@ -303,6 +327,7 @@ function ClassificationReviewSummary({
               <div style={reviewMetaStyle(theme)}>
                 {formatToken(traveler.productClassification.productFamily)} · {formatHintList(traveler.finishHints)} · {traveler.productClassification.routeHint.length > 0 ? traveler.productClassification.routeHint.join(' → ') : 'No route hint'}
               </div>
+              {isTarget ? <div style={targetTextStyle(theme)}>Selected from global review queue</div> : null}
               {travelerConfirmations.length > 0 ? <div style={reviewSavedTextStyle(theme)}>{travelerConfirmations.length} structured confirmation{travelerConfirmations.length === 1 ? '' : 's'} saved</div> : null}
             </button>
           );
@@ -381,6 +406,17 @@ function loadCoverage(): CoveragePerson[] {
   }
 }
 
+function loadReviewTarget(): { orderNumber: string; department: WorkCenter['department']; travelerId?: string; updatedAt?: string } | null {
+  try {
+    const stored = localStorage.getItem(REVIEW_TARGET_STORAGE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as { orderNumber?: string; department?: WorkCenter['department']; travelerId?: string; updatedAt?: string };
+    return parsed.orderNumber && parsed.department ? { orderNumber: parsed.orderNumber, department: parsed.department, travelerId: parsed.travelerId, updatedAt: parsed.updatedAt } : null;
+  } catch {
+    return null;
+  }
+}
+
 function needsClassificationReview(traveler: DynamicTraveler): boolean {
   return traveler.classificationReviewReasons.length > 0 || traveler.productClassification.needsHumanReview || traveler.productClassification.confidence === 'LOW' || traveler.productClassification.confidence === 'REVIEW';
 }
@@ -428,6 +464,8 @@ function reviewItemStyle(theme: 'dark' | 'light', selected: boolean) { return { 
 function reviewReasonTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 12, fontWeight: 800, lineHeight: 1.4, marginTop: 6 } as const; }
 function reviewMetaStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 700, marginTop: 5, lineHeight: 1.35 } as const; }
 function reviewSavedTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#86efac' : '#166534', fontSize: 11, fontWeight: 900, marginTop: 6 } as const; }
+function targetNoticeStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 12, fontWeight: 900, marginTop: 5 } as const; }
+function targetTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#38bdf8' : '#0369a1', fontSize: 11, fontWeight: 900, marginTop: 6 } as const; }
 
 const crewStripLabelStyle = { color: '#f97316', fontSize: 10, fontWeight: 900, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8 } as const;
 const crewRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 } as const;
