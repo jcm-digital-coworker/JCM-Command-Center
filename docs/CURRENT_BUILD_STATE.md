@@ -17,15 +17,15 @@ Current emphasis:
 - Department descriptions flow through a shared operating profile layer.
 - Workflow buttons must not imply resolution unless the app actually resolves something.
 - Blocker navigation must land on visible blocker context.
-- Engineering escalation and Engineering quick selection must land on Engineering, not Orders/Production or generic dashboard/work-center routing.
+- Engineering escalation, Engineering quick selection, and dashboard Quick Actions must land on Engineering when the operator asks for Engineering.
 - Navigation contracts should be audited as route contracts, not patched with timing workarounds.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25294225129
-Commit: 62b6a947fce4bfb6e01dc1336a3436e63882caac
+Run ID: 25294432791
+Commit: 401040fa7aac120e3d8f442594bb8c860cfc7d03
 Status: GREEN
 ```
 
@@ -39,6 +39,62 @@ Passed:
 - Record latest action run
 
 ## Most Recent Completed App Work
+
+### Dashboard Quick Action Navigation Contract Sweep
+
+Files:
+
+```text
+src/logic/navigationContracts.ts
+src/logic/dashboardQuickActions.ts
+src/pages/DashboardPage.tsx
+```
+
+PR:
+
+```text
+#12 Consolidate dashboard quick action routing
+```
+
+Problem fixed:
+
+- Dashboard Quick Actions were a third navigation path separate from work-station card callbacks and department quick selection.
+- `Escalate Engineering` in Quick Actions still used a raw `target: 'orders'`, so it landed on Orders/Production.
+- Several Quick Action labels implied automatic resolution, such as `Resolve Blockers` and `Resolve Material Issues`.
+
+Current behavior:
+
+- Dashboard Quick Actions now use `NavigationIntent` instead of raw `AppTab` targets.
+- Dashboard clicks resolve intents through `getNavigationTab()` in `navigationContracts.ts`.
+- Engineering Quick Actions use `OPEN_ENGINEERING`, which resolves to the Engineering page.
+- Blocker Quick Actions now say `Review Blockers` and resolve to workflow context.
+- Material Quick Actions now say `Open Material Issues` and resolve to Receiving.
+
+Source contract:
+
+```text
+visible Quick Action label -> NavigationIntent -> navigationContracts -> AppTab
+```
+
+Important intent mappings:
+
+```text
+OPEN_ENGINEERING -> engineering
+OPEN_WORKFLOW -> workflow
+OPEN_RECEIVING -> receiving
+OPEN_MAINTENANCE -> maintenance
+OPEN_QA_SAFETY -> risk
+OPEN_QA_DEPARTMENT -> qa
+OPEN_ORDERS -> orders
+```
+
+Guardrail:
+
+- Navigation contract only.
+- No route approval.
+- No dispatch behavior.
+- No classifier mutation.
+- No confidence increase.
 
 ### Engineering Quick Selection Route Fix
 
@@ -54,11 +110,6 @@ PR:
 #11 Fix Engineering quick selection route
 ```
 
-Problem fixed:
-
-- The work-station Engineering escalation button was fixed by PR #10, but the quick department/work-center selector still used `openWorkCenterForDepartment`.
-- That selector treated Engineering like a shop-floor work center and sent it through the generic dashboard/work-center path.
-
 Current behavior:
 
 ```text
@@ -73,15 +124,7 @@ Result:
 
 - Engineering quick selection opens the Engineering page.
 - Work-station card Engineering escalation opens the Engineering page.
-- This is a source-route correction, not a timing workaround.
-
-Guardrail:
-
-- Navigation only.
-- No route approval.
-- No dispatch behavior.
-- No classifier mutation.
-- No confidence increase.
+- Dashboard Quick Action Engineering review opens the Engineering page.
 
 ### Root Engineering Route Fix
 
@@ -96,11 +139,6 @@ PR:
 ```text
 #10 Update app navigation
 ```
-
-Problem fixed:
-
-- The root Work Center tablet `onOpenEngineering` callback in `App.tsx` pointed to `navigateTo('orders')`.
-- That caused `Escalate to Engineering` to land on Orders/Production even though the app has a real Engineering page.
 
 Current behavior:
 
@@ -121,9 +159,8 @@ src/logic/workflowActions.ts
 ```
 
 - A previous mitigation still dispatches Engineering navigation events after `ENGINEERING_ESCALATION` is logged.
-- The root App callback and quick selector now handle the route correctly, so this mitigation is no longer needed.
-- Attempts to remove the mitigation were blocked by the connector write safety layer in this session.
-- Remove it in a future cleanup pass so `workflowActions.ts` is a pure action-log module again.
+- The App callback, quick selector, and dashboard Quick Actions now handle Engineering routing correctly, so this mitigation is no longer needed.
+- Remove it in a cleanup pass so `workflowActions.ts` is a pure action-log module again.
 
 Recommended durable prevention:
 
@@ -134,10 +171,10 @@ Create a route contract auditor checklist/skill.
 It should check every action button as:
 
 ```text
-visible label -> action handler -> callback prop -> App tab/page -> expected destination
+visible label -> action model/intent -> callback prop -> App tab/page -> expected destination
 ```
 
-Use it before changing any action-console, workflow, maintenance, engineering, receiving, quick selector, drawer, or review navigation.
+Use it before changing any action-console, workflow, maintenance, engineering, receiving, quick selector, drawer, dashboard Quick Actions, or review navigation.
 
 ### Blocker Focus Card
 
@@ -313,7 +350,7 @@ Guardrail:
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
 - Work Center Tablet lane drill-ins are mostly scroll/navigation; make them smarter only if operators need precise panel/item focus.
 - HELP FIRST priority may need clearer copy if departments also have ready work.
-- Live validation should confirm both Engineering paths land on the Engineering page: workstation card escalation and quick selection.
+- Live validation should confirm all Engineering paths land on the Engineering page: workstation card escalation, department quick selection, and Dashboard Quick Action.
 - Live validation should confirm Blocker Focus is obvious enough and `Open traveler detail` is understood as review/visibility only.
 
 ## Repo-First Operating Rule
@@ -357,13 +394,14 @@ Avoid:
 Recommended next move:
 
 ```text
-Live-test both Engineering paths after redeploy/refresh. If both land on Engineering, create the route contract auditor checklist/skill before more navigation work.
+Live-test all Engineering paths after redeploy/refresh. If they land on Engineering, create the route contract auditor checklist/skill before more navigation work.
 ```
 
 Use at least:
 
 - Work-station card: Escalate to Engineering.
-- Quick selector: Engineering.
+- Department quick selector: Engineering.
+- Dashboard Quick Actions: Open Engineering Review.
 - Machine Shop: help/blocker and engineering escalation cases.
 - Fab: blocker, engineering escalation, and handoff cases.
 
