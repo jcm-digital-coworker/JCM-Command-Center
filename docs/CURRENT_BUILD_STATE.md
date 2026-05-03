@@ -18,12 +18,13 @@ Current slice completed:
 - Service saddle classification rule refinement.
 - 412 carbon tapping sleeve classification refinement.
 - Classification Review Summary in the workflow panel.
+- Structured local confirmation capture for classification review items.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25267755127
-Commit: 1631995ebfb167d662d75bb5ce45b2a0e576bdf1
+Run ID: 25268058143
+Commit: c2b6510236759430ad6c5d1a60a9ce5387612b1c
 Status: GREEN
 ```
 
@@ -37,6 +38,37 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Structured Classification Review Confirmation Capture
+
+Added/updated:
+
+```text
+src/types/classificationReview.ts
+src/logic/classificationReviewConfirmations.ts
+src/components/travelers/ClassificationReviewCapture.tsx
+src/components/WorkCenterWorkflowPanelV2.tsx
+```
+
+The workflow panel now supports local-only structured confirmation capture for classification review items.
+
+It now:
+
+- uses controlled selection fields for confirmation questions.
+- uses controlled answer values.
+- captures reviewer source as a structured selection.
+- allows a short optional note, but selections remain the source of truth.
+- saves confirmations to localStorage under `jcm-classification-review-confirmations-v1`.
+- shows saved confirmation counts per review-needed traveler.
+- shows recent confirmations for the active traveler.
+
+Important guardrail:
+
+- Confirmations do not mutate classifier rules.
+- Confirmations do not approve routes automatically.
+- Confirmations do not raise confidence automatically.
+- Confirmations do not dispatch work.
+- This is a capture layer only.
 
 ### Classification Review Summary
 
@@ -457,7 +489,7 @@ Main active risks:
 - Clamps and Patch Clamps need more detail.
 - 412/432/452 rules need confirmation before route hints become dispatch logic.
 - Classifier should not overrule human review.
-- Current UI shows intelligence and review warnings, but does not yet allow structured confirmation capture.
+- Current confirmation capture is local-only and does not yet feed route-rule update workflows.
 
 ## Next Recommended Move
 
@@ -466,26 +498,26 @@ Do not jump straight to automatic dispatch.
 Recommended next code slice:
 
 ```text
-Add structured confirmation capture for review items.
+Add a global / dashboard-level Classification Review queue.
 ```
 
 Why:
 
-- The UI now shows classification review needs.
-- The next useful step is capturing confirmations as structured selections, not free-text guesses.
-- This would turn review warnings into a controlled confirmation workflow.
+- Department workflow panels now show and capture confirmations locally.
+- A global queue would show plant-wide unresolved classification risks.
+- This is still visibility/capture, not dispatch.
 
-Guardrails for confirmation capture:
+Guardrails:
 
-- Structured selections > free text.
-- No automatic route approval yet.
-- No confidence increases without explicit confirmation data.
-- Store confirmations separately from raw classifier rules at first.
+- No automatic route approval.
+- No classifier mutation.
+- No confidence increases without confirmed governance.
+- Keep structured selections as the source of truth.
 
 Alternate next move:
 
 ```text
-Pause coding and collect plant facts from the Loose Ends list.
+Pause coding and collect plant facts from docs/LOOSE_ENDS.md.
 ```
 
 Most valuable confirmations:
@@ -503,10 +535,10 @@ Most valuable confirmations:
 
 If continuing code:
 
-1. Design a structured review-confirmation data shape.
-2. Use dropdown/selection values, not free text as the primary truth.
-3. Add display-only or local-only capture first.
-4. Do not mutate classifier rules automatically.
+1. Search for the best global dashboard surface.
+2. Add a plant-wide Classification Review queue/card.
+3. Reuse existing Dynamic Traveler classification data and local confirmation store.
+4. Do not add approval behavior.
 5. Build and verify CI.
 
 If continuing knowledge capture:
