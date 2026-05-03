@@ -24,14 +24,15 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
   const [copied, setCopied] = useState(false);
   const coverage = loadCoverage().filter((p) => p.status !== 'OFFLINE');
 
-  const inProgress = productionOrders.filter((o) =>
-    ['in_progress', 'in progress', 'running'].includes(String(o.status).toLowerCase()),
+  const readyToRun = productionOrders.filter((o) =>
+    String(o.status).toLowerCase() === 'ready' &&
+    String(o.flowStatus).toLowerCase() !== 'blocked',
   );
   const blocked = productionOrders.filter((o) =>
     String(o.flowStatus).toLowerCase() === 'blocked' || (o.blockers ?? []).length > 0,
   );
-  const completed = productionOrders.filter((o) =>
-    ['done', 'completed', 'complete'].includes(String(o.status).toLowerCase()),
+  const onHold = productionOrders.filter((o) =>
+    String(o.status).toLowerCase() === 'hold',
   );
   const openMaint = maintenanceRequests.filter((r) =>
     ['NEW', 'CLAIMED', 'IN_PROGRESS'].includes(r.status),
@@ -50,9 +51,9 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
       `--- CREW ON SHIFT (${coverage.length}) ---`,
       ...coverage.map((p) => `  ${p.name} | ${p.role} | ${p.station} | ${p.status}${p.assignedTo ? ` → ${p.assignedTo}` : ''}`),
       '',
-      `--- ORDERS IN PROGRESS (${inProgress.length}) ---`,
-      ...(inProgress.length > 0
-        ? inProgress.map((o) => `  #${o.orderNumber} ${o.productFamily} — ${o.currentDepartment}${o.nextDepartment ? ` → ${o.nextDepartment}` : ''}`)
+      `--- READY TO RUN (${readyToRun.length}) ---`,
+      ...(readyToRun.length > 0
+        ? readyToRun.map((o) => `  #${o.orderNumber} ${o.productFamily} — ${o.currentDepartment}${o.nextDepartment ? ` → ${o.nextDepartment}` : ''}`)
         : ['  None']),
       '',
       `--- BLOCKED ORDERS (${blocked.length}) ---`,
@@ -63,9 +64,9 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
           })
         : ['  None']),
       '',
-      `--- COMPLETED ORDERS (${completed.length}) ---`,
-      ...(completed.length > 0
-        ? completed.map((o) => `  #${o.orderNumber} ${o.productFamily}`)
+      `--- ON HOLD (${onHold.length}) ---`,
+      ...(onHold.length > 0
+        ? onHold.map((o) => `  #${o.orderNumber} ${o.productFamily} — ${o.currentDepartment}`)
         : ['  None']),
       '',
       `--- OPEN MAINTENANCE REQUESTS (${openMaint.length}) ---`,
@@ -114,10 +115,10 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
             })}
       </ReportSection>
 
-      <ReportSection title={`Orders In Progress — ${inProgress.length}`} theme={theme}>
-        {inProgress.length === 0
-          ? <EmptyRow text="No orders currently in progress." theme={theme} />
-          : inProgress.map((o) => (
+      <ReportSection title={`Ready to Run — ${readyToRun.length}`} theme={theme}>
+        {readyToRun.length === 0
+          ? <EmptyRow text="No orders currently ready to run." theme={theme} />
+          : readyToRun.map((o) => (
               <Row key={o.orderNumber} theme={theme} accent="#10b981">
                 <span style={boldStyle(theme)}>#{o.orderNumber} — {o.productFamily}</span>
                 <span style={mutedStyle}>{o.currentDepartment}{o.nextDepartment ? ` → ${o.nextDepartment}` : ''}</span>
@@ -140,12 +141,13 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
             ))}
       </ReportSection>
 
-      <ReportSection title={`Completed Orders — ${completed.length}`} theme={theme}>
-        {completed.length === 0
-          ? <EmptyRow text="No orders marked complete." theme={theme} />
-          : completed.map((o) => (
-              <Row key={o.orderNumber} theme={theme} accent="#334155">
+      <ReportSection title={`On Hold — ${onHold.length}`} theme={theme}>
+        {onHold.length === 0
+          ? <EmptyRow text="No orders currently on hold." theme={theme} />
+          : onHold.map((o) => (
+              <Row key={o.orderNumber} theme={theme} accent="#64748b">
                 <span style={boldStyle(theme)}>#{o.orderNumber} — {o.productFamily}</span>
+                <span style={mutedStyle}>{o.currentDepartment}</span>
               </Row>
             ))}
       </ReportSection>
