@@ -21,6 +21,7 @@ export type AppTab =
   | 'engineering'
   | 'documents'
   | 'risk'
+  | 'shiftHandoff'
   | 'warRoomContext';
 
 export type DepartmentFilter = 'All' | Department;

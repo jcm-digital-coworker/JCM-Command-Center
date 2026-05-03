@@ -41,6 +41,7 @@ import ShippingDepartmentPage from './pages/departments/ShippingDepartmentPage';
 import QADepartmentPage from './pages/departments/QADepartmentPage';
 import SalesDepartmentPage from './pages/departments/SalesDepartmentPage';
 import EngineeringDepartmentPage from './pages/departments/EngineeringDepartmentPage';
+import ShiftHandoffPage from './pages/ShiftHandoffPage';
 import WarRoomContextPage from './pages/WarRoomContextPage';
 
 type DetailTab = 'overview' | 'events' | 'patterns' | 'notes';
@@ -120,6 +121,17 @@ export default function App() {
       document.body.classList.remove('light-mode');
     }
   }, [theme]);
+
+  // QR / URL deep-link: ?wc=<workCenterId> opens that station tablet directly
+  useEffect(() => {
+    const wcId = new URLSearchParams(window.location.search).get('wc');
+    if (!wcId) return;
+    const wc = workCenters.find((w) => w.id === wcId);
+    if (wc) {
+      setSelectedWorkCenter(wc);
+      setDepartmentFilter(wc.department);
+    }
+  }, []);
 
   function toggleTheme() {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -451,6 +463,7 @@ export default function App() {
     if (tab === 'qa') return <QADepartmentPage theme={theme} />;
     if (tab === 'documents') return <DocumentsPage documents={filteredDocuments} theme={theme} />;
     if (tab === 'risk') return <RiskPage risks={filteredRisks} roleView={roleView} theme={theme} />;
+    if (tab === 'shiftHandoff') return <ShiftHandoffPage theme={theme} />;
     if (tab === 'warRoomContext') return <WarRoomContextPage theme={theme} />;
 
     if (tab === 'maintenance') {
@@ -505,6 +518,7 @@ function getCommandLabel(tab: AppTab): string {
     qa: 'QA',
     documents: 'Documents',
     risk: 'QA / Safety',
+    shiftHandoff: 'Shift Handoff',
     warRoomContext: 'War Room Context',
   };
   return labels[tab];

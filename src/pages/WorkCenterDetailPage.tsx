@@ -58,6 +58,16 @@ export default function WorkCenterDetailPage({
   theme = 'dark',
 }: WorkCenterDetailPageProps) {
   const [digitalCoworkerOpen, setDigitalCoworkerOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  function copyStationLink() {
+    const base = window.location.origin + window.location.pathname;
+    const url = `${base}?wc=${workCenter.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    });
+  }
   const departmentMachines = workCenter.department === 'Maintenance'
     ? machines
     : machines.filter((machine) => machine.department === workCenter.department);
@@ -102,7 +112,12 @@ export default function WorkCenterDetailPage({
 
   return (
     <div style={pageStyle}>
-      <button onClick={onBack} style={getBackButtonStyle(theme)}>BACK TO COMMAND CENTER</button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button onClick={onBack} style={getBackButtonStyle(theme)}>BACK TO COMMAND CENTER</button>
+        <button onClick={copyStationLink} style={getLinkButtonStyle(theme, linkCopied)}>
+          {linkCopied ? '✓ LINK COPIED' : 'COPY STATION LINK'}
+        </button>
+      </div>
 
       <section style={getHeroStyle(theme, workCenter.status)}>
         <div>
@@ -475,6 +490,7 @@ const consoleBadgeRowStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap',
 const heroControlsStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end', position: 'relative', zIndex: 2 };
 const anchorStyle: CSSProperties = { scrollMarginTop: 16 };
 function getBackButtonStyle(theme: 'dark' | 'light'): CSSProperties { return { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 4, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: theme === 'dark' ? '#1e293b' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', cursor: 'pointer', fontWeight: 900, letterSpacing: '0.7px' }; }
+function getLinkButtonStyle(theme: 'dark' | 'light', copied: boolean): CSSProperties { return { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 4, border: copied ? '1px solid #10b981' : '1px solid #f97316', background: copied ? 'rgba(16,185,129,0.12)' : theme === 'dark' ? '#1e293b' : '#fff7ed', color: copied ? '#10b981' : '#f97316', cursor: 'pointer', fontWeight: 900, letterSpacing: '0.7px', transition: 'all 0.2s', fontSize: 12 }; }
 function getHeroStyle(theme: 'dark' | 'light', status: WorkCenter['status']): CSSProperties { return { padding: 22, borderRadius: 8, border: `1px solid ${getStatusColor(status)}`, background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.22)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', position: 'relative' }; }
 function getHeroTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, fontSize: 30, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', letterSpacing: '0.4px' }; }
 function getHeroTextStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: '10px 0 0 0', color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 14, lineHeight: 1.5, maxWidth: 820 }; }

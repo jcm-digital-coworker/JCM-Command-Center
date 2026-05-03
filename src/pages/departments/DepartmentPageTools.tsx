@@ -1,8 +1,10 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { workers } from '../../data/workers';
 import { seedCoverage } from '../../data/coverage';
+import { productionOrders } from '../../data/productionOrders';
 import { COVERAGE_STORAGE_KEY } from '../../logic/coverage';
 import { getCrewGuidanceForDepartment } from '../../logic/crewGuidance';
+import { getSkillGapAlerts } from '../../logic/skillGapAlerts';
 import type { Department } from '../../types/machine';
 import type { CoveragePerson } from '../../types/coverage';
 import type { PlantAsset, PlantAssetKind } from '../../types/plantAsset';
@@ -241,11 +243,22 @@ export function LiveCrewSection({
   const assigned = crew.filter((p) => p.status === 'ASSIGNED');
   const available = crew.filter((p) => p.status === 'AVAILABLE');
   const onBreak = crew.filter((p) => p.status === 'BREAK');
+  const skillGaps = getSkillGapAlerts(department, productionOrders, people);
 
   if (crew.length === 0) return <div style={emptyStyle(theme)}>No crew signed in for this department.</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {skillGaps.length > 0 && (
+        <div style={skillGapBannerStyle(theme)}>
+          <strong style={{ color: '#f59e0b', fontSize: 11, letterSpacing: '0.8px' }}>SKILL GAP ALERT</strong>
+          {skillGaps.map((gap) => (
+            <div key={gap.skill} style={{ fontSize: 12, color: theme === 'dark' ? '#fcd34d' : '#92400e', marginTop: 2 }}>
+              No available crew for <strong>{gap.skill.replace(/_/g, ' ')}</strong> — needed by order{gap.orderNumbers.length > 1 ? 's' : ''} {gap.orderNumbers.join(', ')}
+            </div>
+          ))}
+        </div>
+      )}
       <div style={crewSummaryRowStyle}>
         <CrewStat label="ASSIGNED" count={assigned.length} color="#f59e0b" theme={theme} />
         <CrewStat label="AVAILABLE" count={available.length} color="#10b981" theme={theme} />
@@ -506,3 +519,16 @@ function blockerRowStyle(theme: 'dark' | 'light'): CSSProperties {
 }
 
 const crewSummaryRowStyle: CSSProperties = { display: 'flex', gap: 10, flexWrap: 'wrap' };
+
+function skillGapBannerStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    padding: '10px 14px',
+    borderRadius: 6,
+    border: '1px solid rgba(245,158,11,0.45)',
+    borderLeft: '4px solid #f59e0b',
+    background: theme === 'dark' ? 'rgba(245,158,11,0.08)' : '#fffbeb',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+  };
+}

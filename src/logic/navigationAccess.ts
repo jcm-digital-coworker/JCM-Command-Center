@@ -57,6 +57,7 @@ export const navigationGroups: NavigationGroup[] = [
       { id: 'workflow', label: 'My Workflow', roles: 'all', description: 'Role-specific work queue and current priorities.' },
       { id: 'coverage', label: 'Crew / Coverage', roles: [...plantLeadershipRoles, ...productionRoles, ...supportRoles], description: 'Crew availability and coverage gaps.' },
       { id: 'receiving', label: 'Receiving', roles: [...plantLeadershipRoles, ...supportRoles, ...productionRoles], description: 'Material intake, staging, and request flow.' },
+      { id: 'shiftHandoff', label: 'Shift Handoff', roles: [...plantLeadershipRoles], description: 'End-of-shift snapshot: crew, orders, maintenance. Copy as text for incoming lead.' },
     ],
   },
   {
