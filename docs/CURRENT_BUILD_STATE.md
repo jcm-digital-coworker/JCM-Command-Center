@@ -14,12 +14,13 @@ Current slice completed:
 - Traveler classification wiring.
 - Product Intelligence display in Department Traveler detail modal.
 - Product Intelligence display in full Plant Traveler modal.
+- Compact Product Intelligence badges on Dynamic Traveler workflow cards.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25267183855
-Commit: 40c323f066079e34d46517afcf79d3c075239419
+Run ID: 25267352767
+Commit: d500f91340f522da812228b50cbc1ea5569fbd61
 Status: GREEN
 ```
 
@@ -33,6 +34,23 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Product Intelligence Badges On Workflow Traveler Cards
+
+Updated:
+
+```text
+src/components/WorkCenterWorkflowPanelV2.tsx
+```
+
+Dynamic Traveler cards now show compact Product Intelligence badges before opening the modal:
+
+- finish hint
+- QA required / QA not required
+- review needed / classified
+- confidence
+
+This is display-only. It does not change dispatch behavior.
 
 ### Product Classification Foundation
 
@@ -367,49 +385,36 @@ Do not jump straight to automatic dispatch.
 Recommended next code slice:
 
 ```text
-Add compact Product Intelligence indicators to traveler list cards / workflow cards.
+Refine route rules for one product family only, likely Saddles.
 ```
 
 Why:
 
-- Workers/leads should see review warnings and finish/QA hints before opening the full modal.
-- This remains display-only and low risk.
+- Saddles route is clearer than Couplings/Clamps/Patch Clamp.
+- Receiving -> Coating -> Saddles Dept is confirmed.
+- LV4500 ownership is corrected.
+- Strap dependency from Press Building is known.
+- This can improve classifier confidence without generalizing too broadly.
 
 Alternate next move:
 
 ```text
-Refine route rules for one product family only, likely Saddles or 412.
+Find other workflow list/card surfaces and add the same compact Product Intelligence badges if they render travelers separately.
 ```
-
-Recommended product-family target if routing refinement starts:
-
-```text
-Saddles
-```
-
-Reason:
-
-- Saddles route is now clearer than Couplings/Clamps/Patch Clamp.
-- Receiving -> Coating -> Saddles Dept is confirmed.
-- LV4500 ownership is corrected.
-- Strap dependency from Press Building is known.
 
 ## Exact Next Action
-
-If continuing UI visibility:
-
-1. Find traveler card/list component used by workflow/department views.
-2. Add small badges only:
-   - finish hint
-   - QA required
-   - needs review
-   - confidence
-3. Do not add write actions.
-4. Build and verify CI.
 
 If continuing route rules:
 
 1. Start with Saddles only.
-2. Add route/data rules behind human-review guardrails.
-3. Do not generalize to Couplings/Clamps/Patch Clamp yet.
+2. Add/refine route/data rules behind human-review guardrails.
+3. Confirm or preserve review warnings for uncertain coating details.
+4. Do not generalize to Couplings/Clamps/Patch Clamp yet.
+5. Build and verify CI.
+
+If continuing UI visibility:
+
+1. Search for other traveler list/card renderers.
+2. Add badges only where DynamicTraveler is directly rendered.
+3. Do not add write actions.
 4. Build and verify CI.
