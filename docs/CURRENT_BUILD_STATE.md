@@ -16,14 +16,15 @@ Current emphasis:
 - Copy Station Link supports QR/deep-link station tablet behavior.
 - Department descriptions now flow through a shared operating profile layer instead of scattered hardcoded page copies.
 - Workflow action buttons must not imply resolution unless the app actually resolves something.
+- Blocker navigation must land on visible blocker context, not an empty or generic support area.
 - Validate live tablet use before more UI collapse, panel reordering, or route certainty.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25292083563
-Commit: 1d91f574a08f2b5b97e80dde9fb85388972bd372
+Run ID: 25292684537
+Commit: 5b7caef2ec5e4886e1ad8ede8e426b3b3d339b27
 Status: GREEN
 ```
 
@@ -37,6 +38,43 @@ Passed:
 - Record latest action run
 
 ## Most Recent Completed App Work
+
+### Blocker Focus Card
+
+Files:
+
+```text
+src/components/WorkCenterWorkflowPanelV2.tsx
+src/logic/operatorNextBestActions.ts
+```
+
+PR:
+
+```text
+#9 Add blocker focus card
+```
+
+Problem fixed:
+
+- Operator Next Best Action previously used `Go to blocker`, then landed at the general Live Workflow panel.
+- That was not precise enough because it did not visibly identify the specific blocked/held traveler.
+
+Current behavior:
+
+- Needs Help with a blocked/held Dynamic Traveler now says `Open blocked traveler`.
+- The lane detail says it opens the Blocker Focus card in Live Workflow.
+- Live Workflow now renders a `BLOCKER FOCUS` card near the top when a blocked/held traveler exists.
+- The card identifies the leading blocked/held traveler by order number and current instruction.
+- The card includes `Open traveler detail` for the focused traveler.
+- The card explicitly says opening it does not clear the blocker, approve the route, or dispatch work.
+
+Guardrail:
+
+- No blocker clearing.
+- No route approval.
+- No dispatch behavior.
+- No classifier mutation.
+- No confidence increase.
 
 ### Workflow Action Routing Fix
 
@@ -69,14 +107,6 @@ Current behavior:
 - Maintenance opens only for explicit maintenance/machine/service/repair/alarm/down/downtime actions.
 - Material actions still open Receiving material request.
 - Engineering/hold actions still open Engineering escalation.
-
-Guardrail:
-
-- No route approval.
-- No dispatch behavior.
-- No classifier mutation.
-- No confidence increases.
-- Do not label a button as resolution unless the workflow actually has a resolution path.
 
 ### Department Truth Alignment Audit
 
@@ -144,9 +174,9 @@ src/pages/WorkCenterDetailPage.tsx
 
 Fixes:
 
-- Needs Help caused by a blocked/held traveler now targets the workflow panel and says `Go to blocker`.
 - Needs Help caused by risk/maintenance support still targets the lower support/risk area.
-- The lower risks/support panel now clarifies that traveler blockers, holds, and material shortages live in the workflow panel above.
+- Needs Help caused by blocked/held travelers now opens visible workflow blocker context instead of lower risks or Maintenance.
+- The lower risks/support panel clarifies that traveler blockers, holds, and material shortages appear in the workflow panel above.
 - The confusing standalone Tablet Operating Mode strip was removed from the page.
 - The current operating mode is now the action-console title.
 - Digital Co-worker is centered as an inline flyout panel and contains dynamic mode/ready/help/review counts.
@@ -431,7 +461,7 @@ Avoid:
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
 - Work Center Tablet lane drill-ins are mostly scroll/navigation; make them smarter only if operators need precise panel/item focus.
 - HELP FIRST priority may need clearer copy if departments also have ready work.
-- Live validation should confirm that `Review blocker` is understood as review/logging only, not final resolution.
+- Live validation should confirm that Blocker Focus is obvious enough and that `Open traveler detail` is understood as review/visibility only.
 
 ## Next Recommended Move
 
@@ -443,7 +473,8 @@ Run live Work Center Tablet validation on the deployed/tablet view.
 
 Why:
 
-- The app is green on main after the workflow-action routing fix.
+- The app is green on main after the Blocker Focus card.
+- Needs Help for blocked/held travelers now lands on visible blocker context.
 - Generic blocker review no longer pretends to resolve blockers or sends workers to Maintenance without a real maintenance-owned issue.
 - Department-description drift has been centralized behind shared operating profiles.
 - Remaining route uncertainty is plant-truth uncertainty, not a UI-description alignment problem.
