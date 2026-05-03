@@ -17,12 +17,13 @@ Current slice completed:
 - Compact Product Intelligence badges on Dynamic Traveler workflow cards.
 - Service saddle classification rule refinement.
 - 412 carbon tapping sleeve classification refinement.
+- Classification Review Summary in the workflow panel.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25267551642
-Commit: 29730ca5d43dd68dd29908e2e182c5e4e58bd1d2
+Run ID: 25267755127
+Commit: 1631995ebfb167d662d75bb5ce45b2a0e576bdf1
 Status: GREEN
 ```
 
@@ -36,6 +37,32 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Classification Review Summary
+
+Updated:
+
+```text
+src/components/WorkCenterWorkflowPanelV2.tsx
+```
+
+Added a display-only Classification Review Summary above the Dynamic Travelers list.
+
+It now:
+
+- counts travelers needing route/product/classification review.
+- shows top review-needed travelers.
+- shows order number, model signal, confidence, first review reason, finish hint, product family, and route hint.
+- opens the existing traveler detail modal when a review item is selected.
+- shows CLEAR when no route/product review warnings exist for the work center.
+
+Important guardrail:
+
+- No write actions were added.
+- No approve button was added.
+- No route changes were added.
+- No confidence increases were added.
+- This only makes uncertainty visible.
 
 ### 412 Carbon Tapping Sleeve Classification Refinement
 
@@ -382,6 +409,7 @@ docs/JCM_WEBSITE_PRODUCT_INFRASTRUCTURE.md
 docs/department-reality/COATING_PRODUCT_GUIDE_INTAKE.md
 docs/department-reality/COATING_MODEL_FINISH_MATRIX.md
 docs/TRAVELER_PRODUCT_CLASSIFICATION_RULE_PACK.md
+docs/LOOSE_ENDS.md
 ```
 
 Department reality docs:
@@ -429,7 +457,7 @@ Main active risks:
 - Clamps and Patch Clamps need more detail.
 - 412/432/452 rules need confirmation before route hints become dispatch logic.
 - Classifier should not overrule human review.
-- Current UI shows intelligence, but does not yet make it actionable.
+- Current UI shows intelligence and review warnings, but does not yet allow structured confirmation capture.
 
 ## Next Recommended Move
 
@@ -438,7 +466,26 @@ Do not jump straight to automatic dispatch.
 Recommended next code slice:
 
 ```text
-Pause route-rule expansion and collect missing confirmations.
+Add structured confirmation capture for review items.
+```
+
+Why:
+
+- The UI now shows classification review needs.
+- The next useful step is capturing confirmations as structured selections, not free-text guesses.
+- This would turn review warnings into a controlled confirmation workflow.
+
+Guardrails for confirmation capture:
+
+- Structured selections > free text.
+- No automatic route approval yet.
+- No confidence increases without explicit confirmation data.
+- Store confirmations separately from raw classifier rules at first.
+
+Alternate next move:
+
+```text
+Pause coding and collect plant facts from the Loose Ends list.
 ```
 
 Most valuable confirmations:
@@ -452,28 +499,18 @@ Most valuable confirmations:
 - Does 502 follow the same Saddles Dept path?
 - Is 502 passivated in Coating/passivation room?
 
-Alternate next move:
-
-```text
-Add an in-app review-needed summary panel for classification warnings.
-```
-
-Why:
-
-- The UI now shows intelligence, but not yet a consolidated list of review risks.
-- This would keep uncertainty visible before automatic dispatch work.
-
 ## Exact Next Action
+
+If continuing code:
+
+1. Design a structured review-confirmation data shape.
+2. Use dropdown/selection values, not free text as the primary truth.
+3. Add display-only or local-only capture first.
+4. Do not mutate classifier rules automatically.
+5. Build and verify CI.
 
 If continuing knowledge capture:
 
-1. Answer the confirmation questions above.
-2. Update only the affected rules.
+1. Answer items from docs/LOOSE_ENDS.md.
+2. Update only affected docs/rules.
 3. Build and verify CI if code changes.
-
-If continuing UI visibility:
-
-1. Add a compact Classification Review Summary surface.
-2. List orders/travelers that need human review.
-3. Do not add write actions.
-4. Build and verify CI.
