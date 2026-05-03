@@ -20,12 +20,13 @@ Current slice completed:
 - Classification Review Summary in the workflow panel.
 - Structured local confirmation capture for classification review items.
 - Global dashboard Classification Review Queue.
+- Safe drill-in navigation from global Classification Review Queue to department/work-center review capture.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25284452390
-Commit: 4a55983dd69f728790c83a8153b879507f3bcbaa
+Run ID: 25284781745
+Commit: a23a5c38972f03537a274531c24fe6b1d5c0eb58
 Status: GREEN
 ```
 
@@ -39,6 +40,33 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Global Queue Drill-In Navigation
+
+Added/updated:
+
+```text
+src/components/dashboard/ClassificationReviewQueue.tsx
+src/pages/DashboardPage.tsx
+```
+
+The Plant Command Center dashboard review queue now has a safe drill-in path.
+
+It now:
+
+- shows an OPEN REVIEW CAPTURE button per queue item.
+- matches the review-needed traveler department to the existing work center list.
+- opens the corresponding work-center/department detail page using the existing `onOpenWorkCenter` path.
+- leaves structured confirmation capture inside the department workflow panel.
+- disables the drill-in button if no matching work center exists.
+
+Important guardrail:
+
+- Drill-in only navigates to the existing review/capture surface.
+- It does not approve routes.
+- It does not mutate classifier rules.
+- It does not raise confidence.
+- It does not dispatch work.
 
 ### Global Dashboard Classification Review Queue
 
@@ -526,14 +554,14 @@ Do not jump straight to automatic dispatch.
 Recommended next code slice:
 
 ```text
-Add drill-in navigation from global queue items to the relevant department/work-center review capture.
+Add review-target awareness so drill-in can highlight or preselect the selected traveler in the department workflow panel.
 ```
 
 Why:
 
-- Global dashboard now shows plant-wide unresolved classification risks.
-- Department workflow panels are where structured confirmations are captured.
-- The next useful bridge is a safe drill-in path, not approval behavior.
+- Global queue can now route users to the correct work-center page.
+- The next refinement is helping the worker land directly on the relevant review item/capture panel.
+- This is still navigation/visibility only, not approval behavior.
 
 Guardrails:
 
@@ -564,8 +592,8 @@ Most valuable confirmations:
 
 If continuing code:
 
-1. Add safe drill-in navigation from global queue items.
-2. Route users to the relevant department/work-center panel where capture already exists.
+1. Pass the selected queue order/traveler target through drill-in navigation.
+2. Let the work-center workflow panel highlight or preselect the matching review item.
 3. Do not add approval behavior.
 4. Build and verify CI.
 
