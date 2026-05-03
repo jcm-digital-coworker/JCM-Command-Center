@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { WorkCenter } from '../../types/plant';
+import { getDepartmentOperatingProfile } from '../../data/departmentOperatingProfiles';
 import type { DashboardTheme } from './dashboardStyles';
 
 type DashboardWorkCenterCardProps = {
@@ -8,14 +9,12 @@ type DashboardWorkCenterCardProps = {
   onOpen: (workCenter: WorkCenter) => void;
 };
 
-type TruthStrength = 'STRONG' | 'PARTIAL' | 'PLACEHOLDER';
-
 export default function DashboardWorkCenterCard({
   workCenter,
   theme,
   onOpen,
 }: DashboardWorkCenterCardProps) {
-  const truthStrength = getDepartmentTruthStrength(workCenter.department);
+  const profile = getDepartmentOperatingProfile(workCenter.department);
   const focusItems = workCenter.dailyFocus.slice(0, 2);
   const nextModule = workCenter.nextBuildModules[0] ?? 'Needs module plan';
 
@@ -30,10 +29,10 @@ export default function DashboardWorkCenterCard({
           <div style={getWorkCenterTitleStyle(theme)}>{workCenter.name}</div>
           <div style={chipRowStyle}>
             <span style={getResourceTypeStyle(workCenter.department)}>
-              {getDepartmentResourceLabel(workCenter.department)}
+              {profile.resourceLabel}
             </span>
-            <span style={getTruthBadgeStyle(truthStrength)}>
-              TRUTH: {truthStrength}
+            <span style={getTruthBadgeStyle(profile.truthStrength)}>
+              TRUTH: {profile.truthStrength}
             </span>
           </div>
         </div>
@@ -44,12 +43,12 @@ export default function DashboardWorkCenterCard({
 
       <div style={sectionBlockStyle}>
         <div style={fieldLabelStyle}>Open for</div>
-        <div style={getBodyTextStyle(theme)}>{getOpenForSignal(workCenter)}</div>
+        <div style={getBodyTextStyle(theme)}>{profile.openForSignal}</div>
       </div>
 
       <div style={sectionBlockStyle}>
         <div style={fieldLabelStyle}>Owns</div>
-        <div style={getBodyTextStyle(theme)}>{summarizePrimaryFunction(workCenter.primaryFunction)}</div>
+        <div style={getBodyTextStyle(theme)}>{profile.operatingSummary}</div>
       </div>
 
       {focusItems.length > 0 ? (
@@ -72,59 +71,6 @@ export default function DashboardWorkCenterCard({
       </div>
     </button>
   );
-}
-
-function getDepartmentResourceLabel(department: string) {
-  const labels: Record<string, string> = {
-    Sales: 'Order release / customer signal',
-    Engineering: 'Blueprint / routing gate',
-    Receiving: 'Material intake / staging',
-    'Machine Shop': 'Size-specific CNC / machining flow',
-    'Material Handling': 'Cut / form / roll / press flow',
-    Fab: 'Weld lanes / product fabrication',
-    Coating: 'Prep / paint / plastic dip / passivation',
-    Assembly: 'Product-lane assembly / kit readiness',
-    'Saddles Dept': 'Service saddle build lane',
-    'Patch Clamps': 'Patch clamp product lane',
-    Clamps: 'Clamp product lane',
-    QA: 'Validation / hold layer',
-    Shipping: 'Outbound lanes / ship readiness',
-    Maintenance: 'Reliability / repair flow',
-    Office: 'Admin / purchasing / planning',
-  };
-  return labels[department] ?? 'Work center';
-}
-
-function getOpenForSignal(workCenter: WorkCenter) {
-  const signals: Record<string, string> = {
-    Sales: 'order release readiness, hot-order changes, and customer signal handoff.',
-    Engineering: 'blueprint blockers, routing release, and engineered-order review.',
-    Receiving: 'material arrival, staging truth, and downstream delivery needs.',
-    'Machine Shop': 'machine-capability fit, setup-sensitive work, and tooling or maintenance blockers.',
-    'Material Handling': 'cut lists, burn/roll/press bottlenecks, and downstream material shortages.',
-    Fab: 'weld queue pressure, fixture needs, lane handoff, and quality holds.',
-    Coating: 'finish blockers, prep status, process-zone readiness, and passivation/coating questions.',
-    Assembly: 'missing components, build queue readiness, and product-lane handoffs.',
-    'Saddles Dept': 'service saddle batch progress, LV4500 work, gauge checks, and saddle-specific flow.',
-    'Patch Clamps': 'patch clamp queue, material readiness, and unresolved product-lane setup.',
-    Clamps: 'clamp queue, material readiness, and product-lane blockers.',
-    QA: 'quality holds, inspection status, compliance checks, and release blockers.',
-    Shipping: 'hot shipments, staging, packing status, and dock readiness.',
-    Maintenance: 'open work orders, downtime impact, assignments, and repair closeout.',
-    Office: 'purchasing requests, approvals, scheduling visibility, and plant communication.',
-  };
-  return signals[workCenter.department] ?? workCenter.stationTabletDefault;
-}
-
-function getDepartmentTruthStrength(department: string): TruthStrength {
-  if (['Machine Shop', 'Material Handling', 'Coating', 'Saddles Dept', 'QA', 'Maintenance'].includes(department)) return 'STRONG';
-  if (['Receiving', 'Fab', 'Assembly', 'Engineering', 'Shipping'].includes(department)) return 'PARTIAL';
-  return 'PLACEHOLDER';
-}
-
-function summarizePrimaryFunction(primaryFunction: string) {
-  const [firstSentence] = primaryFunction.split('.');
-  return firstSentence.length > 110 ? `${firstSentence.slice(0, 107).trim()}...` : firstSentence;
 }
 
 function formatCoverage(coverage: WorkCenter['coverage']) {
@@ -180,7 +126,7 @@ function getResourceTypeStyle(department: string): CSSProperties {
   };
 }
 
-function getTruthBadgeStyle(strength: TruthStrength): CSSProperties {
+function getTruthBadgeStyle(strength: string): CSSProperties {
   const color = strength === 'STRONG' ? '#10b981' : strength === 'PARTIAL' ? '#38bdf8' : '#64748b';
   return {
     display: 'inline-block',
