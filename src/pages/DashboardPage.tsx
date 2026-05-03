@@ -128,7 +128,7 @@ export default function DashboardPage({
       />
       <QuickActionsPanel roleView={roleView} actions={quickActions} onGoToTab={onGoToTab} theme={theme} />
       <PlantSignalsPanel onNavigate={onGoToTab} />
-      <ClassificationReviewQueue theme={theme} />
+      <ClassificationReviewQueue theme={theme} workCenters={workCenters} onOpenWorkCenter={onOpenWorkCenter} />
 
       <DashboardOverviewPanels
         openOrderCount={openOrders.length}
