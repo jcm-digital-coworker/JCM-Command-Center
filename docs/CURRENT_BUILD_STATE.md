@@ -19,12 +19,13 @@ Current slice completed:
 - 412 carbon tapping sleeve classification refinement.
 - Classification Review Summary in the workflow panel.
 - Structured local confirmation capture for classification review items.
+- Global dashboard Classification Review Queue.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25268058143
-Commit: c2b6510236759430ad6c5d1a60a9ce5387612b1c
+Run ID: 25284452390
+Commit: 4a55983dd69f728790c83a8153b879507f3bcbaa
 Status: GREEN
 ```
 
@@ -38,6 +39,33 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Global Dashboard Classification Review Queue
+
+Added/updated:
+
+```text
+src/components/dashboard/ClassificationReviewQueue.tsx
+src/pages/DashboardPage.tsx
+```
+
+The Plant Command Center dashboard now shows a plant-wide Classification Review Queue after Plant Signals.
+
+It now:
+
+- gathers review-needed Dynamic Travelers across the plant.
+- shows plant-wide unresolved route/product/classification risks.
+- shows order number, department, model signal, product family, finish hint, confidence, QA required/not required, review reason, suggested route, current instruction, and saved confirmation count.
+- listens for local confirmation updates so saved confirmation counts refresh.
+- separates captured confirmations from unresolved review items.
+
+Important guardrail:
+
+- The queue is visibility only.
+- It does not approve routes.
+- It does not mutate classifier rules.
+- It does not raise confidence.
+- It does not dispatch work.
 
 ### Structured Classification Review Confirmation Capture
 
@@ -498,14 +526,14 @@ Do not jump straight to automatic dispatch.
 Recommended next code slice:
 
 ```text
-Add a global / dashboard-level Classification Review queue.
+Add drill-in navigation from global queue items to the relevant department/work-center review capture.
 ```
 
 Why:
 
-- Department workflow panels now show and capture confirmations locally.
-- A global queue would show plant-wide unresolved classification risks.
-- This is still visibility/capture, not dispatch.
+- Global dashboard now shows plant-wide unresolved classification risks.
+- Department workflow panels are where structured confirmations are captured.
+- The next useful bridge is a safe drill-in path, not approval behavior.
 
 Guardrails:
 
@@ -513,6 +541,7 @@ Guardrails:
 - No classifier mutation.
 - No confidence increases without confirmed governance.
 - Keep structured selections as the source of truth.
+- Keep queue/capture visibility-first.
 
 Alternate next move:
 
@@ -535,11 +564,10 @@ Most valuable confirmations:
 
 If continuing code:
 
-1. Search for the best global dashboard surface.
-2. Add a plant-wide Classification Review queue/card.
-3. Reuse existing Dynamic Traveler classification data and local confirmation store.
-4. Do not add approval behavior.
-5. Build and verify CI.
+1. Add safe drill-in navigation from global queue items.
+2. Route users to the relevant department/work-center panel where capture already exists.
+3. Do not add approval behavior.
+4. Build and verify CI.
 
 If continuing knowledge capture:
 
