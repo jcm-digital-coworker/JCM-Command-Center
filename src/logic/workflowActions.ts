@@ -39,9 +39,7 @@ export function addWorkflowAction(record: Omit<WorkflowActionRecord, 'id' | 'cre
   window.dispatchEvent(new Event('jcm-workflow-action-log-updated'));
 
   if (record.actionType === 'ENGINEERING_ESCALATION') {
-    window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent(JCM_NAVIGATE_EVENT, { detail: { tab: 'engineering' } }));
-    }, 0);
+    routeToEngineeringAfterEscalation();
   }
 
   return next;
@@ -50,4 +48,12 @@ export function addWorkflowAction(record: Omit<WorkflowActionRecord, 'id' | 'cre
 export function clearWorkflowActionLog() {
   localStorage.removeItem(STORAGE_KEY);
   window.dispatchEvent(new Event('jcm-workflow-action-log-updated'));
+}
+
+function routeToEngineeringAfterEscalation() {
+  [0, 50, 150].forEach((delayMs) => {
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(JCM_NAVIGATE_EVENT, { detail: { tab: 'engineering' } }));
+    }, delayMs);
+  });
 }
