@@ -19,6 +19,7 @@ export type AppTab =
   | 'qa'
   | 'sales'
   | 'engineering'
+  | 'saddles'
   | 'documents'
   | 'risk'
   | 'shiftHandoff'

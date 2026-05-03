@@ -7,7 +7,9 @@ export type WorkflowRuntimeActionKind =
   | 'ESCALATE_ENGINEERING'
   | 'ACKNOWLEDGE_ORDER'
   | 'START_WORK'
-  | 'RESOLVE_BLOCKER';
+  | 'RESOLVE_BLOCKER'
+  | 'ADVANCE_DEPARTMENT'
+  | 'COMPLETE_ORDER';
 
 export type RuntimeOrderOverride = Partial<Pick<
   ProductionOrder,
@@ -17,6 +19,8 @@ export type RuntimeOrderOverride = Partial<Pick<
   | 'status'
   | 'flowStatus'
   | 'blockers'
+  | 'currentDepartment'
+  | 'nextDepartment'
 >> & {
   lastAction?: string;
   lastActionAt?: string;
@@ -45,7 +49,12 @@ export function getRuntimeProductionOrders(orders: ProductionOrder[] = productio
   return orders.map(getRuntimeOrder);
 }
 
-export function applyWorkflowRuntimeAction(orderNumber: string, actionKind: WorkflowRuntimeActionKind, note?: string): RuntimeOrderOverride {
+export function applyWorkflowRuntimeAction(
+  orderNumber: string,
+  actionKind: WorkflowRuntimeActionKind,
+  note?: string,
+  extraOverrides?: Partial<RuntimeOrderOverride>,
+): RuntimeOrderOverride {
   const currentState = getWorkflowRuntimeState();
   const baseOrder = productionOrders.find((order) => order.orderNumber === orderNumber);
   const currentOrder = baseOrder ? getRuntimeOrder(baseOrder) : undefined;
@@ -55,6 +64,7 @@ export function applyWorkflowRuntimeAction(orderNumber: string, actionKind: Work
     [orderNumber]: {
       ...(currentState[orderNumber] ?? {}),
       ...nextOverride,
+      ...(extraOverrides ?? {}),
       lastAction: note ?? actionKind,
       lastActionAt: new Date().toISOString(),
     },
@@ -112,6 +122,22 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
       blockers: [],
       flowStatus: 'runnable',
       status: 'READY',
+    };
+  }
+
+  if (actionKind === 'ADVANCE_DEPARTMENT') {
+    return {
+      status: 'ready',
+      flowStatus: 'runnable',
+      blockers: [],
+    };
+  }
+
+  if (actionKind === 'COMPLETE_ORDER') {
+    return {
+      status: 'DONE',
+      flowStatus: 'RUNNABLE',
+      blockers: [],
     };
   }
 

@@ -44,6 +44,7 @@ export const navigationGroups: NavigationGroup[] = [
       { id: 'plantMap', label: 'Plant Map', roles: [...plantLeadershipRoles, ...productionRoles, ...maintenanceRoles, ...supportRoles], description: 'Department and work-center overview.' },
       { id: 'machines', label: 'Equipment', roles: [...plantLeadershipRoles, ...productionRoles, ...maintenanceRoles], description: 'Equipment status and machine detail cards.' },
       { id: 'fab', label: 'Fab', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Fabrication department view.' },
+      { id: 'saddles', label: 'Saddles', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Saddles cell — LV4500 service saddle production.' },
       { id: 'coating', label: 'Coating', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Coating department view.' },
       { id: 'assembly', label: 'Assembly', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Assembly department view.' },
       { id: 'shipping', label: 'Shipping', roles: [...plantLeadershipRoles, ...productionRoles, ...supportRoles], description: 'Outbound readiness and shipping focus.' },

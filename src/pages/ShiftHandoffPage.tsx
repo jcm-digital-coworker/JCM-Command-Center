@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { productionOrders } from '../data/productionOrders';
+import { getRuntimeProductionOrders } from '../logic/workflowRuntimeState';
 import { maintenanceRequests } from '../data/maintenanceRequests';
 import { seedCoverage } from '../data/coverage';
 import { COVERAGE_STORAGE_KEY } from '../logic/coverage';
@@ -23,15 +23,16 @@ function loadCoverage(): CoveragePerson[] {
 export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPageProps) {
   const [copied, setCopied] = useState(false);
   const coverage = loadCoverage().filter((p) => p.status !== 'OFFLINE');
+  const liveOrders = getRuntimeProductionOrders();
 
-  const readyToRun = productionOrders.filter((o) =>
+  const readyToRun = liveOrders.filter((o) =>
     String(o.status).toLowerCase() === 'ready' &&
     String(o.flowStatus).toLowerCase() !== 'blocked',
   );
-  const blocked = productionOrders.filter((o) =>
+  const blocked = liveOrders.filter((o) =>
     String(o.flowStatus).toLowerCase() === 'blocked' || (o.blockers ?? []).length > 0,
   );
-  const onHold = productionOrders.filter((o) =>
+  const onHold = liveOrders.filter((o) =>
     String(o.status).toLowerCase() === 'hold',
   );
   const openMaint = maintenanceRequests.filter((r) =>

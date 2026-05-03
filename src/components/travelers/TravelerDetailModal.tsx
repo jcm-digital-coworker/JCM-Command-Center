@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { DynamicTraveler, TravelerAction, TravelerResource } from '../../types/dynamicTraveler';
+import type { DynamicTraveler, TravelerAction, TravelerActionType, TravelerResource } from '../../types/dynamicTraveler';
 import { generatePlantTraveler } from '../../logic/dynamicTraveler';
+import { applyWorkflowRuntimeAction } from '../../logic/workflowRuntimeState';
 import PlantTravelerDetailModal from './PlantTravelerDetailModal';
+import type { Department } from '../../types/machine';
 
 type TravelerDetailModalProps = {
   traveler: DynamicTraveler;
@@ -14,7 +16,30 @@ type TravelerDetailModalProps = {
 export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOrders }: TravelerDetailModalProps) {
   const [selectedResource, setSelectedResource] = useState<TravelerResource | null>(traveler.bestResource ?? null);
   const [showPlantTraveler, setShowPlantTraveler] = useState(false);
+  const [lastFired, setLastFired] = useState<TravelerActionType | null>(null);
   const order = traveler.order;
+
+  function handleAction(type: TravelerActionType) {
+    const orderNumber = order.orderNumber;
+    if (type === 'REQUEST_MATERIAL') {
+      applyWorkflowRuntimeAction(orderNumber, 'REQUEST_MATERIAL', 'Material requested from traveler');
+    } else if (type === 'MARK_READY_FOR_HANDOFF') {
+      applyWorkflowRuntimeAction(orderNumber, 'START_WORK', 'Marked ready for handoff');
+    } else if (type === 'SEND_TO_NEXT_DEPARTMENT' && traveler.nextHandoff && traveler.nextHandoff !== 'Complete') {
+      const next = traveler.nextHandoff as Department;
+      applyWorkflowRuntimeAction(orderNumber, 'ADVANCE_DEPARTMENT', `Sent to ${next}`, {
+        currentDepartment: next,
+      });
+    } else if (type === 'COMPLETE_ORDER') {
+      applyWorkflowRuntimeAction(orderNumber, 'COMPLETE_ORDER', 'Order marked complete from traveler');
+      onClose();
+      return;
+    } else if (type === 'REPORT_ISSUE') {
+      applyWorkflowRuntimeAction(orderNumber, 'RESOLVE_BLOCKER', 'Issue reported — blocker cleared');
+    }
+    setLastFired(type);
+    setTimeout(() => setLastFired(null), 2000);
+  }
   const signalColor = getSignalColor(traveler.visualSignal);
   const visibleActions = traveler.actions.filter((action) => action.type !== 'OPEN_DETAIL' && action.type !== 'OPEN_FULL_ORDER' && action.type !== 'OPEN_PLANT_TRAVELER');
   const plantTraveler = generatePlantTraveler(order);
@@ -96,10 +121,10 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
 
         <section style={sectionBlockStyle}>
           <div style={smallLabelStyle(theme)}>Traveler Actions</div>
-          <p style={helperTextStyle(theme)}>These are traveler signals. Disabled writeback actions are shown as locked until the live action flow is connected.</p>
+          <p style={helperTextStyle(theme)}>Enabled actions update order state in real time. Locked actions require preconditions to be met first.</p>
           <div style={listStyle}>
             {visibleActions.map((action) => (
-              <ActionRow key={action.type} action={action} theme={theme} />
+              <ActionRow key={action.type} action={action} theme={theme} onFire={handleAction} fired={lastFired === action.type} />
             ))}
           </div>
         </section>
@@ -199,14 +224,25 @@ function ResourceContextPanel({ traveler, resource, theme }: { traveler: Dynamic
   );
 }
 
-function ActionRow({ action, theme }: { action: TravelerAction; theme: 'dark' | 'light' }) {
+function ActionRow({ action, theme, onFire, fired }: { action: TravelerAction; theme: 'dark' | 'light'; onFire: (type: TravelerActionType) => void; fired: boolean }) {
   return (
     <div style={actionRowStyle(theme, action.enabled)}>
       <div>
         <div style={actionLabelStyle(theme, action.enabled)}>{action.label}</div>
         {action.reason ? <div style={actionReasonStyle(theme)}>{action.reason}</div> : null}
       </div>
-      <span style={actionStatusStyle(action.enabled)}>{action.enabled ? 'SIGNAL' : 'LOCKED'}</span>
+      {action.enabled ? (
+        <button
+          type="button"
+          onClick={() => onFire(action.type)}
+          style={actionFireButtonStyle(fired)}
+          disabled={fired}
+        >
+          {fired ? '✓ DONE' : 'ACT'}
+        </button>
+      ) : (
+        <span style={actionStatusStyle(false)}>LOCKED</span>
+      )}
     </div>
   );
 }
@@ -583,6 +619,21 @@ function actionStatusStyle(enabled: boolean): CSSProperties {
     fontSize: 9,
     fontWeight: 900,
     letterSpacing: '0.8px',
+    whiteSpace: 'nowrap',
+  };
+}
+
+function actionFireButtonStyle(fired: boolean): CSSProperties {
+  return {
+    padding: '5px 10px',
+    borderRadius: 4,
+    border: fired ? '1px solid #10b981' : '1px solid #f97316',
+    background: fired ? 'rgba(16,185,129,0.15)' : 'rgba(249,115,22,0.15)',
+    color: fired ? '#10b981' : '#f97316',
+    fontSize: 10,
+    fontWeight: 900,
+    cursor: fired ? 'default' : 'pointer',
+    letterSpacing: '0.5px',
     whiteSpace: 'nowrap',
   };
 }

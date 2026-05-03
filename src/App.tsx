@@ -41,6 +41,7 @@ import ShippingDepartmentPage from './pages/departments/ShippingDepartmentPage';
 import QADepartmentPage from './pages/departments/QADepartmentPage';
 import SalesDepartmentPage from './pages/departments/SalesDepartmentPage';
 import EngineeringDepartmentPage from './pages/departments/EngineeringDepartmentPage';
+import SaddlesDepartmentPage from './pages/departments/SaddlesDepartmentPage';
 import ShiftHandoffPage from './pages/ShiftHandoffPage';
 import WarRoomContextPage from './pages/WarRoomContextPage';
 
@@ -455,6 +456,7 @@ export default function App() {
     if (tab === 'plantMap') return <PlantMapPage theme={theme} />;
     if (tab === 'sales') return <SalesDepartmentPage theme={theme} />;
     if (tab === 'engineering') return <EngineeringDepartmentPage theme={theme} />;
+    if (tab === 'saddles') return <SaddlesDepartmentPage theme={theme} />;
     if (tab === 'materialHandling') return <MaterialHandlingDepartmentPage theme={theme} />;
     if (tab === 'fab') return <FabDepartmentPage theme={theme} />;
     if (tab === 'coating') return <CoatingDepartmentPage theme={theme} />;
@@ -518,6 +520,7 @@ function getCommandLabel(tab: AppTab): string {
     qa: 'QA',
     documents: 'Documents',
     risk: 'QA / Safety',
+    saddles: 'Saddles Dept',
     shiftHandoff: 'Shift Handoff',
     warRoomContext: 'War Room Context',
   };

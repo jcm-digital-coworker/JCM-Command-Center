@@ -308,9 +308,15 @@ function getTravelerActions(
     },
     {
       type: 'SEND_TO_NEXT_DEPARTMENT',
-      label: nextHandoff ? `Send to ${nextHandoff}` : 'Send to next department',
-      enabled: Boolean(nextHandoff) && (stepStatus === 'READY' || stepStatus === 'ACTIVE'),
-      reason: nextHandoff ? undefined : 'No next handoff is available.',
+      label: nextHandoff && nextHandoff !== 'Complete' ? `Send to ${nextHandoff}` : 'Send to next department',
+      enabled: Boolean(nextHandoff) && nextHandoff !== 'Complete' && (stepStatus === 'READY' || stepStatus === 'ACTIVE'),
+      reason: !nextHandoff ? 'No next handoff is available.' : nextHandoff === 'Complete' ? 'This is the final department — use Complete Order instead.' : undefined,
+    },
+    {
+      type: 'COMPLETE_ORDER',
+      label: 'Mark order complete',
+      enabled: nextHandoff === 'Complete' && (stepStatus === 'READY' || stepStatus === 'ACTIVE' || stepStatus === 'DONE'),
+      reason: nextHandoff !== 'Complete' ? 'Order has remaining departments before completion.' : undefined,
     },
     { type: 'OPEN_FULL_ORDER', label: 'Open full order', enabled: true },
   ];

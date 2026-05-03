@@ -57,6 +57,7 @@ export type TravelerActionType =
   | 'REPORT_RESOURCE_MISMATCH'
   | 'MARK_READY_FOR_HANDOFF'
   | 'SEND_TO_NEXT_DEPARTMENT'
+  | 'COMPLETE_ORDER'
   | 'OPEN_FULL_ORDER';
 
 export type TravelerAction = {
