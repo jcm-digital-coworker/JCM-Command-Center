@@ -1,5 +1,6 @@
 import type { Department } from "../types/machine";
 import type { WorkCenter } from "../types/plant";
+import { departmentOperatingProfiles } from "./departmentOperatingProfiles";
 
 export const plantDepartmentOrder: Department[] = [
   "Sales",
@@ -25,8 +26,7 @@ export const workCenters: WorkCenter[] = [
     department: "Sales",
     name: "Sales",
     status: "PLANNED",
-    primaryFunction:
-      "Own customer order intake, release signals, priority changes, and commercial handoff into production.",
+    primaryFunction: departmentOperatingProfiles.Sales.operatingSummary,
     dailyFocus: [
       "Sales order release readiness",
       "Customer priority and hot-order visibility",
@@ -43,8 +43,7 @@ export const workCenters: WorkCenter[] = [
     department: "Engineering",
     name: "Engineering",
     status: "WATCH",
-    primaryFunction:
-      "Own blueprint, routing, engineered-order review, and production packet release before work reaches the floor.",
+    primaryFunction: departmentOperatingProfiles.Engineering.operatingSummary,
     dailyFocus: [
       "Blueprint and routing release",
       "Engineered order review",
@@ -61,7 +60,7 @@ export const workCenters: WorkCenter[] = [
     department: "Office",
     name: "Office",
     status: "PLANNED",
-    primaryFunction: "Administrative, purchasing, scheduling, and management visibility across plant operations.",
+    primaryFunction: departmentOperatingProfiles.Office.operatingSummary,
     dailyFocus: ["Purchasing requests", "Production visibility", "Plant communication", "Management approvals"],
     roles: ["Admin", "Purchasing", "Scheduler", "Manager"],
     coverage: { note: "Shared office hub separate from Sales and Engineering workflow gates" },
@@ -73,8 +72,7 @@ export const workCenters: WorkCenter[] = [
     department: "Receiving",
     name: "Receiving",
     status: "PLANNED",
-    primaryFunction:
-      "Receive everything coming into the plant, verify receiver accuracy, inventory materials, deliver items to the right work centers, and order needed items.",
+    primaryFunction: departmentOperatingProfiles.Receiving.operatingSummary,
     dailyFocus: [
       "Inbound receiver accuracy",
       "Material put-away and location visibility",
@@ -91,8 +89,7 @@ export const workCenters: WorkCenter[] = [
     department: "Machine Shop",
     name: "Machine Shop",
     status: "WATCH",
-    primaryFunction:
-      "Run CNC and manual machines that turn raw material into products for downstream assembly.",
+    primaryFunction: departmentOperatingProfiles["Machine Shop"].operatingSummary,
     dailyFocus: [
       "Machine status and blockers",
       "Daily production by work center",
@@ -109,8 +106,7 @@ export const workCenters: WorkCenter[] = [
     department: "Material Handling",
     name: "Material Handling",
     status: "PLANNED",
-    primaryFunction:
-      "Cut, process, and shape material using metal saws, plasma tables, laser tables, and rollers before downstream operations.",
+    primaryFunction: departmentOperatingProfiles["Material Handling"].operatingSummary,
     dailyFocus: [
       "Cut list priority",
       "Material staging",
@@ -127,11 +123,10 @@ export const workCenters: WorkCenter[] = [
     department: "Fab",
     name: "Fab",
     status: "PLANNED",
-    primaryFunction:
-      "Welding department with future subgroups for each major product flow.",
+    primaryFunction: departmentOperatingProfiles.Fab.operatingSummary,
     dailyFocus: ["Weld queue", "Fixture availability", "Quality holds", "Assembly handoff readiness"],
     roles: ["Welder", "Fitter", "Lead Man", "Supervisor", "QA"],
-    coverage: { note: "To be broken into welding subgroups later" },
+    coverage: { note: "Known Fab lanes exist; staffing and lane-specific coverage still need confirmation" },
     stationTabletDefault: "Weld queue, blockers, fixture needs, and handoffs to assembly.",
     nextBuildModules: ["Fab subgroup boards", "Weld queue", "Quality hold tracker", "Assembly handoff"],
   },
@@ -140,8 +135,7 @@ export const workCenters: WorkCenter[] = [
     department: "Coating",
     name: "Coating",
     status: "PLANNED",
-    primaryFunction:
-      "Surface prep, enamel, plastic dip, shop coat, paint booth, blast rooms, and passivation processes.",
+    primaryFunction: departmentOperatingProfiles.Coating.operatingSummary,
     dailyFocus: ["Coating queue", "Surface prep bottlenecks", "Wheelabrator uptime", "Finish type readiness"],
     roles: ["Blaster", "Painter", "Dip Operator", "Passivation Tech", "Coating Lead", "Supervisor", "QA"],
     coverage: { note: "Large area with shared supervision across Shipping; exact asset list still being verified" },
@@ -153,11 +147,10 @@ export const workCenters: WorkCenter[] = [
     department: "Assembly",
     name: "Assembly",
     status: "PLANNED",
-    primaryFunction:
-      "Assemble downstream products from machined, handled, and welded components. Future subgroups should mirror Fab groups.",
+    primaryFunction: departmentOperatingProfiles.Assembly.operatingSummary,
     dailyFocus: ["Build queue", "Missing parts", "Fab handoffs", "Final inspection readiness"],
     roles: ["Assembler", "Lead", "Supervisor", "QA"],
-    coverage: { note: "To be broken into assembly subgroups that line up with Fab" },
+    coverage: { note: "Assembly is product-lane specific; exact subgroup coverage still needs confirmation" },
     stationTabletDefault: "Build queue, missing components, handoffs, and completed units.",
     nextBuildModules: ["Assembly subgroup boards", "Missing parts tracker", "Build status", "Final checkoff"],
   },
@@ -166,7 +159,7 @@ export const workCenters: WorkCenter[] = [
     department: "Saddles Dept",
     name: "Saddles Dept",
     status: "WATCH",
-    primaryFunction: "Dedicated saddles production and JCM service saddle workflows.",
+    primaryFunction: departmentOperatingProfiles["Saddles Dept"].operatingSummary,
     dailyFocus: ["Saddle job setup", "Batch progress", "Gauge checks", "Macro simulation support"],
     roles: ["Assembler", "Lead", "Supervisor"],
     coverage: { note: "Existing focused app module" },
@@ -178,10 +171,10 @@ export const workCenters: WorkCenter[] = [
     department: "Patch Clamps",
     name: "Patch Clamps",
     status: "PLANNED",
-    primaryFunction: "Future work center for patch clamp production tracking.",
+    primaryFunction: departmentOperatingProfiles["Patch Clamps"].operatingSummary,
     dailyFocus: ["Production queue", "Material availability", "Quality holds"],
     roles: ["Assembler", "Lead", "Supervisor"],
-    coverage: { note: "Deferred work center" },
+    coverage: { note: "Product-lane route and coverage details still need confirmation" },
     stationTabletDefault: "Queue, blockers, and work instructions.",
     nextBuildModules: ["Production board", "Inventory needs", "Inspection checklist"],
   },
@@ -190,10 +183,10 @@ export const workCenters: WorkCenter[] = [
     department: "Clamps",
     name: "Clamps",
     status: "PLANNED",
-    primaryFunction: "Future work center for clamp production tracking.",
+    primaryFunction: departmentOperatingProfiles.Clamps.operatingSummary,
     dailyFocus: ["Production queue", "Material availability", "Quality holds"],
     roles: ["Assembler", "Lead", "Supervisor"],
-    coverage: { note: "Deferred work center" },
+    coverage: { note: "Product-lane route and coverage details still need confirmation" },
     stationTabletDefault: "Queue, blockers, and work instructions.",
     nextBuildModules: ["Production board", "Inventory needs", "Inspection checklist"],
   },
@@ -202,8 +195,7 @@ export const workCenters: WorkCenter[] = [
     department: "QA",
     name: "QA",
     status: "WATCH",
-    primaryFunction:
-      "Plant-wide testing, compliance, inspection, and product acceptance signal layer.",
+    primaryFunction: departmentOperatingProfiles.QA.operatingSummary,
     dailyFocus: ["Quality holds", "Testing", "Compliance", "Rework signals"],
     roles: ["QA Inspector", "Compliance", "Engineering Support", "Supervisor"],
     coverage: { note: "Cross-cutting quality layer that works with shop floor and office personnel" },
@@ -215,10 +207,10 @@ export const workCenters: WorkCenter[] = [
     department: "Shipping",
     name: "Shipping",
     status: "PLANNED",
-    primaryFunction: "Future outbound shipment planning, staging, packing, and dock visibility.",
+    primaryFunction: departmentOperatingProfiles.Shipping.operatingSummary,
     dailyFocus: ["Hot shipments", "Staging", "Packed status", "Dock flow"],
     roles: ["Packer", "Stager", "Loader", "Shipping Coordinator", "Supervisor"],
-    coverage: { note: "Deferred work center" },
+    coverage: { note: "Outbound staging and coverage details still need confirmation" },
     stationTabletDefault: "Hot shipments, staging status, packed/not packed, and dock priorities.",
     nextBuildModules: ["Shipment queue", "Dock board", "Packing checklist", "Hot order alerts"],
   },
@@ -227,10 +219,10 @@ export const workCenters: WorkCenter[] = [
     department: "Maintenance",
     name: "Maintenance",
     status: "WATCH",
-    primaryFunction: "Work-order driven maintenance requests, tracking, assignment, and completion notes.",
+    primaryFunction: departmentOperatingProfiles.Maintenance.operatingSummary,
     dailyFocus: ["Open work orders", "Downtime impact", "Assigned owner", "Completion notes"],
     roles: ["Maintenance Tech", "Maintenance Lead", "Supervisor"],
-    coverage: { note: "Deferred but critical plant-wide module" },
+    coverage: { note: "Reliability flow is active; staffing and coverage details still need confirmation" },
     stationTabletDefault: "Open requests, urgent downtime, assigned tasks, and closeout notes.",
     nextBuildModules: ["Work order intake", "Priority queue", "Assignment board", "Maintenance history"],
   },
