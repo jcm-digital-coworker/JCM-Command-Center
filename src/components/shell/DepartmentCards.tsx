@@ -2,6 +2,7 @@ import type { Machine } from "../../types/machine";
 import type { MaintenanceTask } from "../../types/maintenance";
 import type { DepartmentFilter } from "../../types/app";
 import type { WorkCenter } from "../../types/plant";
+import { getDepartmentOperatingProfile } from "../../data/departmentOperatingProfiles";
 import type { CSSProperties } from "react";
 
 export default function DepartmentCards({
@@ -25,6 +26,7 @@ export default function DepartmentCards({
     <div style={departmentCardGridStyle}>
       {options.map((department) => {
         const center = workCenters.find((item) => item.department === department);
+        const profile = center ? getDepartmentOperatingProfile(center.department) : null;
         const deptMachines =
           department === "All"
             ? machines
@@ -60,10 +62,13 @@ export default function DepartmentCards({
               <span style={{ fontWeight: 900 }}>{department}</span>
               <span style={statusPillStyle}>{status}</span>
             </div>
+            <div style={resourceLabelStyle}>
+              {department === "All" ? "Plant command" : profile?.resourceLabel ?? "Work center"}
+            </div>
             <div style={cardPurposeStyle}>
               {department === "All"
                 ? "Whole plant command view"
-                : center?.primaryFunction ?? "Planned work center"}
+                : profile?.operatingSummary ?? center?.primaryFunction ?? "Planned work center"}
             </div>
             <div style={metricRowStyle}>
               <span>{deptMachines.length} machines</span>
@@ -89,7 +94,7 @@ const departmentCardStyle: CSSProperties = {
   borderRadius: 18,
   cursor: "pointer",
   textAlign: "left",
-  minHeight: 136,
+  minHeight: 150,
 };
 
 const cardTopLineStyle: CSSProperties = {
@@ -109,9 +114,18 @@ const statusPillStyle: CSSProperties = {
   background: "#f8fafc",
 };
 
+const resourceLabelStyle: CSSProperties = {
+  color: "#f97316",
+  marginTop: 8,
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: "0.4px",
+  textTransform: "uppercase",
+};
+
 const cardPurposeStyle: CSSProperties = {
   color: "#475569",
-  marginTop: 8,
+  marginTop: 6,
   fontSize: 13,
   lineHeight: 1.35,
 };
