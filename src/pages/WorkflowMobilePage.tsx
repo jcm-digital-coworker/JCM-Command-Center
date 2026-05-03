@@ -225,8 +225,8 @@ function TravelerMeta({ label, value, theme }: { label: string; value: string; t
 }
 
 function getWorkflowMode(roleView: RoleView): WorkflowMode {
-  if (roleView === 'Production' || roleView === 'Operator' || roleView === 'operator') return 'production';
-  if (roleView === 'Department Lead' || roleView === 'Department Supervisor' || roleView === 'Lead / Supervisor' || roleView === 'lead' || roleView === 'supervisor') return 'lead';
+  if (roleView === 'Production') return 'production';
+  if (roleView === 'Department Lead' || roleView === 'Department Supervisor') return 'lead';
   return 'management';
 }
 
