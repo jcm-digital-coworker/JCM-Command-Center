@@ -345,7 +345,8 @@ export default function App() {
           }}
           onOpenEngineering={() => {
             setSelectedWorkCenter(null);
-            navigateTo('orders');
+            setDepartmentFilter('Engineering');
+            navigateTo('engineering');
           }}
           theme={theme}
         />
