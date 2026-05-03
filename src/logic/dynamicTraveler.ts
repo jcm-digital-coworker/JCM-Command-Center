@@ -1,4 +1,5 @@
 import { departmentResources } from '../data/departmentResources';
+import { classifyProductionOrder } from './classifyProductionOrder';
 import type { Department } from '../types/machine';
 import type { ProductionOrder, ProductLane } from '../types/productionOrder';
 import type {
@@ -33,6 +34,7 @@ export function generatePlantTravelers(orders: ProductionOrder[]): PlantTraveler
 }
 
 export function generatePlantTraveler(order: ProductionOrder): PlantTraveler {
+  const productClassification = classifyProductionOrder(order);
   const route = getPlantRoute(order);
   const rawDepartmentSteps = route.map((department) => generateDynamicTraveler(order, department));
   const activeIndex = Math.max(route.indexOf(order.currentDepartment), 0);
@@ -49,6 +51,11 @@ export function generatePlantTraveler(order: ProductionOrder): PlantTraveler {
     order,
     route,
     departmentSteps,
+    productClassification,
+    finishHints: productClassification.finishHints,
+    qaRequired: productClassification.qaRequired,
+    suggestedRoute: productClassification.routeHint,
+    classificationReviewReasons: productClassification.reviewReasons,
     activeDepartment: activeStep?.department ?? order.currentDepartment,
     nextDepartment,
     overallStatus,
@@ -61,6 +68,7 @@ export function generatePlantTraveler(order: ProductionOrder): PlantTraveler {
 }
 
 export function generateDynamicTraveler(order: ProductionOrder, department: Department): DynamicTraveler {
+  const productClassification = classifyProductionOrder(order);
   const materialStatus = order.materialStatus ?? 'UNKNOWN';
   const qaStatus = order.qaStatus ?? 'UNKNOWN';
   const blockers = order.blockers ?? [];
@@ -83,6 +91,10 @@ export function generateDynamicTraveler(order: ProductionOrder, department: Depa
     blockers,
     materialStatus,
     qaStatus,
+    productClassification,
+    finishHints: productClassification.finishHints,
+    qaRequired: productClassification.qaRequired,
+    classificationReviewReasons: productClassification.reviewReasons,
     actions: getTravelerActions(order, stepStatus, bestResource, nextHandoff),
     priorityScore: getTravelerPriorityScore(order, stepStatus, bestResource),
     visualSignal: getVisualSignal(stepStatus),
@@ -108,6 +120,11 @@ export function getRequiredCapabilities(order: ProductionOrder, department: Depa
 function getPlantRoute(order: ProductionOrder): Department[] {
   if (order.requiredDepartments && order.requiredDepartments.length > 0) {
     return dedupeRoute(order.requiredDepartments);
+  }
+
+  const productClassification = classifyProductionOrder(order);
+  if (productClassification.routeHint.length > 0 && !productClassification.needsHumanReview) {
+    return dedupeRoute(productClassification.routeHint);
   }
 
   const route = [...DEFAULT_PLANT_ROUTE];
@@ -173,6 +190,8 @@ function getPlantTravelerSortScore(traveler: PlantTraveler): number {
   if (traveler.overallStatus === 'READY' || traveler.overallStatus === 'ACTIVE') score += 80;
   if (traveler.order.priority === 'critical' || traveler.order.priority === 'CRITICAL') score += 30;
   if (traveler.order.priority === 'hot' || traveler.order.priority === 'HOT') score += 20;
+  if (traveler.qaRequired) score += 5;
+  if (traveler.classificationReviewReasons.length > 0) score += 5;
   score += Math.max(0, 100 - traveler.completionPercent) / 10;
   return score;
 }
@@ -184,7 +203,7 @@ function getMachineShopCapabilities(order: ProductionOrder): TravelerCapability[
   if (lane === 'SERVICE_SADDLE' || family.includes('SERVICE_SADDLE')) return ['service-saddle', 'large-turning'];
   if (lane === 'TAPPING_SLEEVE' || family.includes('TAPPING_SLEEVE')) return ['tapping-sleeve', 'large-turning'];
   if (lane === 'COUPLING' || family.includes('COUPLING')) return ['coupling', 'turning'];
-  if (lane === 'PIPE_FABRICATION' || family.includes('PIPE_FABRICATION')) return ['pipe-fabrication', 'large-turning'];
+  if (lane === 'PIPE_FABRATION' || family.includes('PIPE_FABRICATION')) return ['pipe-fabrication', 'large-turning'];
   if (lane === 'ENGINEERED_FITTING' || family.includes('ENGINEERED')) return ['engineered-fitting', 'large-turning'];
   if (lane === 'CLAMP' || lane === 'PATCH_CLAMP' || family.includes('REPAIR')) return ['repair-fitting', 'turning'];
   if (lane === 'OTHER') return ['turning'];
