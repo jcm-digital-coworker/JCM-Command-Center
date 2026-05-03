@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { WorkCenter } from '../types/plant';
 import type { Machine } from '../types/machine';
@@ -56,6 +57,7 @@ export default function WorkCenterDetailPage({
   onOpenEngineering,
   theme = 'dark',
 }: WorkCenterDetailPageProps) {
+  const [digitalCoworkerOpen, setDigitalCoworkerOpen] = useState(false);
   const departmentMachines = workCenter.department === 'Maintenance'
     ? machines
     : machines.filter((machine) => machine.department === workCenter.department);
@@ -110,26 +112,28 @@ export default function WorkCenterDetailPage({
             {isSupervisorView ? workCenter.primaryFunction : getWorkerHeroText(workCenter.id)}
           </p>
         </div>
-        <div style={getStatusPillStyle(workCenter.status)}>{workCenter.status.replace('_', ' ')}</div>
-      </section>
-
-      <section style={getNextMoveStyle(theme)}>
-        <div style={eyebrowStyle}>DIGITAL CO-WORKER</div>
-        <h3 style={getSectionTitleStyle(theme)}>Today's priority</h3>
-        <p style={getLargeTextStyle(theme)}>{priority}</p>
-
-        {isSupervisorView ? (
-          <div style={getThreeColumnGridStyle()}>
-            <InfoTile label="Role view" value={roleView} theme={theme} />
-            <InfoTile label="Live coverage source" value="Tablet sign-in / roll call" theme={theme} />
-            <InfoTile label="Default station" value={workCenter.stationTabletDefault} theme={theme} />
-            <InfoTile label="Resource model" value={resourceModel?.displayLabel ?? 'Work center'} theme={theme} />
-          </div>
-        ) : (
-          <div style={getWorkerNoticeStyle(theme)}>
-            Worker station view: this screen stays focused on orders, claims, handoffs, blockers, and the next useful action. This area is modeled as {resourceModel?.displayLabel ?? 'a work center'}.
-          </div>
-        )}
+        <div style={heroControlsStyle}>
+          <div style={getStatusPillStyle(workCenter.status)}>{workCenter.status.replace('_', ' ')}</div>
+          <button
+            type="button"
+            onClick={() => setDigitalCoworkerOpen((open) => !open)}
+            style={getDigitalCoworkerButtonStyle(theme, digitalCoworkerOpen)}
+            aria-expanded={digitalCoworkerOpen}
+          >
+            DIGITAL CO-WORKER
+          </button>
+          {digitalCoworkerOpen ? (
+            <DigitalCoworkerFlyout
+              theme={theme}
+              roleView={roleView}
+              priority={priority}
+              workCenter={workCenter}
+              isSupervisorView={isSupervisorView}
+              resourceLabel={resourceModel?.displayLabel ?? 'Work center'}
+              onClose={() => setDigitalCoworkerOpen(false)}
+            />
+          ) : null}
+        </div>
       </section>
 
       <OperatorNextBestActionPanel model={actionModel} theme={theme} onSelectLane={handleOperatorLaneSelect} />
@@ -266,6 +270,51 @@ export default function WorkCenterDetailPage({
           />
         </Panel>
       </div>
+    </div>
+  );
+}
+
+function DigitalCoworkerFlyout({
+  theme,
+  roleView,
+  priority,
+  workCenter,
+  isSupervisorView,
+  resourceLabel,
+  onClose,
+}: {
+  theme: 'dark' | 'light';
+  roleView: RoleView;
+  priority: string;
+  workCenter: WorkCenter;
+  isSupervisorView: boolean;
+  resourceLabel: string;
+  onClose: () => void;
+}) {
+  return (
+    <div style={getFlyoutStyle(theme)}>
+      <div style={flyoutHeaderStyle}>
+        <div>
+          <div style={eyebrowStyle}>DIGITAL CO-WORKER</div>
+          <h3 style={getSectionTitleStyle(theme)}>Today's priority</h3>
+        </div>
+        <button type="button" onClick={onClose} style={getFlyoutCloseStyle(theme)}>CLOSE</button>
+      </div>
+
+      <p style={getFlyoutPriorityStyle(theme)}>{priority}</p>
+
+      {isSupervisorView ? (
+        <div style={getTwoColumnGridStyle()}>
+          <InfoTile label="Role view" value={roleView} theme={theme} />
+          <InfoTile label="Coverage source" value="Tablet sign-in / roll call" theme={theme} />
+          <InfoTile label="Default station" value={workCenter.stationTabletDefault} theme={theme} />
+          <InfoTile label="Resource model" value={resourceLabel} theme={theme} />
+        </div>
+      ) : (
+        <div style={getWorkerNoticeStyle(theme)}>
+          Worker station view: this screen stays focused on orders, claims, handoffs, blockers, and the next useful action. This area is modeled as {resourceLabel}.
+        </div>
+      )}
     </div>
   );
 }
@@ -418,20 +467,27 @@ const eyebrowStyle: CSSProperties = { color: '#f97316', fontSize: 11, fontWeight
 const mutedStyle: CSSProperties = { color: '#64748b', fontSize: 12, marginTop: 4, textAlign: 'left' };
 const listStackStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 10 };
 const panelHeaderStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' };
+const flyoutHeaderStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12 };
 const orangeDotStyle: CSSProperties = { width: 8, height: 8, borderRadius: 999, background: '#f97316', flex: '0 0 auto', marginTop: 5 };
 const actionButtonStyle: CSSProperties = { padding: '8px 12px', borderRadius: 4, border: '1px solid #f97316', background: 'rgba(249, 115, 22, 0.12)', color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '0.8px', cursor: 'pointer' };
 const tileLabelStyle: CSSProperties = { color: '#94a3b8', fontSize: 11, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 };
 const consoleBadgeRowStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' };
+const heroControlsStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end', position: 'relative', zIndex: 2 };
 const anchorStyle: CSSProperties = { scrollMarginTop: 16 };
 function getBackButtonStyle(theme: 'dark' | 'light'): CSSProperties { return { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 4, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: theme === 'dark' ? '#1e293b' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', cursor: 'pointer', fontWeight: 900, letterSpacing: '0.7px' }; }
-function getHeroStyle(theme: 'dark' | 'light', status: WorkCenter['status']): CSSProperties { return { padding: 22, borderRadius: 8, border: `1px solid ${getStatusColor(status)}`, background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.22)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }; }
+function getHeroStyle(theme: 'dark' | 'light', status: WorkCenter['status']): CSSProperties { return { padding: 22, borderRadius: 8, border: `1px solid ${getStatusColor(status)}`, background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.22)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', position: 'relative' }; }
 function getHeroTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, fontSize: 30, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', letterSpacing: '0.4px' }; }
 function getHeroTextStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: '10px 0 0 0', color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 14, lineHeight: 1.5, maxWidth: 820 }; }
+function getDigitalCoworkerButtonStyle(theme: 'dark' | 'light', open: boolean): CSSProperties { return { border: open ? '1px solid #f97316' : theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: open ? 'rgba(249,115,22,0.18)' : theme === 'dark' ? '#0f172a' : '#ffffff', color: open ? '#f97316' : theme === 'dark' ? '#e2e8f0' : '#0f172a', borderRadius: 4, padding: '8px 10px', fontSize: 11, fontWeight: 900, letterSpacing: '0.7px', cursor: 'pointer', whiteSpace: 'nowrap' }; }
+function getFlyoutStyle(theme: 'dark' | 'light'): CSSProperties { return { position: 'absolute', top: 76, right: 0, width: 'min(420px, calc(100vw - 48px))', padding: 16, borderRadius: 8, border: theme === 'dark' ? '1px solid #475569' : '1px solid #cbd5e1', background: theme === 'dark' ? '#111827' : '#ffffff', boxShadow: '0 18px 42px rgba(0,0,0,0.35)', zIndex: 20 }; }
+function getFlyoutCloseStyle(theme: 'dark' | 'light'): CSSProperties { return { border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: 'transparent', color: theme === 'dark' ? '#94a3b8' : '#64748b', borderRadius: 4, padding: '5px 7px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }; }
+function getFlyoutPriorityStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 16, lineHeight: 1.4, fontWeight: 850, margin: '0 0 12px 0' }; }
 function getNextMoveStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 20, borderRadius: 8, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#1e293b' : '#ffffff' }; }
 function getActionConsoleStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 18, borderRadius: 8, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#111827' : '#ffffff', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }; }
 function getLargeTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 20, lineHeight: 1.4, fontWeight: 800, margin: '8px 0 18px 0' }; }
 function getSectionTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 16, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase' }; }
 function getThreeColumnGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }; }
+function getTwoColumnGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }; }
 function getActionLaneGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }; }
 function getMainGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }; }
 function getPanelStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }; }
