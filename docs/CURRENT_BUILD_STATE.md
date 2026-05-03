@@ -16,12 +16,13 @@ Current slice completed:
 - Product Intelligence display in full Plant Traveler modal.
 - Compact Product Intelligence badges on Dynamic Traveler workflow cards.
 - Service saddle classification rule refinement.
+- 412 carbon tapping sleeve classification refinement.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25267450016
-Commit: 1f3e2f0e15b4a962f72d621f222071541f1450f5
+Run ID: 25267551642
+Commit: 29730ca5d43dd68dd29908e2e182c5e4e58bd1d2
 Status: GREEN
 ```
 
@@ -35,6 +36,35 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### 412 Carbon Tapping Sleeve Classification Refinement
+
+Updated:
+
+```text
+src/data/productClassificationRules.ts
+```
+
+412 rule was tightened only for the carbon 412 tapping sleeve family:
+
+- Product family remains TAPPING_SLEEVE.
+- Material class remains CARBON_STEEL.
+- Size/outlet hints remain SMALL / UNDER_12_INCH.
+- Route hint remains Material Handling -> Machine Shop -> Fab -> Coating -> Assembly.
+- Ownership notes now specify Material Handling + Machine Shop feed 412 Fab components.
+- Ownership notes now specify 412 Fab owns carbon small-body fabrication with 12 inch and under outlets.
+- Ownership notes now specify Coating handles shop coat or optional fusion epoxy review after 412 Fab.
+- Ownership notes now specify 412 Assembly builds after Coating.
+- Confidence remains MEDIUM.
+- Review warning preserved for 12 inch outlet threshold and exact coating lane.
+
+Important guardrail:
+
+- This does not make automatic dispatch final.
+- 12 inch threshold still needs confirmation.
+- Coating lane still needs confirmation.
+- 432 and 452 stainless paths were not touched.
+- Couplings, Clamps, and Patch Clamp were not touched.
 
 ### Service Saddle Classification Refinement
 
@@ -56,7 +86,7 @@ Important guardrail:
 
 - This does not make automatic dispatch final.
 - Coating sub-lane details still require review.
-- No Couplings, Clamps, Patch Clamp, 412, 432, or 452 route assumptions were expanded.
+- No Couplings, Clamps, Patch Clamp, 432, or 452 route assumptions were expanded.
 
 ### Product Intelligence Badges On Workflow Traveler Cards
 
@@ -408,39 +438,42 @@ Do not jump straight to automatic dispatch.
 Recommended next code slice:
 
 ```text
-Refine one more product family only, likely 412.
+Pause route-rule expansion and collect missing confirmations.
 ```
 
-Why:
+Most valuable confirmations:
 
-- 412 route has partial confirmation from Fab and Assembly maps.
-- 412 still needs outlet threshold confirmation before route confidence can be raised too far.
-- It is a good next isolated route-rule slice.
+- Is the 12 inch outlet threshold for 412 inclusive?
+- Does 412 always route 412 Fab -> Coating -> 412 Assembly?
+- Which exact coating lane handles 412 shop coat?
+- Is optional fusion epoxy in-house, outsourced, or order-specific?
+- Does fusion plastic coating for 405-408 equal pizza oven plus fluidized bed?
+- Do saddle straps get coated before or after Saddles Dept/LV4500 work?
+- Does 502 follow the same Saddles Dept path?
+- Is 502 passivated in Coating/passivation room?
 
 Alternate next move:
 
 ```text
-Ask shop-floor questions for Saddles coating details before raising 405-408 confidence.
+Add an in-app review-needed summary panel for classification warnings.
 ```
 
-Important Saddles questions:
+Why:
 
-- Does fusion plastic coating equal pizza oven plus fluidized bed?
-- Do straps get coated before or after Saddles Dept/LV4500 work?
-- Does 502 follow the same Saddles Dept path?
-- Is 502 passivated in Coating/passivation room?
+- The UI now shows intelligence, but not yet a consolidated list of review risks.
+- This would keep uncertainty visible before automatic dispatch work.
 
 ## Exact Next Action
 
-If continuing route rules:
-
-1. Start with 412 only.
-2. Preserve human-review guardrails around the 12 inch outlet threshold and coating type.
-3. Do not generalize to 432 or 452 until stainless/passivation details are confirmed.
-4. Build and verify CI.
-
 If continuing knowledge capture:
 
-1. Ask/answer the Saddles coating questions above.
-2. Update service saddle rules only after confirmation.
+1. Answer the confirmation questions above.
+2. Update only the affected rules.
 3. Build and verify CI if code changes.
+
+If continuing UI visibility:
+
+1. Add a compact Classification Review Summary surface.
+2. List orders/travelers that need human review.
+3. Do not add write actions.
+4. Build and verify CI.
