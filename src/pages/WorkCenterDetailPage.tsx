@@ -17,10 +17,7 @@ import { isMaintenanceRole, isMaterialRole, isSupervisorRole } from '../data/wor
 import { getResourceModel } from '../data/workCenterResources';
 import { productionOrders } from '../data/productionOrders';
 import { generateDynamicTravelers } from '../logic/dynamicTraveler';
-import {
-  getConfirmationsForTraveler,
-  loadClassificationReviewConfirmations,
-} from '../logic/classificationReviewConfirmations';
+import { getConfirmationsForTraveler, loadClassificationReviewConfirmations } from '../logic/classificationReviewConfirmations';
 import { getOperatorNextBestActionModel, needsClassificationReview } from '../logic/operatorNextBestActions';
 
 type ReceivingShortcut = 'submit' | 'arriving' | 'ready' | 'claimed' | 'delivered' | 'holds';
@@ -60,14 +57,6 @@ export default function WorkCenterDetailPage({
   const [digitalCoworkerOpen, setDigitalCoworkerOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  function copyStationLink() {
-    const base = window.location.origin + window.location.pathname;
-    const url = `${base}?wc=${workCenter.id}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2500);
-    });
-  }
   const departmentMachines = workCenter.department === 'Maintenance'
     ? machines
     : machines.filter((machine) => machine.department === workCenter.department);
@@ -79,7 +68,6 @@ export default function WorkCenterDetailPage({
   const resourceModel = getResourceModel(workCenter.department);
   const isReceiving = workCenter.id === 'receiving';
   const showEngineeringLoop = isSupervisorView || workCenter.department === 'Fab' || workCenter.department === 'QA';
-  const priority = getPriority(workCenter, departmentMachines, activeTasks, activeRisks);
   const tabletFocus = getTabletFocus(workCenter.id, roleView);
   const departmentTravelers = generateDynamicTravelers(productionOrders, workCenter.department);
   const reviewConfirmations = loadClassificationReviewConfirmations();
@@ -93,6 +81,16 @@ export default function WorkCenterDetailPage({
     activeTasks,
     pendingReviewCount,
   });
+  const priority = getPriority(workCenter, departmentMachines, activeTasks, activeRisks, actionModel);
+
+  function copyStationLink() {
+    const base = window.location.origin + window.location.pathname;
+    const url = `${base}?wc=${workCenter.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    });
+  }
 
   function handleOperatorLaneSelect(target: OperatorActionLaneTarget) {
     if (target === 'REVIEW' && leadingReviewTraveler) {
@@ -112,10 +110,10 @@ export default function WorkCenterDetailPage({
 
   return (
     <div style={pageStyle}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div style={topButtonRowStyle}>
         <button onClick={onBack} style={getBackButtonStyle(theme)}>BACK TO COMMAND CENTER</button>
         <button onClick={copyStationLink} style={getLinkButtonStyle(theme, linkCopied)}>
-          {linkCopied ? '✓ LINK COPIED' : 'COPY STATION LINK'}
+          {linkCopied ? 'LINK COPIED' : 'COPY STATION LINK'}
         </button>
       </div>
 
@@ -123,9 +121,7 @@ export default function WorkCenterDetailPage({
         <div>
           <div style={eyebrowStyle}>WORK CENTER TABLET</div>
           <h2 style={getHeroTitleStyle(theme)}>{workCenter.name}</h2>
-          <p style={getHeroTextStyle(theme)}>
-            {isSupervisorView ? workCenter.primaryFunction : getWorkerHeroText(workCenter.id)}
-          </p>
+          <p style={getHeroTextStyle(theme)}>{isSupervisorView ? workCenter.primaryFunction : getWorkerHeroText(workCenter.id)}</p>
         </div>
         <div style={heroControlsStyle}>
           <div style={getStatusPillStyle(workCenter.status)}>{workCenter.status.replace('_', ' ')}</div>
@@ -137,19 +133,21 @@ export default function WorkCenterDetailPage({
           >
             DIGITAL CO-WORKER
           </button>
-          {digitalCoworkerOpen ? (
-            <DigitalCoworkerFlyout
-              theme={theme}
-              roleView={roleView}
-              priority={priority}
-              workCenter={workCenter}
-              isSupervisorView={isSupervisorView}
-              resourceLabel={resourceModel?.displayLabel ?? 'Work center'}
-              onClose={() => setDigitalCoworkerOpen(false)}
-            />
-          ) : null}
         </div>
       </section>
+
+      {digitalCoworkerOpen ? (
+        <DigitalCoworkerFlyout
+          theme={theme}
+          roleView={roleView}
+          priority={priority}
+          workCenter={workCenter}
+          actionModel={actionModel}
+          isSupervisorView={isSupervisorView}
+          resourceLabel={resourceModel?.displayLabel ?? 'Work center'}
+          onClose={() => setDigitalCoworkerOpen(false)}
+        />
+      ) : null}
 
       <OperatorNextBestActionPanel model={actionModel} theme={theme} onSelectLane={handleOperatorLaneSelect} />
 
@@ -167,21 +165,12 @@ export default function WorkCenterDetailPage({
 
       {isReceiving ? <ReceivingClosurePanel theme={theme} /> : null}
       {showEngineeringLoop ? <EngineeringBacklogPanel theme={theme} /> : null}
-
-      {isSupervisorView ? (
-        <LiveCoveragePanel theme={theme} department={workCenter.department} onOpenStatus={onOpenCoverage} />
-      ) : null}
-
+      {isSupervisorView ? <LiveCoveragePanel theme={theme} department={workCenter.department} onOpenStatus={onOpenCoverage} /> : null}
       {isReceiving ? <ReceivingWorkflowPanel theme={theme} onOpenQueue={onOpenReceiving} /> : null}
 
       {!isReceiving ? (
-        <Panel
-          title="Material requests"
-          theme={theme}
-          actionLabel="REQUEST MATERIAL"
-          onAction={() => onOpenReceiving?.('submit', workCenter.department)}
-        >
-          <p style={getHeroTextStyle(theme)}>Request known department material from Receiving. Pick the catalog item, enter quantity, add the weekly order or job number, then Receiving can verify inventory and deliver it to your station.</p>
+        <Panel title="Material requests" theme={theme} actionLabel="REQUEST MATERIAL" onAction={() => onOpenReceiving?.('submit', workCenter.department)}>
+          <p style={getBodyTextStyle(theme)}>Request known department material from Receiving. Pick the catalog item, enter quantity, add the weekly order or job number, then Receiving can verify inventory and deliver it to your station.</p>
         </Panel>
       ) : null}
 
@@ -191,7 +180,6 @@ export default function WorkCenterDetailPage({
         <Panel title={isSupervisorView ? 'Department focus' : 'Today work'} theme={theme}>
           <List items={workCenter.dailyFocus} theme={theme} />
         </Panel>
-
         <Panel title={isSupervisorView ? 'Coordination view' : 'Station actions'} theme={theme}>
           <List items={tabletFocus} theme={theme} />
         </Panel>
@@ -201,43 +189,19 @@ export default function WorkCenterDetailPage({
 
       <div style={getMainGridStyle()}>
         <Panel title={getAssetPanelTitle(workCenter.department, isMaintenanceView)} theme={theme}>
-          {isReceiving ? (
-            departmentAssets.length === 0 ? (
-              <EmptyState text="No receiving forklifts or support assets are listed yet." theme={theme} />
-            ) : (
-              <div style={listStackStyle}>
-                {departmentAssets.map((asset) => (
-                  <div key={asset.id} style={getSimpleRowStyle(theme)}>
-                    <div>
-                      <div style={getRowTitleStyle(theme)}>{asset.name}</div>
-                      <div style={mutedStyle}>{asset.lastKnownState}</div>
-                      {asset.nextAction ? <div style={mutedStyle}>Next: {asset.nextAction}</div> : null}
-                    </div>
-                    <span style={getAssetStatusBadgeStyle(asset.status)}>{asset.status.replace('_', ' ')}</span>
-                  </div>
-                ))}
-              </div>
-            )
-          ) : departmentMachines.length === 0 ? (
-            <EmptyState text={workCenter.department === 'Maintenance' ? 'No machines currently need maintenance attention.' : 'No machines are assigned to this work center yet.'} theme={theme} />
-          ) : (
-            <div style={listStackStyle}>
-              {departmentMachines.map((machine) => (
-                <button key={machine.id} onClick={() => onOpenMachine(machine)} style={getMachineRowStyle(theme)}>
-                  <div>
-                    <div style={getRowTitleStyle(theme)}>{machine.name}</div>
-                    <div style={mutedStyle}>{machine.department} - {machine.lastKnownState}</div>
-                  </div>
-                  <StatusBadge state={machine.state} priority={machine.alarmPriority} />
-                </button>
-              ))}
-            </div>
-          )}
+          {renderAssetsOrMachines({
+            isReceiving,
+            departmentAssets,
+            departmentMachines,
+            workCenter,
+            theme,
+            onOpenMachine,
+          })}
         </Panel>
 
-        <Panel title="Blockers and risks" theme={theme}>
+        <Panel title="Risks / support signals" theme={theme}>
           {activeRisks.length === 0 ? (
-            <EmptyState text="No open risks for this work center." theme={theme} />
+            <EmptyState text="No open risk records are assigned to this work center. Traveler blockers, holds, and material shortages appear in the workflow panel above." theme={theme} />
           ) : (
             <div style={listStackStyle}>
               {activeRisks.map((risk) => (
@@ -273,18 +237,69 @@ export default function WorkCenterDetailPage({
           )}
         </Panel>
 
-        <Panel
-          title={isSupervisorView ? 'Supervisor tools' : 'Support tools'}
-          theme={theme}
-          actionLabel={isSupervisorView ? 'OPEN COVERAGE' : undefined}
-          onAction={isSupervisorView ? onOpenCoverage : undefined}
-        >
+        <Panel title={isSupervisorView ? 'Supervisor tools' : 'Support tools'} theme={theme} actionLabel={isSupervisorView ? 'OPEN COVERAGE' : undefined} onAction={isSupervisorView ? onOpenCoverage : undefined}>
           <List
-            items={isSupervisorView ? ['Live roll call / coverage board', 'Assignment visibility by person', 'Work center blockers', 'Next build modules'] : isMaintenanceView ? ['Open maintenance requests', 'Machine repair notes', 'Downtime blockers'] : workCenter.nextBuildModules}
+            items={isSupervisorView
+              ? ['Live roll call / coverage board', 'Assignment visibility by person', 'Work center blockers', 'Next build modules']
+              : isMaintenanceView
+                ? ['Open maintenance requests', 'Machine repair notes', 'Downtime blockers']
+                : workCenter.nextBuildModules}
             theme={theme}
           />
         </Panel>
       </div>
+    </div>
+  );
+}
+
+function renderAssetsOrMachines({
+  isReceiving,
+  departmentAssets,
+  departmentMachines,
+  workCenter,
+  theme,
+  onOpenMachine,
+}: {
+  isReceiving: boolean;
+  departmentAssets: typeof workCenterAssets;
+  departmentMachines: Machine[];
+  workCenter: WorkCenter;
+  theme: 'dark' | 'light';
+  onOpenMachine: (machine: Machine) => void;
+}) {
+  if (isReceiving) {
+    if (departmentAssets.length === 0) return <EmptyState text="No receiving forklifts or support assets are listed yet." theme={theme} />;
+    return (
+      <div style={listStackStyle}>
+        {departmentAssets.map((asset) => (
+          <div key={asset.id} style={getSimpleRowStyle(theme)}>
+            <div>
+              <div style={getRowTitleStyle(theme)}>{asset.name}</div>
+              <div style={mutedStyle}>{asset.lastKnownState}</div>
+              {asset.nextAction ? <div style={mutedStyle}>Next: {asset.nextAction}</div> : null}
+            </div>
+            <span style={getAssetStatusBadgeStyle(asset.status)}>{asset.status.replace('_', ' ')}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (departmentMachines.length === 0) {
+    return <EmptyState text={workCenter.department === 'Maintenance' ? 'No machines currently need maintenance attention.' : 'No machines are assigned to this work center yet.'} theme={theme} />;
+  }
+
+  return (
+    <div style={listStackStyle}>
+      {departmentMachines.map((machine) => (
+        <button key={machine.id} onClick={() => onOpenMachine(machine)} style={getMachineRowStyle(theme)}>
+          <div>
+            <div style={getRowTitleStyle(theme)}>{machine.name}</div>
+            <div style={mutedStyle}>{machine.department} - {machine.lastKnownState}</div>
+          </div>
+          <StatusBadge state={machine.state} priority={machine.alarmPriority} />
+        </button>
+      ))}
     </div>
   );
 }
@@ -294,6 +309,7 @@ function DigitalCoworkerFlyout({
   roleView,
   priority,
   workCenter,
+  actionModel,
   isSupervisorView,
   resourceLabel,
   onClose,
@@ -302,53 +318,46 @@ function DigitalCoworkerFlyout({
   roleView: RoleView;
   priority: string;
   workCenter: WorkCenter;
+  actionModel: OperatorNextBestActionModel;
   isSupervisorView: boolean;
   resourceLabel: string;
   onClose: () => void;
 }) {
   return (
-    <div style={getFlyoutStyle(theme)}>
+    <div style={getFlyoutShellStyle(theme)}>
       <div style={flyoutHeaderStyle}>
         <div>
           <div style={eyebrowStyle}>DIGITAL CO-WORKER</div>
-          <h3 style={getSectionTitleStyle(theme)}>Today's priority</h3>
+          <h3 style={getSectionTitleStyle(theme)}>Station guidance</h3>
         </div>
         <button type="button" onClick={onClose} style={getFlyoutCloseStyle(theme)}>CLOSE</button>
       </div>
-
       <p style={getFlyoutPriorityStyle(theme)}>{priority}</p>
-
-      {isSupervisorView ? (
-        <div style={getTwoColumnGridStyle()}>
-          <InfoTile label="Role view" value={roleView} theme={theme} />
-          <InfoTile label="Coverage source" value="Tablet sign-in / roll call" theme={theme} />
-          <InfoTile label="Default station" value={workCenter.stationTabletDefault} theme={theme} />
-          <InfoTile label="Resource model" value={resourceLabel} theme={theme} />
-        </div>
-      ) : (
-        <div style={getWorkerNoticeStyle(theme)}>
-          Worker station view: this screen stays focused on orders, claims, handoffs, blockers, and the next useful action. This area is modeled as {resourceLabel}.
-        </div>
-      )}
+      <div style={getTwoColumnGridStyle()}>
+        <InfoTile label="Mode" value={getOperatingModeLabel(actionModel)} theme={theme} />
+        <InfoTile label="Ready" value={String(actionModel.readyCount)} theme={theme} />
+        <InfoTile label="Help" value={String(actionModel.helpCount)} theme={theme} />
+        <InfoTile label="Review" value={String(actionModel.pendingReviewCount)} theme={theme} />
+      </div>
+      <div style={getWorkerNoticeStyle(theme)}>
+        {isSupervisorView
+          ? `Supervisor view for ${workCenter.name}. Use the lanes first, then coverage or support panels when people, material, or machines need attention.`
+          : `Station view for ${workCenter.name}. Start with the lane cards. Traveler blockers live in the workflow panel; risk records and service signals live lower on the page.`}
+      </div>
+      <div style={getWorkerNoticeStyle(theme)}>
+        Role: {roleView}. Resource model: {resourceLabel}.
+      </div>
     </div>
   );
 }
 
-function OperatorNextBestActionPanel({
-  model,
-  theme,
-  onSelectLane,
-}: {
-  model: OperatorNextBestActionModel;
-  theme: 'dark' | 'light';
-  onSelectLane: (target: OperatorActionLaneTarget) => void;
-}) {
+function OperatorNextBestActionPanel({ model, theme, onSelectLane }: { model: OperatorNextBestActionModel; theme: 'dark' | 'light'; onSelectLane: (target: OperatorActionLaneTarget) => void }) {
   return (
     <section style={getActionConsoleStyle(theme)}>
       <div style={panelHeaderStyle}>
         <div>
           <div style={eyebrowStyle}>OPERATOR NEXT BEST ACTION</div>
-          <h3 style={getSectionTitleStyle(theme)}>Local action console</h3>
+          <h3 style={getSectionTitleStyle(theme)}>{getOperatingModeLabel(model)}</h3>
         </div>
         <div style={consoleBadgeRowStyle}>
           <span style={getConsoleBadgeStyle('#10b981')}>{model.readyCount} READY</span>
@@ -356,54 +365,35 @@ function OperatorNextBestActionPanel({
           <span style={getConsoleBadgeStyle('#f97316')}>{model.pendingReviewCount} REVIEW</span>
         </div>
       </div>
-
-      <div style={getOperatingModeStripStyle(theme)}>
-        <span style={getOperatingModeLabelStyle(theme)}>TABLET OPERATING MODE</span>
-        <strong style={getOperatingModeValueStyle(theme)}>{getOperatingModeLabel(model)}</strong>
-        <span style={getOperatingModeDetailStyle(theme)}>Tap a lane to jump to the work, help, review, or handoff area without changing dispatch authority.</span>
-      </div>
-
+      <p style={getConsoleHelpTextStyle(theme)}>Use the cards below. They move you to the right area, but they do not approve routes, dispatch work, or change classification confidence.</p>
       <div style={getActionLaneGridStyle()}>
-        {model.lanes.map((lane) => (
-          <ActionLane key={lane.title} lane={lane} theme={theme} onSelectLane={onSelectLane} />
-        ))}
+        {model.lanes.map((lane) => <ActionLane key={`${lane.title}-${lane.value}`} lane={lane} theme={theme} onSelectLane={onSelectLane} />)}
       </div>
     </section>
   );
 }
 
-function ActionLane({
-  lane,
-  theme,
-  onSelectLane,
-}: {
-  lane: OperatorActionLane;
-  theme: 'dark' | 'light';
-  onSelectLane: (target: OperatorActionLaneTarget) => void;
-}) {
+function ActionLane({ lane, theme, onSelectLane }: { lane: OperatorActionLane; theme: 'dark' | 'light'; onSelectLane: (target: OperatorActionLaneTarget) => void }) {
   const tone = getActionLaneToneColor(lane.tone);
   return (
     <article style={getActionLaneStyle(theme, tone)}>
       <div style={{ color: tone, fontSize: 10, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' }}>{lane.title}</div>
       <strong style={getActionLaneValueStyle(theme)}>{lane.value}</strong>
       <p style={getActionLaneDetailStyle(theme)}>{lane.detail}</p>
-      <button type="button" style={getLaneButtonStyle(tone)} onClick={() => onSelectLane(lane.target)}>
-        {lane.actionLabel}
-      </button>
+      <button type="button" style={getLaneButtonStyle(tone)} onClick={() => onSelectLane(lane.target)}>{lane.actionLabel}</button>
     </article>
   );
 }
 
 function getOperatingModeLabel(model: OperatorNextBestActionModel) {
-  if (model.helpCount > 0) return 'HELP FIRST';
-  if (model.pendingReviewCount > 0) return 'REVIEW FIRST';
-  if (model.readyCount > 0) return 'RUN READY WORK';
-  return 'MONITOR / STAGE';
+  if (model.helpCount > 0) return 'Help first';
+  if (model.pendingReviewCount > 0) return 'Review first';
+  if (model.readyCount > 0) return 'Run ready work';
+  return 'Monitor / stage';
 }
 
 function scrollToOperatorLaneTarget(target: OperatorActionLaneTarget) {
-  const element = document.getElementById(getOperatorLaneTargetId(target));
-  element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById(getOperatorLaneTargetId(target))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function getOperatorLaneTargetId(target: OperatorActionLaneTarget) {
@@ -420,9 +410,12 @@ function getActionLaneToneColor(tone: OperatorActionLaneTone) {
   return '#38bdf8';
 }
 
-function getPriority(workCenter: WorkCenter, machines: Machine[], tasks: MaintenanceTask[], risks: RiskItem[]) {
+function getPriority(workCenter: WorkCenter, machines: Machine[], tasks: MaintenanceTask[], risks: RiskItem[], model: OperatorNextBestActionModel) {
   const downMachine = machines.find((machine) => machine.state === 'ALARM' || machine.alarmPriority === 'ESTOP');
   if (downMachine) return `${downMachine.name} needs attention before this area can run cleanly.`;
+  if (model.helpCount > 0) return `${model.helpCount} traveler blocker${model.helpCount === 1 ? '' : 's'} need attention in the workflow panel.`;
+  if (model.pendingReviewCount > 0) return `${model.pendingReviewCount} traveler${model.pendingReviewCount === 1 ? '' : 's'} need classification review before confidence should increase.`;
+  if (model.readyCount > 0) return `${model.readyCount} traveler${model.readyCount === 1 ? '' : 's'} appear ready to work. Start with the Do now card.`;
   if (tasks.length > 0) return `${tasks.length} maintenance item${tasks.length === 1 ? '' : 's'} need review or follow-up.`;
   if (risks.length > 0) return `${risks.length} open risk item${risks.length === 1 ? '' : 's'} should be reviewed before the shift gets busy.`;
   if (workCenter.id === 'receiving') return 'Keep the inbound queue accurate, then deliver material to the right work centers without creating mystery inventory.';
@@ -440,12 +433,8 @@ function getWorkerHeroText(workCenterId: string) {
 
 function getTabletFocus(workCenterId: string, roleView: RoleView) {
   if (workCenterId === 'receiving') {
-    if (isMaterialRole(roleView) || roleView === 'Operator') {
-      return ['Check inbound receiver accuracy.', 'Claim deliveries that are ready.', 'Mark delivered only after handoff.', 'Put unclear, short, or damaged items on problem hold.'];
-    }
-    if (isSupervisorRole(roleView)) {
-      return ['Review late, hot, or questionable receipts first.', 'Watch delivery backlog by work center.', 'Use live coverage before assigning more work.', 'Confirm handoff notes are clear.'];
-    }
+    if (isMaterialRole(roleView) || roleView === 'Operator') return ['Check inbound receiver accuracy.', 'Claim deliveries that are ready.', 'Mark delivered only after handoff.', 'Put unclear, short, or damaged items on problem hold.'];
+    if (isSupervisorRole(roleView)) return ['Review late, hot, or questionable receipts first.', 'Watch delivery backlog by work center.', 'Use live coverage before assigning more work.', 'Confirm handoff notes are clear.'];
   }
   if (isMaintenanceRole(roleView)) return ['Look for downtime or safety-impacting requests first.', 'Claim the request before starting work.', 'Leave completion notes.', 'Escalate repeated failures into machine history.'];
   if (isSupervisorRole(roleView)) return ['Check blockers before output numbers.', 'Look for people, machines, or material that need help.', 'Use coverage to assign work.', 'Push only the next useful action to the floor.'];
@@ -456,11 +445,6 @@ function getAssetPanelTitle(department: WorkCenter['department'], isMaintenanceV
   if (department === 'Receiving') return 'Forklifts / receiving assets';
   if (department === 'Maintenance' || isMaintenanceView) return 'Machines needing service';
   return 'Active machines / stations';
-}
-
-function getAssetStatusBadgeStyle(status: string): CSSProperties {
-  const color = status === 'NEEDS_SERVICE' || status === 'OFFLINE' ? '#dc2626' : status === 'ASSIGNED' ? '#f59e0b' : '#10b981';
-  return { whiteSpace: 'nowrap', padding: '5px 8px', borderRadius: 4, border: `1px solid ${color}66`, color, background: `${color}18`, fontSize: 11, fontWeight: 900, letterSpacing: '0.5px', textTransform: 'uppercase' };
 }
 
 function Panel({ title, children, theme, actionLabel, onAction }: { title: string; children: ReactNode; theme: 'dark' | 'light'; actionLabel?: string; onAction?: () => void }) {
@@ -476,12 +460,7 @@ function Panel({ title, children, theme, actionLabel, onAction }: { title: strin
 }
 
 function InfoTile({ label, value, theme }: { label: string; value: string; theme: 'dark' | 'light' }) {
-  return (
-    <div style={getInfoTileStyle(theme)}>
-      <div style={tileLabelStyle}>{label}</div>
-      <div style={getTileValueStyle(theme)}>{value}</div>
-    </div>
-  );
+  return <div style={getInfoTileStyle(theme)}><div style={tileLabelStyle}>{label}</div><div style={getTileValueStyle(theme)}>{value}</div></div>;
 }
 
 function List({ items, theme }: { items: string[]; theme: 'dark' | 'light' }) {
@@ -491,33 +470,33 @@ function List({ items, theme }: { items: string[]; theme: 'dark' | 'light' }) {
 function EmptyState({ text, theme }: { text: string; theme: 'dark' | 'light' }) { return <div style={getEmptyStyle(theme)}>{text}</div>; }
 
 const pageStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 16 };
+const topButtonRowStyle: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' };
 const eyebrowStyle: CSSProperties = { color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '1.4px', textTransform: 'uppercase', marginBottom: 8 };
 const mutedStyle: CSSProperties = { color: '#64748b', fontSize: 12, marginTop: 4, textAlign: 'left' };
 const listStackStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 10 };
 const panelHeaderStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' };
 const flyoutHeaderStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12 };
 const orangeDotStyle: CSSProperties = { width: 8, height: 8, borderRadius: 999, background: '#f97316', flex: '0 0 auto', marginTop: 5 };
-const actionButtonStyle: CSSProperties = { padding: '8px 12px', borderRadius: 4, border: '1px solid #f97316', background: 'rgba(249, 115, 22, 0.12)', color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '0.8px', cursor: 'pointer' };
+const actionButtonStyle: CSSProperties = { padding: '8px 12px', borderRadius: 4, border: '1px solid #f97316', background: 'rgba(249,115,22,0.12)', color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '0.8px', cursor: 'pointer' };
 const tileLabelStyle: CSSProperties = { color: '#94a3b8', fontSize: 11, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 };
 const consoleBadgeRowStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' };
-const heroControlsStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end', position: 'relative', zIndex: 2 };
+const heroControlsStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' };
 const anchorStyle: CSSProperties = { scrollMarginTop: 16 };
+
 function getBackButtonStyle(theme: 'dark' | 'light'): CSSProperties { return { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 4, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: theme === 'dark' ? '#1e293b' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', cursor: 'pointer', fontWeight: 900, letterSpacing: '0.7px' }; }
-function getLinkButtonStyle(theme: 'dark' | 'light', copied: boolean): CSSProperties { return { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 4, border: copied ? '1px solid #10b981' : '1px solid #f97316', background: copied ? 'rgba(16,185,129,0.12)' : theme === 'dark' ? '#1e293b' : '#fff7ed', color: copied ? '#10b981' : '#f97316', cursor: 'pointer', fontWeight: 900, letterSpacing: '0.7px', transition: 'all 0.2s', fontSize: 12 }; }
-function getHeroStyle(theme: 'dark' | 'light', status: WorkCenter['status']): CSSProperties { return { padding: 22, borderRadius: 8, border: `1px solid ${getStatusColor(status)}`, background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.22)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', position: 'relative' }; }
+function getLinkButtonStyle(theme: 'dark' | 'light', copied: boolean): CSSProperties { return { ...getBackButtonStyle(theme), border: copied ? '1px solid #10b981' : '1px solid #f97316', color: copied ? '#10b981' : '#f97316' }; }
+function getHeroStyle(theme: 'dark' | 'light', status: WorkCenter['status']): CSSProperties { return { padding: 22, borderRadius: 8, border: `1px solid ${getStatusColor(status)}`, background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.22)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }; }
 function getHeroTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, fontSize: 30, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', letterSpacing: '0.4px' }; }
 function getHeroTextStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: '10px 0 0 0', color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 14, lineHeight: 1.5, maxWidth: 820 }; }
+function getBodyTextStyle(theme: 'dark' | 'light'): CSSProperties { return { ...getHeroTextStyle(theme), margin: 0 }; }
 function getDigitalCoworkerButtonStyle(theme: 'dark' | 'light', open: boolean): CSSProperties { return { border: open ? '1px solid #f97316' : theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: open ? 'rgba(249,115,22,0.18)' : theme === 'dark' ? '#0f172a' : '#ffffff', color: open ? '#f97316' : theme === 'dark' ? '#e2e8f0' : '#0f172a', borderRadius: 4, padding: '8px 10px', fontSize: 11, fontWeight: 900, letterSpacing: '0.7px', cursor: 'pointer', whiteSpace: 'nowrap' }; }
-function getFlyoutStyle(theme: 'dark' | 'light'): CSSProperties { return { position: 'absolute', top: 76, right: 0, width: 'min(420px, calc(100vw - 48px))', padding: 16, borderRadius: 8, border: theme === 'dark' ? '1px solid #475569' : '1px solid #cbd5e1', background: theme === 'dark' ? '#111827' : '#ffffff', boxShadow: '0 18px 42px rgba(0,0,0,0.35)', zIndex: 20 }; }
+function getFlyoutShellStyle(theme: 'dark' | 'light'): CSSProperties { return { alignSelf: 'center', width: 'min(620px, 100%)', padding: 16, borderRadius: 8, border: theme === 'dark' ? '1px solid #475569' : '1px solid #cbd5e1', background: theme === 'dark' ? '#111827' : '#ffffff', boxShadow: '0 18px 42px rgba(0,0,0,0.28)', display: 'grid', gap: 12 }; }
 function getFlyoutCloseStyle(theme: 'dark' | 'light'): CSSProperties { return { border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: 'transparent', color: theme === 'dark' ? '#94a3b8' : '#64748b', borderRadius: 4, padding: '5px 7px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }; }
-function getFlyoutPriorityStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 16, lineHeight: 1.4, fontWeight: 850, margin: '0 0 12px 0' }; }
+function getFlyoutPriorityStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 16, lineHeight: 1.4, fontWeight: 850, margin: 0 }; }
 function getActionConsoleStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 18, borderRadius: 8, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#111827' : '#ffffff', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }; }
-function getOperatingModeStripStyle(theme: 'dark' | 'light'): CSSProperties { return { display: 'grid', gridTemplateColumns: 'auto auto 1fr', gap: 10, alignItems: 'center', padding: 12, marginBottom: 12, borderRadius: 7, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#0f172a' : '#f8fafc' }; }
-function getOperatingModeLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 10, fontWeight: 900, letterSpacing: '0.9px', textTransform: 'uppercase' }; }
-function getOperatingModeValueStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 13, fontWeight: 950, letterSpacing: '0.7px', whiteSpace: 'nowrap' }; }
-function getOperatingModeDetailStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, lineHeight: 1.35, fontWeight: 750 }; }
+function getConsoleHelpTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, lineHeight: 1.45, fontWeight: 750, margin: '0 0 12px 0' }; }
 function getSectionTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 16, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase' }; }
-function getTwoColumnGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }; }
+function getTwoColumnGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }; }
 function getActionLaneGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }; }
 function getMainGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }; }
 function getPanelStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }; }
@@ -526,13 +505,14 @@ function getActionLaneValueStyle(theme: 'dark' | 'light'): CSSProperties { retur
 function getActionLaneDetailStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 750, lineHeight: 1.4, margin: 0 }; }
 function getLaneButtonStyle(tone: string): CSSProperties { return { justifySelf: 'start', border: `1px solid ${tone}`, background: `${tone}18`, color: tone, borderRadius: 4, padding: '6px 8px', fontSize: 10, fontWeight: 900, letterSpacing: '0.6px', cursor: 'pointer', textTransform: 'uppercase' }; }
 function getConsoleBadgeStyle(color: string): CSSProperties { return { whiteSpace: 'nowrap', padding: '5px 8px', borderRadius: 4, border: `1px solid ${color}66`, color, background: `${color}18`, fontSize: 10, fontWeight: 900, letterSpacing: '0.6px' }; }
-function getInfoTileStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
+function getInfoTileStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function getTileValueStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 14, lineHeight: 1.4, fontWeight: 800 }; }
 function getWorkerNoticeStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 13, borderRadius: 6, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#0f172a' : '#f8fafc', color: theme === 'dark' ? '#94a3b8' : '#475569', fontSize: 13, lineHeight: 1.5, fontWeight: 700 }; }
 function getMachineRowStyle(theme: 'dark' | 'light'): CSSProperties { return { ...getSimpleRowStyle(theme), width: '100%', cursor: 'pointer', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function getSimpleRowStyle(theme: 'dark' | 'light'): CSSProperties { return { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, padding: 13, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0', color: 'inherit' }; }
 function getRowTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 13, fontWeight: 800, textAlign: 'left', lineHeight: 1.35 }; }
 function getEmptyStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 16, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px dashed #334155' : '1px dashed #cbd5e1', color: '#64748b', fontSize: 13, fontWeight: 700 }; }
+function getAssetStatusBadgeStyle(status: string): CSSProperties { const color = status === 'NEEDS_SERVICE' || status === 'OFFLINE' ? '#dc2626' : status === 'ASSIGNED' ? '#f59e0b' : '#10b981'; return { whiteSpace: 'nowrap', padding: '5px 8px', borderRadius: 4, border: `1px solid ${color}66`, color, background: `${color}18`, fontSize: 11, fontWeight: 900, letterSpacing: '0.5px', textTransform: 'uppercase' }; }
 function getStatusPillStyle(status: WorkCenter['status']): CSSProperties { const color = getStatusColor(status); return { whiteSpace: 'nowrap', padding: '8px 12px', borderRadius: 4, border: `1px solid ${color}`, color, background: `${color}1f`, fontSize: 12, fontWeight: 900, letterSpacing: '0.8px' }; }
 function getSmallBadgeStyle(value: string): CSSProperties { const color = value === 'CRITICAL' || value === 'HIGH' || value === 'OVERDUE' ? '#dc2626' : value === 'DUE_SOON' || value === 'MEDIUM' ? '#f59e0b' : '#64748b'; return { whiteSpace: 'nowrap', padding: '5px 8px', borderRadius: 4, border: `1px solid ${color}66`, color, background: `${color}18`, fontSize: 11, fontWeight: 900, letterSpacing: '0.5px', textTransform: 'uppercase' }; }
 function getStatusColor(status: WorkCenter['status']) { if (status === 'READY') return '#10b981'; if (status === 'WATCH') return '#f59e0b'; if (status === 'NEEDS_ATTENTION') return '#dc2626'; return '#64748b'; }
