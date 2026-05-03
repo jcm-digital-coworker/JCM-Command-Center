@@ -24,6 +24,9 @@ import { getOperatorNextBestActionModel, needsClassificationReview } from '../lo
 
 type ReceivingShortcut = 'submit' | 'arriving' | 'ready' | 'claimed' | 'delivered' | 'holds';
 
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
+
 interface WorkCenterDetailPageProps {
   workCenter: WorkCenter;
   machines: Machine[];
@@ -69,6 +72,7 @@ export default function WorkCenterDetailPage({
   const departmentTravelers = generateDynamicTravelers(productionOrders, workCenter.department);
   const reviewConfirmations = loadClassificationReviewConfirmations();
   const reviewTravelers = departmentTravelers.filter((traveler) => needsClassificationReview(traveler));
+  const leadingReviewTraveler = reviewTravelers[0] ?? null;
   const pendingReviewCount = reviewTravelers.filter((traveler) => getConfirmationsForTraveler(reviewConfirmations, traveler).length === 0).length;
   const actionModel = getOperatorNextBestActionModel({
     workCenter,
@@ -77,6 +81,22 @@ export default function WorkCenterDetailPage({
     activeTasks,
     pendingReviewCount,
   });
+
+  function handleOperatorLaneSelect(target: OperatorActionLaneTarget) {
+    if (target === 'REVIEW' && leadingReviewTraveler) {
+      localStorage.setItem(
+        REVIEW_TARGET_STORAGE_KEY,
+        JSON.stringify({
+          orderNumber: leadingReviewTraveler.order.orderNumber,
+          department: leadingReviewTraveler.department,
+          travelerId: leadingReviewTraveler.id,
+          updatedAt: new Date().toISOString(),
+        }),
+      );
+      window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+    }
+    scrollToOperatorLaneTarget(target);
+  }
 
   return (
     <div style={pageStyle}>
@@ -112,7 +132,7 @@ export default function WorkCenterDetailPage({
         )}
       </section>
 
-      <OperatorNextBestActionPanel model={actionModel} theme={theme} onSelectLane={scrollToOperatorLaneTarget} />
+      <OperatorNextBestActionPanel model={actionModel} theme={theme} onSelectLane={handleOperatorLaneSelect} />
 
       <div id="operator-target-workflow">
         <WorkCenterWorkflowPanelV2
@@ -311,7 +331,7 @@ function scrollToOperatorLaneTarget(target: OperatorActionLaneTarget) {
 
 function getOperatorLaneTargetId(target: OperatorActionLaneTarget) {
   if (target === 'SUPPORT') return 'operator-target-support';
-  if (target === 'REVIEW') return 'operator-target-review';
+  if (target === 'REVIEW') return 'operator-target-workflow';
   if (target === 'HANDOFF') return 'operator-target-handoff';
   return 'operator-target-workflow';
 }
