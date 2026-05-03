@@ -10,6 +10,9 @@ import {
 } from '../../logic/classificationReviewConfirmations';
 import type { DashboardTheme } from './dashboardStyles';
 
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
+
 type ClassificationReviewQueueProps = {
   theme: DashboardTheme;
   workCenters: WorkCenter[];
@@ -39,7 +42,18 @@ export default function ClassificationReviewQueue({ theme, workCenters, onOpenWo
 
   function openTravelerWorkCenter(traveler: DynamicTraveler) {
     const matchingWorkCenter = workCenters.find((workCenter) => workCenter.department === traveler.department);
-    if (matchingWorkCenter) onOpenWorkCenter(matchingWorkCenter);
+    if (!matchingWorkCenter) return;
+    localStorage.setItem(
+      REVIEW_TARGET_STORAGE_KEY,
+      JSON.stringify({
+        orderNumber: traveler.order.orderNumber,
+        department: traveler.department,
+        travelerId: traveler.id,
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+    onOpenWorkCenter(matchingWorkCenter);
   }
 
   if (reviewTravelers.length === 0) {
