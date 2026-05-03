@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import type { WorkCenter } from '../types/plant';
 import type { CoveragePerson } from '../types/coverage';
 import type { DynamicTraveler } from '../types/dynamicTraveler';
+import type { ClassificationReviewConfirmation, ClassificationReviewDraft } from '../types/classificationReview';
 import { seedCoverage } from '../data/coverage';
 import { productionOrders } from '../data/productionOrders';
 import { COVERAGE_STORAGE_KEY } from '../logic/coverage';
@@ -9,7 +10,13 @@ import { getWorkCenterWorkflowGroups } from '../logic/workflowPanelSelectors';
 import { generateDynamicTravelers } from '../logic/dynamicTraveler';
 import { addWorkflowAction } from '../logic/workflowActions';
 import { applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import {
+  getConfirmationsForTraveler,
+  loadClassificationReviewConfirmations,
+  saveClassificationReviewConfirmation,
+} from '../logic/classificationReviewConfirmations';
 import TravelerDetailModal from './travelers/TravelerDetailModal';
+import ClassificationReviewCapture from './travelers/ClassificationReviewCapture';
 
 type Props = {
   workCenter: WorkCenter;
@@ -17,6 +24,12 @@ type Props = {
   onOpenReceiving?: (view: 'submit', requesterDepartment?: WorkCenter['department']) => void;
   onOpenEngineering?: () => void;
   onOpenMaintenance?: () => void;
+};
+
+const defaultReviewDraft: ClassificationReviewDraft = {
+  question: 'NOT_ENOUGH_INFO',
+  answer: 'NEEDS_REVIEW',
+  reviewedBy: 'Floor Review',
 };
 
 export default function WorkCenterWorkflowPanelV2({
@@ -28,15 +41,23 @@ export default function WorkCenterWorkflowPanelV2({
 }: Props) {
   const [runtimeVersion, setRuntimeVersion] = useState(0);
   const [selectedTraveler, setSelectedTraveler] = useState<DynamicTraveler | null>(null);
+  const [selectedReviewTraveler, setSelectedReviewTraveler] = useState<DynamicTraveler | null>(null);
+  const [reviewDraft, setReviewDraft] = useState<ClassificationReviewDraft>(defaultReviewDraft);
+  const [reviewConfirmations, setReviewConfirmations] = useState<ClassificationReviewConfirmation[]>(() => loadClassificationReviewConfirmations());
   const [coveragePeople] = useState<CoveragePerson[]>(() => loadCoverage());
 
   useEffect(() => {
     const refresh = () => setRuntimeVersion((version) => version + 1);
+    const refreshConfirmations = () => setReviewConfirmations(loadClassificationReviewConfirmations());
     window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
     window.addEventListener('storage', refresh);
+    window.addEventListener('storage', refreshConfirmations);
+    window.addEventListener('jcm-classification-review-confirmations-updated', refreshConfirmations);
     return () => {
       window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
       window.removeEventListener('storage', refresh);
+      window.removeEventListener('storage', refreshConfirmations);
+      window.removeEventListener('jcm-classification-review-confirmations-updated', refreshConfirmations);
     };
   }, []);
 
@@ -55,6 +76,13 @@ export default function WorkCenterWorkflowPanelV2({
   const travelerReadyCount = travelers.filter((traveler) => traveler.visualSignal === 'READY').length;
   const travelerBlockedCount = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
   const reviewTravelers = travelers.filter((traveler) => needsClassificationReview(traveler));
+
+  const saveReviewCapture = () => {
+    if (!selectedReviewTraveler) return;
+    const next = saveClassificationReviewConfirmation(selectedReviewTraveler, reviewDraft);
+    setReviewConfirmations(next);
+    setReviewDraft(defaultReviewDraft);
+  };
 
   return (
     <section style={panelStyle(theme)}>
@@ -83,7 +111,19 @@ export default function WorkCenterWorkflowPanelV2({
         </div>
       )}
 
-      <ClassificationReviewSummary travelers={reviewTravelers} theme={theme} onSelectTraveler={setSelectedTraveler} />
+      <ClassificationReviewSummary
+        travelers={reviewTravelers}
+        confirmations={reviewConfirmations}
+        selectedTraveler={selectedReviewTraveler}
+        draft={reviewDraft}
+        theme={theme}
+        onSelectTraveler={(traveler) => {
+          setSelectedReviewTraveler(traveler);
+          setSelectedTraveler(traveler);
+        }}
+        onDraftChange={setReviewDraft}
+        onSave={saveReviewCapture}
+      />
 
       <div style={travelerPanelStyle(theme)}>
         <div style={travelerHeaderStyle}>
@@ -204,7 +244,25 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
   return <div style={{ padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#fff', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0' }}><div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 900 }}>{label}</div><div style={{ color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontWeight: 900 }}>{value}</div></div>;
 }
 
-function ClassificationReviewSummary({ travelers, theme, onSelectTraveler }: { travelers: DynamicTraveler[]; theme: 'dark' | 'light'; onSelectTraveler: (traveler: DynamicTraveler) => void }) {
+function ClassificationReviewSummary({
+  travelers,
+  confirmations,
+  selectedTraveler,
+  draft,
+  theme,
+  onSelectTraveler,
+  onDraftChange,
+  onSave,
+}: {
+  travelers: DynamicTraveler[];
+  confirmations: ClassificationReviewConfirmation[];
+  selectedTraveler: DynamicTraveler | null;
+  draft: ClassificationReviewDraft;
+  theme: 'dark' | 'light';
+  onSelectTraveler: (traveler: DynamicTraveler) => void;
+  onDraftChange: (draft: ClassificationReviewDraft) => void;
+  onSave: () => void;
+}) {
   if (travelers.length === 0) {
     return (
       <div style={reviewSummaryStyle(theme, false)}>
@@ -219,6 +277,9 @@ function ClassificationReviewSummary({ travelers, theme, onSelectTraveler }: { t
     );
   }
 
+  const activeTraveler = selectedTraveler ?? travelers[0];
+  const activeTravelerConfirmations = getConfirmationsForTraveler(confirmations, activeTraveler);
+
   return (
     <div style={reviewSummaryStyle(theme, true)}>
       <div style={reviewSummaryHeaderStyle}>
@@ -229,19 +290,33 @@ function ClassificationReviewSummary({ travelers, theme, onSelectTraveler }: { t
         <span style={badge('#f97316')}>{travelers.length} REVIEW</span>
       </div>
       <div style={reviewItemListStyle}>
-        {travelers.slice(0, 3).map((traveler) => (
-          <button key={traveler.id} type="button" style={reviewItemStyle(theme)} onClick={() => onSelectTraveler(traveler)}>
-            <div style={reviewItemTopStyle}>
-              <strong>#{traveler.order.orderNumber} • {traveler.productClassification.modelSignal ?? 'No model'}</strong>
-              <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
-            </div>
-            <div style={reviewReasonTextStyle(theme)}>{traveler.classificationReviewReasons[0] ?? 'Classification needs human review.'}</div>
-            <div style={reviewMetaStyle(theme)}>
-              {formatToken(traveler.productClassification.productFamily)} · {formatHintList(traveler.finishHints)} · {traveler.productClassification.routeHint.length > 0 ? traveler.productClassification.routeHint.join(' → ') : 'No route hint'}
-            </div>
-          </button>
-        ))}
+        {travelers.slice(0, 3).map((traveler) => {
+          const travelerConfirmations = getConfirmationsForTraveler(confirmations, traveler);
+          const isSelected = activeTraveler.id === traveler.id;
+          return (
+            <button key={traveler.id} type="button" style={reviewItemStyle(theme, isSelected)} onClick={() => onSelectTraveler(traveler)}>
+              <div style={reviewItemTopStyle}>
+                <strong>#{traveler.order.orderNumber} • {traveler.productClassification.modelSignal ?? 'No model'}</strong>
+                <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
+              </div>
+              <div style={reviewReasonTextStyle(theme)}>{traveler.classificationReviewReasons[0] ?? 'Classification needs human review.'}</div>
+              <div style={reviewMetaStyle(theme)}>
+                {formatToken(traveler.productClassification.productFamily)} · {formatHintList(traveler.finishHints)} · {traveler.productClassification.routeHint.length > 0 ? traveler.productClassification.routeHint.join(' → ') : 'No route hint'}
+              </div>
+              {travelerConfirmations.length > 0 ? <div style={reviewSavedTextStyle(theme)}>{travelerConfirmations.length} structured confirmation{travelerConfirmations.length === 1 ? '' : 's'} saved</div> : null}
+            </button>
+          );
+        })}
       </div>
+
+      <ClassificationReviewCapture
+        traveler={activeTraveler}
+        confirmations={activeTravelerConfirmations}
+        draft={draft}
+        theme={theme}
+        onDraftChange={onDraftChange}
+        onSave={onSave}
+      />
     </div>
   );
 }
@@ -349,9 +424,10 @@ function travelerCardStyle(signal: DynamicTraveler['visualSignal'], theme: 'dark
 function reviewSummaryStyle(theme: 'dark' | 'light', needsReview: boolean) { const color = needsReview ? '#f97316' : '#10b981'; return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, marginBottom: 16 } as const; }
 function reviewSummaryEyebrowStyle(color: string) { return { color, fontSize: 11, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 } as const; }
 function reviewSummaryTitleStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 14 } as const; }
-function reviewItemStyle(theme: 'dark' | 'light') { return { width: '100%', textAlign: 'left', padding: 10, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', cursor: 'pointer' } as const; }
+function reviewItemStyle(theme: 'dark' | 'light', selected: boolean) { return { width: '100%', textAlign: 'left', padding: 10, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: selected ? '1px solid #f97316' : theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', cursor: 'pointer' } as const; }
 function reviewReasonTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 12, fontWeight: 800, lineHeight: 1.4, marginTop: 6 } as const; }
 function reviewMetaStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 700, marginTop: 5, lineHeight: 1.35 } as const; }
+function reviewSavedTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#86efac' : '#166534', fontSize: 11, fontWeight: 900, marginTop: 6 } as const; }
 
 const crewStripLabelStyle = { color: '#f97316', fontSize: 10, fontWeight: 900, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8 } as const;
 const crewRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 } as const;
