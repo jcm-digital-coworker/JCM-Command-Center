@@ -24,12 +24,13 @@ Current slice completed:
 - Review-target awareness so drill-in preselects/highlights the selected traveler in the department workflow panel.
 - Review-target banner with a user-controlled Clear Target action in the department workflow panel.
 - Plant Truth Checklist inside the existing Classification Review Queue, powered by existing structured confirmations.
+- Useful-info Department Focus cards that surface existing work-center ownership, focus, coverage, truth strength, and next-module signals.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25285901743
-Commit: ece0a5cda28233ba37196ed8236e017f10d6afac
+Run ID: 25286090281
+Commit: 5d802b8511a5cb9952156d3a02c9b092fb216a05
 Status: GREEN
 ```
 
@@ -43,6 +44,36 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Useful-Info Department Focus Cards
+
+Updated:
+
+```text
+src/components/dashboard/DashboardWorkCenterCard.tsx
+```
+
+Department Focus cards now use existing `WorkCenter` data to explain why a user should open each department instead of only showing a thin clickable tile.
+
+They now show:
+
+- department name and status.
+- sharper resource/lane label.
+- truth-strength badge: STRONG, PARTIAL, or PLACEHOLDER.
+- Open For signal explaining the practical reason to open the department.
+- Owns summary from the department primary function.
+- top two daily focus items.
+- coverage count or coverage note.
+- next useful module from `nextBuildModules`.
+
+Important guardrail:
+
+- This is display-only.
+- It uses existing `WorkCenter` fields.
+- It does not change routing.
+- It does not mutate classifier rules.
+- It does not approve or dispatch work.
+- It does not add a new department truth model.
 
 ### Plant Truth Checklist In Classification Review Queue
 
@@ -494,26 +525,14 @@ Main active risks:
 Recommended next move:
 
 ```text
-Use the Plant Truth Checklist during floor review, then update confirmed plant facts before changing classifier rules.
+Use the upgraded Department Focus cards, then consider whether the department detail pages should mirror the same useful-info hierarchy.
 ```
 
 Why:
 
-- Global queue can route users to the correct work-center page and preselect the review item.
-- The review target banner now explains the landing context and can clear the stored target.
-- The Plant Truth Checklist keeps unresolved plant questions visible without creating a second truth system.
-- Route-rule expansion should wait for plant confirmations.
-
-Most valuable confirmations:
-
-- Is the 12 inch outlet threshold for 412 inclusive?
-- Does 412 always route 412 Fab -> Coating -> 412 Assembly?
-- Which exact coating lane handles 412 shop coat?
-- Is optional fusion epoxy in-house, outsourced, or order-specific?
-- Does fusion plastic coating for 405-408 equal pizza oven plus fluidized bed?
-- Do saddle straps get coated before or after Saddles Dept/LV4500 work?
-- Does 502 follow the same Saddles Dept path?
-- Is 502 passivated in Coating/passivation room?
+- Department cards now explain why to open a department.
+- They surface current ownership, daily focus, coverage, next module, and truth strength using existing work-center data.
+- The next likely improvement is consistency between dashboard cards and department detail pages, not more fields on the cards.
 
 Guardrails:
 
