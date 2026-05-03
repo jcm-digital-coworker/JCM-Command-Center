@@ -4,6 +4,7 @@ import type { Machine } from '../types/machine';
 import type { MaintenanceTask } from '../types/maintenance';
 import type { RiskItem } from '../types/risk';
 import type { RoleView } from '../types/app';
+import type { DynamicTraveler } from '../types/dynamicTraveler';
 import StatusBadge from '../components/StatusBadge';
 import ReceivingWorkflowPanel from '../components/ReceivingWorkflowPanel';
 import ReceivingClosurePanel from '../components/ReceivingClosurePanel';
@@ -13,6 +14,12 @@ import WorkCenterWorkflowPanelV2 from '../components/WorkCenterWorkflowPanelV2';
 import { workCenterAssets } from '../data/workCenterAssets';
 import { isMaintenanceRole, isMaterialRole, isSupervisorRole } from '../data/workRoles';
 import { getResourceModel } from '../data/workCenterResources';
+import { productionOrders } from '../data/productionOrders';
+import { generateDynamicTravelers } from '../logic/dynamicTraveler';
+import {
+  getConfirmationsForTraveler,
+  loadClassificationReviewConfirmations,
+} from '../logic/classificationReviewConfirmations';
 
 type ReceivingShortcut = 'submit' | 'arriving' | 'ready' | 'claimed' | 'delivered' | 'holds';
 
@@ -58,6 +65,10 @@ export default function WorkCenterDetailPage({
   const showEngineeringLoop = isSupervisorView || workCenter.department === 'Fab' || workCenter.department === 'QA';
   const priority = getPriority(workCenter, departmentMachines, activeTasks, activeRisks);
   const tabletFocus = getTabletFocus(workCenter.id, roleView);
+  const departmentTravelers = generateDynamicTravelers(productionOrders, workCenter.department);
+  const reviewConfirmations = loadClassificationReviewConfirmations();
+  const reviewTravelers = departmentTravelers.filter((traveler) => needsClassificationReview(traveler));
+  const pendingReviewCount = reviewTravelers.filter((traveler) => getConfirmationsForTraveler(reviewConfirmations, traveler).length === 0).length;
 
   return (
     <div style={pageStyle}>
@@ -92,6 +103,15 @@ export default function WorkCenterDetailPage({
           </div>
         )}
       </section>
+
+      <OperatorNextBestActionPanel
+        workCenter={workCenter}
+        travelers={departmentTravelers}
+        activeRisks={activeRisks}
+        activeTasks={activeTasks}
+        pendingReviewCount={pendingReviewCount}
+        theme={theme}
+      />
 
       <WorkCenterWorkflowPanelV2
         workCenter={workCenter}
@@ -221,6 +241,96 @@ export default function WorkCenterDetailPage({
   );
 }
 
+function OperatorNextBestActionPanel({
+  workCenter,
+  travelers,
+  activeRisks,
+  activeTasks,
+  pendingReviewCount,
+  theme,
+}: {
+  workCenter: WorkCenter;
+  travelers: DynamicTraveler[];
+  activeRisks: RiskItem[];
+  activeTasks: MaintenanceTask[];
+  pendingReviewCount: number;
+  theme: 'dark' | 'light';
+}) {
+  const readyTraveler = travelers.find((traveler) => traveler.visualSignal === 'READY');
+  const blockedTraveler = travelers.find((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD');
+  const reviewTraveler = travelers.find((traveler) => needsClassificationReview(traveler));
+  const handoffTraveler = travelers.find((traveler) => traveler.nextHandoff && traveler.visualSignal !== 'DONE');
+
+  return (
+    <section style={getActionConsoleStyle(theme)}>
+      <div style={panelHeaderStyle}>
+        <div>
+          <div style={eyebrowStyle}>OPERATOR NEXT BEST ACTION</div>
+          <h3 style={getSectionTitleStyle(theme)}>Local action console</h3>
+        </div>
+        <div style={consoleBadgeRowStyle}>
+          <span style={getConsoleBadgeStyle('#10b981')}>{travelers.filter((traveler) => traveler.visualSignal === 'READY').length} READY</span>
+          <span style={getConsoleBadgeStyle('#dc2626')}>{travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length} HELP</span>
+          <span style={getConsoleBadgeStyle('#f97316')}>{pendingReviewCount} REVIEW</span>
+        </div>
+      </div>
+
+      <div style={getActionLaneGridStyle()}>
+        <ActionLane
+          title="Run now"
+          tone="#10b981"
+          value={readyTraveler ? `#${readyTraveler.order.orderNumber}` : 'No ready traveler'}
+          detail={readyTraveler?.currentInstruction ?? getFallbackRunNow(workCenter)}
+          theme={theme}
+        />
+        <ActionLane
+          title="Needs help"
+          tone="#dc2626"
+          value={blockedTraveler ? `#${blockedTraveler.order.orderNumber}` : `${activeRisks.length + activeTasks.length} support signal${activeRisks.length + activeTasks.length === 1 ? '' : 's'}`}
+          detail={blockedTraveler?.currentInstruction ?? getSupportSignalDetail(activeRisks, activeTasks)}
+          theme={theme}
+        />
+        <ActionLane
+          title="Review needed"
+          tone="#f97316"
+          value={reviewTraveler ? `#${reviewTraveler.order.orderNumber}` : 'No active review target'}
+          detail={reviewTraveler?.classificationReviewReasons[0] ?? 'No local classification review warning is leading this work center.'}
+          theme={theme}
+        />
+        <ActionLane
+          title="Next handoff"
+          tone="#38bdf8"
+          value={handoffTraveler?.nextHandoff ? String(handoffTraveler.nextHandoff) : 'No handoff ready'}
+          detail={handoffTraveler ? `Order #${handoffTraveler.order.orderNumber}: ${handoffTraveler.currentInstruction}` : workCenter.stationTabletDefault}
+          theme={theme}
+        />
+      </div>
+    </section>
+  );
+}
+
+function ActionLane({
+  title,
+  tone,
+  value,
+  detail,
+  theme,
+}: {
+  title: string;
+  tone: string;
+  value: string;
+  detail: string;
+  theme: 'dark' | 'light';
+}) {
+  return (
+    <article style={getActionLaneStyle(theme, tone)}>
+      <div style={{ color: tone, fontSize: 10, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' }}>{title}</div>
+      <strong style={getActionLaneValueStyle(theme)}>{value}</strong>
+      <p style={getActionLaneDetailStyle(theme)}>{detail}</p>
+    </article>
+  );
+}
+
 function getPriority(workCenter: WorkCenter, machines: Machine[], tasks: MaintenanceTask[], risks: RiskItem[]) {
   const downMachine = machines.find((machine) => machine.state === 'ALARM' || machine.alarmPriority === 'ESTOP');
   if (downMachine) return `${downMachine.name} needs attention before this area can run cleanly.`;
@@ -228,6 +338,21 @@ function getPriority(workCenter: WorkCenter, machines: Machine[], tasks: Mainten
   if (risks.length > 0) return `${risks.length} open risk item${risks.length === 1 ? '' : 's'} should be reviewed before the shift gets busy.`;
   if (workCenter.id === 'receiving') return 'Keep the inbound queue accurate, then deliver material to the right work centers without creating mystery inventory.';
   return workCenter.stationTabletDefault;
+}
+
+function needsClassificationReview(traveler: DynamicTraveler): boolean {
+  return traveler.classificationReviewReasons.length > 0 || traveler.productClassification.needsHumanReview || traveler.productClassification.confidence === 'LOW' || traveler.productClassification.confidence === 'REVIEW';
+}
+
+function getFallbackRunNow(workCenter: WorkCenter) {
+  if (workCenter.dailyFocus[0]) return workCenter.dailyFocus[0];
+  return workCenter.stationTabletDefault;
+}
+
+function getSupportSignalDetail(activeRisks: RiskItem[], activeTasks: MaintenanceTask[]) {
+  if (activeRisks[0]) return activeRisks[0].title;
+  if (activeTasks[0]) return `${activeTasks[0].title} is due ${activeTasks[0].nextDue}.`;
+  return 'No blocker is leading this work center right now. Keep the workflow panel clean and current.';
 }
 
 function getWorkerHeroText(workCenterId: string) {
@@ -295,20 +420,27 @@ const pageStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap
 const eyebrowStyle: CSSProperties = { color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '1.4px', textTransform: 'uppercase', marginBottom: 8 };
 const mutedStyle: CSSProperties = { color: '#64748b', fontSize: 12, marginTop: 4, textAlign: 'left' };
 const listStackStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 10 };
-const panelHeaderStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 14 };
+const panelHeaderStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' };
 const orangeDotStyle: CSSProperties = { width: 8, height: 8, borderRadius: 999, background: '#f97316', flex: '0 0 auto', marginTop: 5 };
 const actionButtonStyle: CSSProperties = { padding: '8px 12px', borderRadius: 4, border: '1px solid #f97316', background: 'rgba(249, 115, 22, 0.12)', color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '0.8px', cursor: 'pointer' };
 const tileLabelStyle: CSSProperties = { color: '#94a3b8', fontSize: 11, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 };
+const consoleBadgeRowStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' };
 function getBackButtonStyle(theme: 'dark' | 'light'): CSSProperties { return { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 4, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: theme === 'dark' ? '#1e293b' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', cursor: 'pointer', fontWeight: 900, letterSpacing: '0.7px' }; }
 function getHeroStyle(theme: 'dark' | 'light', status: WorkCenter['status']): CSSProperties { return { padding: 22, borderRadius: 8, border: `1px solid ${getStatusColor(status)}`, background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.22)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }; }
 function getHeroTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, fontSize: 30, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', letterSpacing: '0.4px' }; }
 function getHeroTextStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: '10px 0 0 0', color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 14, lineHeight: 1.5, maxWidth: 820 }; }
 function getNextMoveStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 20, borderRadius: 8, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#1e293b' : '#ffffff' }; }
+function getActionConsoleStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 18, borderRadius: 8, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#111827' : '#ffffff', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }; }
 function getLargeTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 20, lineHeight: 1.4, fontWeight: 800, margin: '8px 0 18px 0' }; }
 function getSectionTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 16, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase' }; }
 function getThreeColumnGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }; }
+function getActionLaneGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }; }
 function getMainGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }; }
 function getPanelStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }; }
+function getActionLaneStyle(theme: 'dark' | 'light', tone: string): CSSProperties { return { padding: 13, borderRadius: 7, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${tone}55`, borderLeft: `4px solid ${tone}`, display: 'grid', gap: 6 }; }
+function getActionLaneValueStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 14, fontWeight: 900, lineHeight: 1.25 }; }
+function getActionLaneDetailStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 750, lineHeight: 1.4, margin: 0 }; }
+function getConsoleBadgeStyle(color: string): CSSProperties { return { whiteSpace: 'nowrap', padding: '5px 8px', borderRadius: 4, border: `1px solid ${color}66`, color, background: `${color}18`, fontSize: 10, fontWeight: 900, letterSpacing: '0.6px' }; }
 function getInfoTileStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function getTileValueStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 14, lineHeight: 1.4, fontWeight: 800 }; }
 function getWorkerNoticeStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 13, borderRadius: 6, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#0f172a' : '#f8fafc', color: theme === 'dark' ? '#94a3b8' : '#475569', fontSize: 13, lineHeight: 1.5, fontWeight: 700 }; }
