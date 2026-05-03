@@ -54,6 +54,7 @@ export default function WorkCenterWorkflowPanelV2({
   const activeCount = groups.reduce((total, group) => total + group.cards.length, 0);
   const travelerReadyCount = travelers.filter((traveler) => traveler.visualSignal === 'READY').length;
   const travelerBlockedCount = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
+  const reviewTravelers = travelers.filter((traveler) => needsClassificationReview(traveler));
 
   return (
     <section style={panelStyle(theme)}>
@@ -81,6 +82,8 @@ export default function WorkCenterWorkflowPanelV2({
           </div>
         </div>
       )}
+
+      <ClassificationReviewSummary travelers={reviewTravelers} theme={theme} onSelectTraveler={setSelectedTraveler} />
 
       <div style={travelerPanelStyle(theme)}>
         <div style={travelerHeaderStyle}>
@@ -176,7 +179,7 @@ export default function WorkCenterWorkflowPanelV2({
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                       <button type="button" style={button(card.urgency.color)} onClick={() => act(card.buttons.primary, order.orderNumber, workCenter.department, onOpenReceiving, onOpenEngineering, onOpenMaintenance)}>{card.buttons.primary}</button>
-                      <button type="button" style={button('#64748b')} onClick={() => act(card.buttons.secondary, order.orderNumber, workCenter.department, onOpenReceiving, onOpenEngineering, onOpenMaintenance)}>{card.buttons.secondary}</button>
+                      <button type="button" style={button('#64748b')} onClick={() => act(card.buttons.secondary, order.orderNumber, workCenter.department, onOpenReceiving, onEngineering, onOpenMaintenance)}>{card.buttons.secondary}</button>
                     </div>
                   </article>
                 );
@@ -201,10 +204,52 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
   return <div style={{ padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#fff', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0' }}><div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 900 }}>{label}</div><div style={{ color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontWeight: 900 }}>{value}</div></div>;
 }
 
+function ClassificationReviewSummary({ travelers, theme, onSelectTraveler }: { travelers: DynamicTraveler[]; theme: 'dark' | 'light'; onSelectTraveler: (traveler: DynamicTraveler) => void }) {
+  if (travelers.length === 0) {
+    return (
+      <div style={reviewSummaryStyle(theme, false)}>
+        <div style={reviewSummaryHeaderStyle}>
+          <div>
+            <div style={reviewSummaryEyebrowStyle('#10b981')}>Classification Review</div>
+            <strong style={reviewSummaryTitleStyle(theme)}>No route/product review warnings in this work center.</strong>
+          </div>
+          <span style={badge('#10b981')}>CLEAR</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={reviewSummaryStyle(theme, true)}>
+      <div style={reviewSummaryHeaderStyle}>
+        <div>
+          <div style={reviewSummaryEyebrowStyle('#f97316')}>Classification Review Needed</div>
+          <strong style={reviewSummaryTitleStyle(theme)}>{travelers.length} traveler{travelers.length === 1 ? '' : 's'} need route/product confirmation.</strong>
+        </div>
+        <span style={badge('#f97316')}>{travelers.length} REVIEW</span>
+      </div>
+      <div style={reviewItemListStyle}>
+        {travelers.slice(0, 3).map((traveler) => (
+          <button key={traveler.id} type="button" style={reviewItemStyle(theme)} onClick={() => onSelectTraveler(traveler)}>
+            <div style={reviewItemTopStyle}>
+              <strong>#{traveler.order.orderNumber} • {traveler.productClassification.modelSignal ?? 'No model'}</strong>
+              <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
+            </div>
+            <div style={reviewReasonTextStyle(theme)}>{traveler.classificationReviewReasons[0] ?? 'Classification needs human review.'}</div>
+            <div style={reviewMetaStyle(theme)}>
+              {formatToken(traveler.productClassification.productFamily)} · {formatHintList(traveler.finishHints)} · {traveler.productClassification.routeHint.length > 0 ? traveler.productClassification.routeHint.join(' → ') : 'No route hint'}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TravelerIntelBadges({ traveler }: { traveler: DynamicTraveler }) {
   const primaryFinishHint = traveler.finishHints[0] ? formatToken(traveler.finishHints[0]) : 'Finish Unknown';
   const confidence = formatToken(traveler.productClassification.confidence);
-  const needsReview = traveler.classificationReviewReasons.length > 0 || traveler.productClassification.needsHumanReview;
+  const needsReview = needsClassificationReview(traveler);
 
   return (
     <div style={intelBadgeRowStyle}>
@@ -261,6 +306,10 @@ function loadCoverage(): CoveragePerson[] {
   }
 }
 
+function needsClassificationReview(traveler: DynamicTraveler): boolean {
+  return traveler.classificationReviewReasons.length > 0 || traveler.productClassification.needsHumanReview || traveler.productClassification.confidence === 'LOW' || traveler.productClassification.confidence === 'REVIEW';
+}
+
 function crewDotColor(status: string): string {
   if (status === 'AVAILABLE') return '#10b981';
   if (status === 'ASSIGNED') return '#f59e0b';
@@ -286,12 +335,23 @@ function formatToken(value: string) {
   return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function formatHintList(values: string[]) {
+  if (values.length === 0) return 'No finish hint';
+  return values.map(formatToken).join(', ');
+}
+
 function crewStripStyle(theme: 'dark' | 'light') { return { padding: '10px 14px', borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0', marginBottom: 14 } as const; }
 function crewChipStyle(status: string, theme: 'dark' | 'light') { const color = crewDotColor(status); return { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 6, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: `1px solid ${color}44`, borderLeft: `3px solid ${color}` } as const; }
 function crewDotStyle(status: string) { return { width: 8, height: 8, borderRadius: 999, background: crewDotColor(status), marginTop: 4, flexShrink: 0 } as const; }
 function crewNameStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 12, fontWeight: 900 } as const; }
 function travelerPanelStyle(theme: 'dark' | 'light') { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', marginBottom: 16 } as const; }
 function travelerCardStyle(signal: DynamicTraveler['visualSignal'], theme: 'dark' | 'light') { const color = getTravelerSignalColor(signal); return { width: '100%', textAlign: 'left', padding: 13, borderRadius: 8, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, cursor: 'pointer' } as const; }
+function reviewSummaryStyle(theme: 'dark' | 'light', needsReview: boolean) { const color = needsReview ? '#f97316' : '#10b981'; return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, marginBottom: 16 } as const; }
+function reviewSummaryEyebrowStyle(color: string) { return { color, fontSize: 11, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 } as const; }
+function reviewSummaryTitleStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 14 } as const; }
+function reviewItemStyle(theme: 'dark' | 'light') { return { width: '100%', textAlign: 'left', padding: 10, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', cursor: 'pointer' } as const; }
+function reviewReasonTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 12, fontWeight: 800, lineHeight: 1.4, marginTop: 6 } as const; }
+function reviewMetaStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 700, marginTop: 5, lineHeight: 1.35 } as const; }
 
 const crewStripLabelStyle = { color: '#f97316', fontSize: 10, fontWeight: 900, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8 } as const;
 const crewRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 } as const;
@@ -299,6 +359,9 @@ const crewStationStyle = { color: '#64748b', fontSize: 11, fontWeight: 700, marg
 const travelerHeaderStyle = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap' } as const;
 const travelerCountRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' } as const;
 const intelBadgeRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 } as const;
+const reviewSummaryHeaderStyle = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' } as const;
+const reviewItemListStyle = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 } as const;
+const reviewItemTopStyle = { display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' } as const;
 
 function panelStyle(theme: 'dark' | 'light') { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#fff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
 function groupStyle(theme: 'dark' | 'light') { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
