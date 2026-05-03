@@ -58,8 +58,10 @@ export function getOperatorNextBestActionModel({
         title: 'Needs help',
         tone: 'HELP',
         value: blockedTraveler ? `#${blockedTraveler.order.orderNumber}` : `${supportSignalCount} support signal${supportSignalCount === 1 ? '' : 's'}`,
-        detail: blockedTraveler?.currentInstruction ?? getSupportSignalDetail(activeRisks, activeTasks),
-        actionLabel: blockedTraveler ? 'Go to blocker' : 'Go to support',
+        detail: blockedTraveler
+          ? `Blocked traveler ${blockedTraveler.order.orderNumber}: ${blockedTraveler.currentInstruction}. Open Live Workflow to review the blocker; this does not clear or resolve it.`
+          : getSupportSignalDetail(activeRisks, activeTasks),
+        actionLabel: blockedTraveler ? 'Open Live Workflow' : 'Go to support',
         target: blockedTraveler ? 'WORKFLOW' : 'SUPPORT',
       },
       {
