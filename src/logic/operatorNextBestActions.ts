@@ -39,6 +39,7 @@ export function getOperatorNextBestActionModel({
   const blockedTraveler = travelers.find((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD');
   const reviewTraveler = travelers.find((traveler) => needsClassificationReview(traveler));
   const handoffTraveler = travelers.find((traveler) => traveler.nextHandoff && traveler.visualSignal !== 'DONE');
+  const supportSignalCount = activeRisks.length + activeTasks.length;
 
   return {
     readyCount: travelers.filter((traveler) => traveler.visualSignal === 'READY').length,
@@ -46,25 +47,25 @@ export function getOperatorNextBestActionModel({
     pendingReviewCount,
     lanes: [
       {
-        title: 'Run now',
+        title: 'Do now',
         tone: 'RUN',
-        value: readyTraveler ? `#${readyTraveler.order.orderNumber}` : 'No ready traveler',
-        detail: readyTraveler?.currentInstruction ?? getFallbackRunNow(workCenter),
-        actionLabel: 'Go to workflow',
+        value: readyTraveler ? `#${readyTraveler.order.orderNumber}` : 'No ready work',
+        detail: readyTraveler?.currentInstruction ?? 'No ready traveler is leading this work center right now. Check help and review before starting side work.',
+        actionLabel: readyTraveler ? 'Go to workflow' : 'Check workflow',
         target: 'WORKFLOW',
       },
       {
         title: 'Needs help',
         tone: 'HELP',
-        value: blockedTraveler ? `#${blockedTraveler.order.orderNumber}` : `${activeRisks.length + activeTasks.length} support signal${activeRisks.length + activeTasks.length === 1 ? '' : 's'}`,
+        value: blockedTraveler ? `#${blockedTraveler.order.orderNumber}` : `${supportSignalCount} support signal${supportSignalCount === 1 ? '' : 's'}`,
         detail: blockedTraveler?.currentInstruction ?? getSupportSignalDetail(activeRisks, activeTasks),
-        actionLabel: 'Go to help',
-        target: 'SUPPORT',
+        actionLabel: blockedTraveler ? 'Go to blocker' : 'Go to support',
+        target: blockedTraveler ? 'WORKFLOW' : 'SUPPORT',
       },
       {
         title: 'Review needed',
         tone: 'REVIEW',
-        value: reviewTraveler ? `#${reviewTraveler.order.orderNumber}` : 'No active review target',
+        value: reviewTraveler ? `#${reviewTraveler.order.orderNumber}` : 'No review target',
         detail: reviewTraveler?.classificationReviewReasons[0] ?? 'No local classification review warning is leading this work center.',
         actionLabel: 'Go to review',
         target: 'REVIEW',
@@ -73,7 +74,7 @@ export function getOperatorNextBestActionModel({
         title: 'Next handoff',
         tone: 'HANDOFF',
         value: handoffTraveler?.nextHandoff ? String(handoffTraveler.nextHandoff) : 'No handoff ready',
-        detail: handoffTraveler ? `Order #${handoffTraveler.order.orderNumber}: ${handoffTraveler.currentInstruction}` : workCenter.stationTabletDefault,
+        detail: handoffTraveler ? `Order #${handoffTraveler.order.orderNumber}: ${handoffTraveler.currentInstruction}` : 'No outgoing handoff is ready from this station yet.',
         actionLabel: 'Go to handoff',
         target: 'HANDOFF',
       },
@@ -88,13 +89,8 @@ export function needsClassificationReview(traveler: DynamicTraveler): boolean {
     || traveler.productClassification.confidence === 'REVIEW';
 }
 
-function getFallbackRunNow(workCenter: WorkCenter) {
-  if (workCenter.dailyFocus[0]) return workCenter.dailyFocus[0];
-  return workCenter.stationTabletDefault;
-}
-
 function getSupportSignalDetail(activeRisks: RiskItem[], activeTasks: MaintenanceTask[]) {
   if (activeRisks[0]) return activeRisks[0].title;
   if (activeTasks[0]) return `${activeTasks[0].title} is due ${activeTasks[0].nextDue}.`;
-  return 'No blocker is leading this work center right now. Keep the workflow panel clean and current.';
+  return 'No risk or maintenance support signal is leading this work center right now.';
 }
