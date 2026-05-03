@@ -109,6 +109,7 @@ export default function WorkCenterWorkflowPanelV2({
                   </div>
                   <span style={badge(getTravelerSignalColor(traveler.visualSignal))}>{traveler.visualSignal}</span>
                 </div>
+                <TravelerIntelBadges traveler={traveler} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginTop: 10 }}>
                   <Info label="Resource" value={traveler.bestResource?.label ?? 'No capable resource'} theme={theme} />
                   <Info label="Next" value={String(traveler.nextHandoff ?? 'Not assigned')} theme={theme} />
@@ -200,6 +201,21 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
   return <div style={{ padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#fff', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0' }}><div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 900 }}>{label}</div><div style={{ color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontWeight: 900 }}>{value}</div></div>;
 }
 
+function TravelerIntelBadges({ traveler }: { traveler: DynamicTraveler }) {
+  const primaryFinishHint = traveler.finishHints[0] ? formatToken(traveler.finishHints[0]) : 'Finish Unknown';
+  const confidence = formatToken(traveler.productClassification.confidence);
+  const needsReview = traveler.classificationReviewReasons.length > 0 || traveler.productClassification.needsHumanReview;
+
+  return (
+    <div style={intelBadgeRowStyle}>
+      <span style={badge('#38bdf8')}>FINISH: {primaryFinishHint}</span>
+      {traveler.qaRequired ? <span style={badge('#f97316')}>QA REQUIRED</span> : <span style={badge('#64748b')}>QA NOT REQUIRED</span>}
+      {needsReview ? <span style={badge('#f97316')}>REVIEW NEEDED</span> : <span style={badge('#10b981')}>CLASSIFIED</span>}
+      <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{confidence}</span>
+    </div>
+  );
+}
+
 function SignalList({ title, items, theme }: { title: string; items: Array<{ owner: string; reason: string; action: string; urgency: string }>; theme: 'dark' | 'light' }) {
   return (
     <div style={{ marginTop: 10, padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#fff', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
@@ -259,6 +275,13 @@ function getTravelerSignalColor(signal: DynamicTraveler['visualSignal']): string
   return '#f97316';
 }
 
+function getConfidenceColor(confidence: DynamicTraveler['productClassification']['confidence']): string {
+  if (confidence === 'HIGH') return '#10b981';
+  if (confidence === 'MEDIUM') return '#38bdf8';
+  if (confidence === 'LOW') return '#f97316';
+  return '#ef4444';
+}
+
 function formatToken(value: string) {
   return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -275,6 +298,7 @@ const crewRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 } as const;
 const crewStationStyle = { color: '#64748b', fontSize: 11, fontWeight: 700, marginTop: 2 } as const;
 const travelerHeaderStyle = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap' } as const;
 const travelerCountRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' } as const;
+const intelBadgeRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 } as const;
 
 function panelStyle(theme: 'dark' | 'light') { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#fff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
 function groupStyle(theme: 'dark' | 'light') { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
