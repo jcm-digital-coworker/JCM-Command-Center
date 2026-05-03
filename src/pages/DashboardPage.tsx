@@ -17,6 +17,7 @@ import PlantSignalsPanel from '../components/dashboard/PlantSignalsPanel';
 import DashboardOverviewPanels from '../components/dashboard/DashboardOverviewPanels';
 import DashboardWorkCenterCard from '../components/dashboard/DashboardWorkCenterCard';
 import CommandRecommendationCard from '../components/dashboard/CommandRecommendationCard';
+import ClassificationReviewQueue from '../components/dashboard/ClassificationReviewQueue';
 import {
   dashboardGridStyle,
   dashboardHeaderStyle,
@@ -73,9 +74,11 @@ export default function DashboardPage({
     const refresh = () => setRuntimeVersion((version) => version + 1);
     window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
     window.addEventListener('storage', refresh);
+    window.addEventListener('jcm-classification-review-confirmations-updated', refresh);
     return () => {
       window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
       window.removeEventListener('storage', refresh);
+      window.removeEventListener('jcm-classification-review-confirmations-updated', refresh);
     };
   }, []);
 
@@ -125,6 +128,7 @@ export default function DashboardPage({
       />
       <QuickActionsPanel roleView={roleView} actions={quickActions} onGoToTab={onGoToTab} theme={theme} />
       <PlantSignalsPanel onNavigate={onGoToTab} />
+      <ClassificationReviewQueue theme={theme} />
 
       <DashboardOverviewPanels
         openOrderCount={openOrders.length}
