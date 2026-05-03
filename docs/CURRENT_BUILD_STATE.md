@@ -13,14 +13,16 @@ Current emphasis:
 - Fast, stable, clickerboard-style operation.
 - Department cards explain why to open an area.
 - Work Center Tablet explains what local action deserves attention first.
+- Operator Next Best Action is the primary tablet operating surface.
 - Digital Co-worker information is now a flyout, not prime page content.
+- Copy Station Link supports QR/deep-link station tablet behavior.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25287125205
-Commit: 7757dd05d91a24f73de47513ad6987305b59d696
+Run ID: 25289205624
+Commit: d5d73b2da8c4f243639764001d65a5dcfe03e8f5
 Status: GREEN
 ```
 
@@ -34,6 +36,47 @@ Passed:
 - Record latest action run
 
 ## Most Recent Completed Work
+
+### Tablet Operating Mode Emphasis
+
+Updated:
+
+```text
+src/pages/WorkCenterDetailPage.tsx
+```
+
+The Work Center Tablet now visually emphasizes the Operator Next Best Action console as the active operating surface.
+
+Added a compact operating-mode strip inside the console:
+
+```text
+TABLET OPERATING MODE
+```
+
+Mode labels are derived from the current action model:
+
+- Help count greater than zero -> `HELP FIRST`.
+- Pending review count greater than zero -> `REVIEW FIRST`.
+- Ready count greater than zero -> `RUN READY WORK`.
+- Otherwise -> `MONITOR / STAGE`.
+
+The strip explains that lane taps jump to work, help, review, or handoff areas without changing dispatch authority.
+
+Preserved existing repo behavior:
+
+- Copy Station Link.
+- Digital Co-worker flyout.
+- Review target behavior.
+- Runtime workflow panel behavior.
+
+Guardrail:
+
+- This is visual hierarchy only.
+- No dispatch change.
+- No route approval.
+- No classifier mutation.
+- No confidence change.
+- No App.tsx change.
 
 ### Digital Co-worker Flyout
 
@@ -458,12 +501,12 @@ Avoid:
 Recommended next move:
 
 ```text
-Use the Digital Co-worker flyout and Work Center Tablet lane drill-ins, then evaluate whether the main tablet page should be further simplified for clickerboard-speed operation.
+Use the tablet operating-mode strip, Digital Co-worker flyout, Copy Station Link, and lane drill-ins in the live Work Center Tablet view; then evaluate whether remaining lower-page panels should be collapsed, reordered, or moved behind action buttons for clickerboard-speed operation.
 ```
 
 Good next candidates:
 
-- Tighten the top of `WorkCenterDetailPage.tsx` so Operator Next Best Action is the visual priority.
+- Collapse or move lower-priority tablet panels behind action buttons.
 - Improve precise focus inside `WorkCenterWorkflowPanelV2` only if the current review target behavior still feels too broad.
 - Audit Dashboard / Orders / Plant Map for similar stale, bulky panels.
 
