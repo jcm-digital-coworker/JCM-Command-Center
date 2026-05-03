@@ -37,6 +37,34 @@ Passed:
 
 ## Most Recent Completed Work
 
+### Work Center Tablet Validation Checklist
+
+Added:
+
+```text
+docs/WORK_CENTER_TABLET_VALIDATION.md
+```
+
+Purpose:
+
+- Validate the live Work Center Tablet flow before adding more UI collapse, reordering, or route certainty.
+- Confirm whether the tablet already feels fast enough before hiding more information.
+- Prevent assumptions about lower panels.
+
+The checklist validates:
+
+- normal ready work center flow.
+- help/blocker work center flow.
+- review-needed work center flow.
+- handoff-oriented work center flow.
+- Copy Station Link / QR deep-link behavior.
+- whether lower panels are actually used or ignored.
+
+Decision rule:
+
+- Collapse/reorder/move panels only after validation shows they are unused, duplicative, or blocking the next action.
+- Do not collapse panels that explain blockers, support material requests, support maintenance/service context, prevent hallway-report drift, or clarify handoffs.
+
 ### Tablet Operating Mode Emphasis
 
 Updated:
@@ -446,6 +474,7 @@ docs/department-reality/COATING_MODEL_FINISH_MATRIX.md
 docs/TRAVELER_PRODUCT_CLASSIFICATION_RULE_PACK.md
 docs/LOOSE_ENDS.md
 docs/CLAUDE_PULL_NOTES.md
+docs/WORK_CENTER_TABLET_VALIDATION.md
 ```
 
 Department reality docs:
@@ -501,14 +530,24 @@ Avoid:
 Recommended next move:
 
 ```text
-Use the tablet operating-mode strip, Digital Co-worker flyout, Copy Station Link, and lane drill-ins in the live Work Center Tablet view; then evaluate whether remaining lower-page panels should be collapsed, reordered, or moved behind action buttons for clickerboard-speed operation.
+Run the Work Center Tablet validation checklist before adding more UI collapse, panel reordering, or route certainty.
 ```
 
-Good next candidates:
+Why:
 
-- Collapse or move lower-priority tablet panels behind action buttons.
-- Improve precise focus inside `WorkCenterWorkflowPanelV2` only if the current review target behavior still feels too broad.
-- Audit Dashboard / Orders / Plant Map for similar stale, bulky panels.
+- The tablet already has Operator Next Best Action, Tablet Operating Mode, Digital Co-worker flyout, Copy Station Link, lane drill-ins, and review targeting.
+- `LOOSE_ENDS.md` now says the remaining uncertainty is mostly plant truth and live-use validation, not missing review UI.
+- Lower panel collapse may be useful, but should be driven by observed use, not assumed neatness.
+
+Good next candidates after validation:
+
+- Leave tablet panels as-is.
+- Reorder a panel.
+- Collapse a panel.
+- Move a panel behind an action button.
+- Improve lane targeting.
+- Clarify confusing text.
+- Fix a bug found during validation.
 
 Guardrails:
 
