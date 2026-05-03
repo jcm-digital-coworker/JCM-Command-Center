@@ -18,7 +18,8 @@ Main moves fast. It may already contain the component, logic file, or data field
 
 **What to look for after fetching:**
 - New files in `src/logic/` — workflow engine, selectors, evaluators
-- New files in `src/components/` — panels, cards, coverage widgets
+- New files in `src/components/` — panels, cards, coverage widgets, traveler modals
+- New files in `src/logic/` — skill gap alerts, repeat offender detection
 - New fields on `ProductionOrder` — `workflowOrigin`, `engineeringRequired`, `salesReleasedAt`, `blueprintId`
 - New `Department` values — `Sales`, `Engineering` are live
 - New work centers in `workCenters.ts`
@@ -113,7 +114,10 @@ src/
 │   ├── PriorityBadge.tsx
 │   ├── WorkCenterWorkflowPanel.tsx  ← v1 (order signals, static)
 │   ├── WorkCenterWorkflowPanelV2.tsx ← v2 (grouped by operator responsibility, runtime-aware, crew strip)
-│   └── Lv4500JcmSimulator.tsx
+│   ├── Lv4500JcmSimulator.tsx
+│   └── travelers/
+│       ├── DynamicTravelerCard.tsx   ← order traveler card (route, status, actions)
+│       └── TravelerDetailModal.tsx   ← action buttons wired to runtime state mutations
 ├── data/
 │   ├── coverage.ts          ← 28+ named workers, full shift coverage
 │   ├── documents.ts         ← NSF 61, AWWA, WPS, Powercron SOP, torque specs
@@ -137,6 +141,8 @@ src/
 │   ├── orderBlueprints.ts       ← blueprint resolution + missing-blueprint kickback
 │   ├── orderWorkflow.ts         ← workflow signal generation
 │   ├── warnings.ts
+│   ├── maintenanceRepeatOffenders.ts ← flags assets with 3+ requests in 30 days
+│   ├── skillGapAlerts.ts        ← maps WorkerSkill→skillTags, surfaces coverage gaps
 │   ├── workflowActions.ts       ← action logging helpers
 │   ├── workflowEvaluation.ts    ← checkpoint-based workflow evaluator
 │   ├── workflowPanelSelectors.ts ← groups orders by operator responsibility
@@ -156,10 +162,11 @@ src/
 │   ├── CoveragePage.tsx
 │   ├── PlantMapPage.tsx
 │   ├── ReceivingPage.tsx
-│   ├── WorkCenterDetailPage.tsx  ← station tablet, wires WorkCenterWorkflowPanelV2
+│   ├── ShiftHandoffPage.tsx      ← end-of-shift snapshot using live runtime orders
+│   ├── WorkCenterDetailPage.tsx  ← station tablet, wires WorkCenterWorkflowPanelV2, QR deep-link, copy link button
 │   ├── WarRoomContextPage.tsx    ← dev/internal only
 │   └── departments/
-│       ├── DepartmentPageTools.tsx      ← PageShell, Section, OrderCard, LiveCrewSection, CardGrid, helpers
+│       ├── DepartmentPageTools.tsx      ← PageShell, Section, OrderCard, LiveCrewSection (+ skill gap alerts), CardGrid, helpers
 │       ├── SalesDepartmentPage.tsx
 │       ├── EngineeringDepartmentPage.tsx
 │       ├── MaterialHandlingDepartmentPage.tsx
@@ -167,10 +174,12 @@ src/
 │       ├── CoatingDepartmentPage.tsx
 │       ├── AssemblyDepartmentPage.tsx
 │       ├── ShippingDepartmentPage.tsx
+│       ├── SaddlesDepartmentPage.tsx    ← Saddles cell — LV4500 service saddle production
 │       └── QADepartmentPage.tsx
 ├── types/
-│   ├── app.ts              ← AppTab, RoleView, DepartmentFilter
-│   ├── machine.ts          ← Department type (includes Sales, Engineering)
+│   ├── app.ts              ← AppTab (includes saddles, shiftHandoff), RoleView, DepartmentFilter
+│   ├── dynamicTraveler.ts  ← DynamicTraveler, TravelerAction, TravelerActionType (incl. COMPLETE_ORDER)
+│   ├── machine.ts          ← Department type (includes Sales, Engineering, Saddles Dept)
 │   ├── maintenanceRequest.ts
 │   ├── maintenance.ts
 │   ├── partBlueprint.ts    ← blueprint packet types
@@ -231,6 +240,20 @@ The workflow engine drives what operators see on station tablets. Key files:
 - Groups orders by operator responsibility
 - Shows crew on shift for this work center
 - Routes action buttons to Receiving, Engineering, or Maintenance
+
+**TravelerDetailModal** wires action buttons to live runtime mutations:
+- `REQUEST_MATERIAL` → `applyWorkflowRuntimeAction(order, 'REQUEST_MATERIAL')`
+- `MARK_READY_FOR_HANDOFF` → `applyWorkflowRuntimeAction(order, 'START_WORK')`
+- `SEND_TO_NEXT_DEPARTMENT` → `applyWorkflowRuntimeAction(order, 'ADVANCE_DEPARTMENT', note, { currentDepartment: next })`
+- `COMPLETE_ORDER` → `applyWorkflowRuntimeAction(order, 'COMPLETE_ORDER')` then closes modal
+- `REPORT_ISSUE` → `applyWorkflowRuntimeAction(order, 'RESOLVE_BLOCKER')`
+
+**WorkflowRuntimeState** action kinds:
+`REQUEST_MATERIAL | MARK_MATERIAL_STAGED | ESCALATE_ENGINEERING | ACKNOWLEDGE_ORDER | START_WORK | RESOLVE_BLOCKER | ADVANCE_DEPARTMENT | COMPLETE_ORDER`
+
+`applyWorkflowRuntimeAction(orderNumber, actionKind, note?, extraOverrides?)` — `extraOverrides` allows patching additional fields (e.g., `currentDepartment`) beyond what the reducer produces.
+
+**QR deep-link**: `WorkCenterDetailPage` on mount checks `?wc=<workCenterId>` URL param and navigates directly to that station tablet. "Copy Station Link" button writes the URL to clipboard.
 
 ---
 
@@ -293,8 +316,9 @@ accent: '#f97316' (safety orange)
 
 - `jcm_theme` — 'dark' | 'light'
 - `jcm_maintenance_requests` — MaintenanceRequest[]
-- `jcm_live_coverage_v1` — CoveragePerson[] (falls back to seedCoverage)
+- `jcm_live_coverage_v1` — CoveragePerson[] (falls back to seedCoverage; now includes Sales + Engineering crew)
 - `jcm_workflow_actions` — WorkflowAction[] (action log)
+- `jcm_workflow_runtime_state` — WorkflowRuntimeState (order overrides keyed by orderNumber)
 
 ---
 
@@ -324,15 +348,29 @@ accent: '#f97316' (safety orange)
 - OrderCard rewritten to show real data (priority, flowStatus, blockers, route)
 - Photo attachments on maintenance requests (base64, max 3, 2MB each)
 - All 5 maintenance priorities surfaced in submit form (NORMAL / URGENT / LINE_DOWN / MACHINE_DOWN / SAFETY)
+- Live order mutations: TravelerDetailModal action buttons fire real runtime state changes (ADVANCE_DEPARTMENT, COMPLETE_ORDER, REQUEST_MATERIAL, START_WORK, RESOLVE_BLOCKER)
+- Saddles department page (SaddlesDepartmentPage) — crew, assets, active/blocked orders
+- Maintenance repeat offender detection — `getRepeatOffenders()` flags 3+ requests in 30 days, surfaced on MaintenancePage
+- Skill gap alerts — `getSkillGapAlerts()` compares required WorkerSkill vs coverage skillTags; shown as amber banner in LiveCrewSection
+- Shift Handoff page — uses `getRuntimeProductionOrders()` for live order state; text report copy button
+- QR deep-link — `?wc=<id>` URL param jumps directly to station tablet; "Copy Station Link" button on WorkCenterDetailPage
+- ShiftHandoffPage correct status filters — 'ready' / 'blocked' / 'hold' (matches seed data values)
+- Deleted orphaned pages: FlowPage.tsx, old WorkflowPage.tsx
 
 **Queued:**
-- App fluidity audit — remaining rough spots in OrdersPage, DashboardPage, PlantMapPage, WorkflowPage views
+- App fluidity audit — remaining rough spots in OrdersPage, DashboardPage, PlantMapPage, WorkflowMobilePage views
 - Supabase backend (replace localStorage) — Phase 3, after app is solid
 - Multi-user real-time sync — Phase 3
 - Email / push notifications — requires backend service, Phase 3
 
-**Dead code note:**
+**Dead code / known gaps:**
 - `DepartmentCards.tsx` is not imported anywhere in the app. Do not build on it. Safe to delete if it causes confusion.
+- Skill systems are split: `workers.ts` has typed `skills: WorkerSkill[]`, but `skillGapAlerts.ts` reads `coverage.ts` free-text `skillTags`. Not unified — fuzzy keyword matching bridges them for now.
+- No Office department page — 1 order with `currentDepartment: 'Office'` exists but it's admin-only, no dept page needed.
+
+**Important: production order status values in seed data**
+Orders use lowercase/mixed values: `'ready'`, `'blocked'`, `'hold'` — NOT `'IN_PROGRESS'`, `'DONE'`, `'COMPLETE'`.
+Runtime overrides may write uppercase (e.g., `'DONE'`). Always normalize when filtering.
 
 ### Phase 3 (Future)
 - ERP/MES integration
@@ -374,6 +412,6 @@ git push -u origin <your-branch>
 
 ---
 
-**Last Updated:** May 1, 2026
-**Version:** v1.3 (Phase 2 — department pages complete, fluidity audit queued)
+**Last Updated:** May 3, 2026
+**Version:** v1.4 (Phase 2 — live mutations, Saddles page, repeat offender detection, skill gaps, shift handoff, QR deep-links)
 **Developer:** Manufacturing Engineering Technician, JCM Industries, Nash, Texas
