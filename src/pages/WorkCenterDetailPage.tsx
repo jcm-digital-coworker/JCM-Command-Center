@@ -4,7 +4,7 @@ import type { Machine } from '../types/machine';
 import type { MaintenanceTask } from '../types/maintenance';
 import type { RiskItem } from '../types/risk';
 import type { RoleView } from '../types/app';
-import type { DynamicTraveler } from '../types/dynamicTraveler';
+import type { OperatorActionLane, OperatorNextBestActionModel, OperatorActionLaneTone } from '../logic/operatorNextBestActions';
 import StatusBadge from '../components/StatusBadge';
 import ReceivingWorkflowPanel from '../components/ReceivingWorkflowPanel';
 import ReceivingClosurePanel from '../components/ReceivingClosurePanel';
@@ -20,6 +20,7 @@ import {
   getConfirmationsForTraveler,
   loadClassificationReviewConfirmations,
 } from '../logic/classificationReviewConfirmations';
+import { getOperatorNextBestActionModel, needsClassificationReview } from '../logic/operatorNextBestActions';
 
 type ReceivingShortcut = 'submit' | 'arriving' | 'ready' | 'claimed' | 'delivered' | 'holds';
 
@@ -69,6 +70,13 @@ export default function WorkCenterDetailPage({
   const reviewConfirmations = loadClassificationReviewConfirmations();
   const reviewTravelers = departmentTravelers.filter((traveler) => needsClassificationReview(traveler));
   const pendingReviewCount = reviewTravelers.filter((traveler) => getConfirmationsForTraveler(reviewConfirmations, traveler).length === 0).length;
+  const actionModel = getOperatorNextBestActionModel({
+    workCenter,
+    travelers: departmentTravelers,
+    activeRisks,
+    activeTasks,
+    pendingReviewCount,
+  });
 
   return (
     <div style={pageStyle}>
@@ -104,14 +112,7 @@ export default function WorkCenterDetailPage({
         )}
       </section>
 
-      <OperatorNextBestActionPanel
-        workCenter={workCenter}
-        travelers={departmentTravelers}
-        activeRisks={activeRisks}
-        activeTasks={activeTasks}
-        pendingReviewCount={pendingReviewCount}
-        theme={theme}
-      />
+      <OperatorNextBestActionPanel model={actionModel} theme={theme} />
 
       <WorkCenterWorkflowPanelV2
         workCenter={workCenter}
@@ -242,25 +243,12 @@ export default function WorkCenterDetailPage({
 }
 
 function OperatorNextBestActionPanel({
-  workCenter,
-  travelers,
-  activeRisks,
-  activeTasks,
-  pendingReviewCount,
+  model,
   theme,
 }: {
-  workCenter: WorkCenter;
-  travelers: DynamicTraveler[];
-  activeRisks: RiskItem[];
-  activeTasks: MaintenanceTask[];
-  pendingReviewCount: number;
+  model: OperatorNextBestActionModel;
   theme: 'dark' | 'light';
 }) {
-  const readyTraveler = travelers.find((traveler) => traveler.visualSignal === 'READY');
-  const blockedTraveler = travelers.find((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD');
-  const reviewTraveler = travelers.find((traveler) => needsClassificationReview(traveler));
-  const handoffTraveler = travelers.find((traveler) => traveler.nextHandoff && traveler.visualSignal !== 'DONE');
-
   return (
     <section style={getActionConsoleStyle(theme)}>
       <div style={panelHeaderStyle}>
@@ -269,66 +257,43 @@ function OperatorNextBestActionPanel({
           <h3 style={getSectionTitleStyle(theme)}>Local action console</h3>
         </div>
         <div style={consoleBadgeRowStyle}>
-          <span style={getConsoleBadgeStyle('#10b981')}>{travelers.filter((traveler) => traveler.visualSignal === 'READY').length} READY</span>
-          <span style={getConsoleBadgeStyle('#dc2626')}>{travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length} HELP</span>
-          <span style={getConsoleBadgeStyle('#f97316')}>{pendingReviewCount} REVIEW</span>
+          <span style={getConsoleBadgeStyle('#10b981')}>{model.readyCount} READY</span>
+          <span style={getConsoleBadgeStyle('#dc2626')}>{model.helpCount} HELP</span>
+          <span style={getConsoleBadgeStyle('#f97316')}>{model.pendingReviewCount} REVIEW</span>
         </div>
       </div>
 
       <div style={getActionLaneGridStyle()}>
-        <ActionLane
-          title="Run now"
-          tone="#10b981"
-          value={readyTraveler ? `#${readyTraveler.order.orderNumber}` : 'No ready traveler'}
-          detail={readyTraveler?.currentInstruction ?? getFallbackRunNow(workCenter)}
-          theme={theme}
-        />
-        <ActionLane
-          title="Needs help"
-          tone="#dc2626"
-          value={blockedTraveler ? `#${blockedTraveler.order.orderNumber}` : `${activeRisks.length + activeTasks.length} support signal${activeRisks.length + activeTasks.length === 1 ? '' : 's'}`}
-          detail={blockedTraveler?.currentInstruction ?? getSupportSignalDetail(activeRisks, activeTasks)}
-          theme={theme}
-        />
-        <ActionLane
-          title="Review needed"
-          tone="#f97316"
-          value={reviewTraveler ? `#${reviewTraveler.order.orderNumber}` : 'No active review target'}
-          detail={reviewTraveler?.classificationReviewReasons[0] ?? 'No local classification review warning is leading this work center.'}
-          theme={theme}
-        />
-        <ActionLane
-          title="Next handoff"
-          tone="#38bdf8"
-          value={handoffTraveler?.nextHandoff ? String(handoffTraveler.nextHandoff) : 'No handoff ready'}
-          detail={handoffTraveler ? `Order #${handoffTraveler.order.orderNumber}: ${handoffTraveler.currentInstruction}` : workCenter.stationTabletDefault}
-          theme={theme}
-        />
+        {model.lanes.map((lane) => (
+          <ActionLane key={lane.title} lane={lane} theme={theme} />
+        ))}
       </div>
     </section>
   );
 }
 
 function ActionLane({
-  title,
-  tone,
-  value,
-  detail,
+  lane,
   theme,
 }: {
-  title: string;
-  tone: string;
-  value: string;
-  detail: string;
+  lane: OperatorActionLane;
   theme: 'dark' | 'light';
 }) {
+  const tone = getActionLaneToneColor(lane.tone);
   return (
     <article style={getActionLaneStyle(theme, tone)}>
-      <div style={{ color: tone, fontSize: 10, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' }}>{title}</div>
-      <strong style={getActionLaneValueStyle(theme)}>{value}</strong>
-      <p style={getActionLaneDetailStyle(theme)}>{detail}</p>
+      <div style={{ color: tone, fontSize: 10, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' }}>{lane.title}</div>
+      <strong style={getActionLaneValueStyle(theme)}>{lane.value}</strong>
+      <p style={getActionLaneDetailStyle(theme)}>{lane.detail}</p>
     </article>
   );
+}
+
+function getActionLaneToneColor(tone: OperatorActionLaneTone) {
+  if (tone === 'RUN') return '#10b981';
+  if (tone === 'HELP') return '#dc2626';
+  if (tone === 'REVIEW') return '#f97316';
+  return '#38bdf8';
 }
 
 function getPriority(workCenter: WorkCenter, machines: Machine[], tasks: MaintenanceTask[], risks: RiskItem[]) {
@@ -338,21 +303,6 @@ function getPriority(workCenter: WorkCenter, machines: Machine[], tasks: Mainten
   if (risks.length > 0) return `${risks.length} open risk item${risks.length === 1 ? '' : 's'} should be reviewed before the shift gets busy.`;
   if (workCenter.id === 'receiving') return 'Keep the inbound queue accurate, then deliver material to the right work centers without creating mystery inventory.';
   return workCenter.stationTabletDefault;
-}
-
-function needsClassificationReview(traveler: DynamicTraveler): boolean {
-  return traveler.classificationReviewReasons.length > 0 || traveler.productClassification.needsHumanReview || traveler.productClassification.confidence === 'LOW' || traveler.productClassification.confidence === 'REVIEW';
-}
-
-function getFallbackRunNow(workCenter: WorkCenter) {
-  if (workCenter.dailyFocus[0]) return workCenter.dailyFocus[0];
-  return workCenter.stationTabletDefault;
-}
-
-function getSupportSignalDetail(activeRisks: RiskItem[], activeTasks: MaintenanceTask[]) {
-  if (activeRisks[0]) return activeRisks[0].title;
-  if (activeTasks[0]) return `${activeTasks[0].title} is due ${activeTasks[0].nextDue}.`;
-  return 'No blocker is leading this work center right now. Keep the workflow panel clean and current.';
 }
 
 function getWorkerHeroText(workCenterId: string) {
