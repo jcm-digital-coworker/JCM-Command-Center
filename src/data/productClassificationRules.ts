@@ -69,11 +69,16 @@ export const productClassificationRules: ProductClassificationRule[] = [
     outletClass: 'UNDER_12_INCH',
     finishHints: ['STANDARD_SHOP_COAT', 'OPTIONAL_FUSION_EPOXY'],
     routeHint: ['Material Handling', 'Machine Shop', 'Fab', 'Coating', 'Assembly'],
-    departmentOwnershipHint: ['412 Fab', '412 Assembly'],
+    departmentOwnershipHint: [
+      'Material Handling and Machine Shop feed 412 Fab components',
+      '412 Fab owns carbon small-body fabrication with 12 inch and under outlets',
+      'Coating handles shop coat or optional fusion epoxy review after 412 Fab',
+      '412 Assembly builds after Coating',
+    ],
     qaRequired: false,
     qaReason: 'not_required',
     confidence: 'MEDIUM',
-    reviewReason: 'Confirm 412 route and whether 12 inch outlet threshold is inclusive.',
+    reviewReason: 'Route family is partially confirmed, but verify the 12 inch outlet threshold is inclusive and confirm the exact coating lane before automatic dispatch.',
   },
   {
     modelSignals: ['432'],
