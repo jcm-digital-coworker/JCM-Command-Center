@@ -51,6 +51,8 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
           <Info label="Ship Date" value={order.projectedShipDate ?? 'Not scheduled'} theme={theme} />
         </div>
 
+        <ProductIntelligencePanel traveler={traveler} theme={theme} />
+
         <section style={sectionBlockStyle}>
           <div style={smallLabelStyle(theme)}>Capable Resources</div>
           <p style={helperTextStyle(theme)}>Only resources that match all required traveler capabilities are shown here. Unusable equipment is intentionally hidden.</p>
@@ -127,6 +129,41 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
   );
 }
 
+function ProductIntelligencePanel({ traveler, theme }: { traveler: DynamicTraveler; theme: 'dark' | 'light' }) {
+  const classification = traveler.productClassification;
+  const matchedLabel = classification.matchedRule?.label ?? 'No matched model rule';
+  const reviewReasons = traveler.classificationReviewReasons;
+
+  return (
+    <section style={productIntelStyle(theme, reviewReasons.length > 0)}>
+      <div style={smallLabelStyle(theme)}>Product Intelligence</div>
+      <div style={infoGridStyle}>
+        <Info label="Model Signal" value={classification.modelSignal ?? 'Not found'} theme={theme} />
+        <Info label="Matched Rule" value={matchedLabel} theme={theme} />
+        <Info label="Product Family" value={formatToken(classification.productFamily)} theme={theme} />
+        <Info label="Material" value={formatToken(classification.materialClass)} theme={theme} />
+        <Info label="Finish Hint" value={formatHintList(traveler.finishHints)} theme={theme} />
+        <Info label="QA Required" value={traveler.qaRequired ? 'Yes' : 'No'} theme={theme} />
+        <Info label="Confidence" value={formatToken(classification.confidence)} theme={theme} />
+        <Info label="Suggested Route" value={classification.routeHint.length > 0 ? classification.routeHint.join(' → ') : 'No route hint'} theme={theme} />
+      </div>
+
+      {reviewReasons.length > 0 ? (
+        <div style={reviewBoxStyle(theme)}>
+          <strong>Needs review before automatic dispatch:</strong>
+          <ul style={reviewListStyle}>
+            {reviewReasons.slice(0, 4).map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div style={readyNoticeStyle(theme)}>No classification review warning is listed for this traveler.</div>
+      )}
+    </section>
+  );
+}
+
 function ResourceContextPanel({ traveler, resource, theme }: { traveler: DynamicTraveler; resource: TravelerResource; theme: 'dark' | 'light' }) {
   const isRecommended = resource.id === traveler.bestResource?.id;
   const matchingCapabilities = resource.capabilities.filter((capability) => traveler.capableResources.some((candidate) => candidate.id === resource.id && candidate.capabilities.includes(capability)));
@@ -176,6 +213,11 @@ function ActionRow({ action, theme }: { action: TravelerAction; theme: 'dark' | 
 
 function formatToken(value: string) {
   return value.replaceAll('_', ' ').replaceAll('-', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatHintList(values: string[]) {
+  if (values.length === 0) return 'No finish hint';
+  return values.map(formatToken).join(', ');
 }
 
 function formatMaterial(value: string) {
@@ -292,6 +334,11 @@ const chipRowStyle: CSSProperties = {
   marginTop: 10,
 };
 
+const reviewListStyle: CSSProperties = {
+  margin: '8px 0 0',
+  paddingLeft: 18,
+};
+
 function modalCardStyle(theme: 'dark' | 'light', color: string): CSSProperties {
   return {
     width: 'min(760px, 100%)',
@@ -357,6 +404,32 @@ function instructionTextStyle(theme: 'dark' | 'light'): CSSProperties {
     fontWeight: 900,
     color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
     lineHeight: 1.4,
+  };
+}
+
+function productIntelStyle(theme: 'dark' | 'light', needsReview: boolean): CSSProperties {
+  const color = needsReview ? '#f97316' : '#10b981';
+  return {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    background: theme === 'dark' ? 'rgba(15,23,42,0.9)' : '#f8fafc',
+    border: `1px solid ${color}66`,
+    borderLeft: `4px solid ${color}`,
+  };
+}
+
+function reviewBoxStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 6,
+    background: theme === 'dark' ? 'rgba(124,45,18,0.32)' : '#ffedd5',
+    border: '1px solid #f97316',
+    color: theme === 'dark' ? '#fed7aa' : '#9a3412',
+    fontSize: 12,
+    lineHeight: 1.45,
+    fontWeight: 750,
   };
 }
 
