@@ -103,6 +103,12 @@ export default function WorkCenterWorkflowPanelV2({
     setReviewDraft(defaultReviewDraft);
   };
 
+  const clearReviewTarget = () => {
+    localStorage.removeItem(REVIEW_TARGET_STORAGE_KEY);
+    setReviewTargetVersion((version) => version + 1);
+    window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+  };
+
   return (
     <section style={panelStyle(theme)}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, gap: 12 }}>
@@ -143,6 +149,7 @@ export default function WorkCenterWorkflowPanelV2({
         }}
         onDraftChange={setReviewDraft}
         onSave={saveReviewCapture}
+        onClearTarget={clearReviewTarget}
       />
 
       <div style={travelerPanelStyle(theme)}>
@@ -274,6 +281,7 @@ function ClassificationReviewSummary({
   onSelectTraveler,
   onDraftChange,
   onSave,
+  onClearTarget,
 }: {
   travelers: DynamicTraveler[];
   confirmations: ClassificationReviewConfirmation[];
@@ -284,6 +292,7 @@ function ClassificationReviewSummary({
   onSelectTraveler: (traveler: DynamicTraveler) => void;
   onDraftChange: (draft: ClassificationReviewDraft) => void;
   onSave: () => void;
+  onClearTarget: () => void;
 }) {
   if (travelers.length === 0) {
     return (
@@ -308,7 +317,15 @@ function ClassificationReviewSummary({
         <div>
           <div style={reviewSummaryEyebrowStyle('#f97316')}>Classification Review Needed</div>
           <strong style={reviewSummaryTitleStyle(theme)}>{travelers.length} traveler{travelers.length === 1 ? '' : 's'} need route/product confirmation.</strong>
-          {targetOrderNumber ? <div style={targetNoticeStyle(theme)}>Opened from global queue for order {targetOrderNumber}.</div> : null}
+          {targetOrderNumber ? (
+            <div style={targetNoticeBoxStyle(theme)}>
+              <div>
+                <div style={targetNoticeStyle(theme)}>Opened from global queue for order {targetOrderNumber}.</div>
+                <div style={targetInstructionStyle(theme)}>This traveler is preselected below. Clear the target after the review is handled.</div>
+              </div>
+              <button type="button" style={clearTargetButtonStyle(theme)} onClick={onClearTarget}>Clear Target</button>
+            </div>
+          ) : null}
         </div>
         <span style={badge('#f97316')}>{travelers.length} REVIEW</span>
       </div>
@@ -466,6 +483,9 @@ function reviewMetaStyle(theme: 'dark' | 'light') { return { color: theme === 'd
 function reviewSavedTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#86efac' : '#166534', fontSize: 11, fontWeight: 900, marginTop: 6 } as const; }
 function targetNoticeStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 12, fontWeight: 900, marginTop: 5 } as const; }
 function targetTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#38bdf8' : '#0369a1', fontSize: 11, fontWeight: 900, marginTop: 6 } as const; }
+function targetNoticeBoxStyle(theme: 'dark' | 'light') { return { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 8, padding: '8px 10px', borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#fff7ed', border: theme === 'dark' ? '1px solid #7c2d12' : '1px solid #fed7aa' } as const; }
+function targetInstructionStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#94a3b8' : '#9a3412', fontSize: 11, fontWeight: 800, marginTop: 3 } as const; }
+function clearTargetButtonStyle(theme: 'dark' | 'light') { return { padding: '7px 9px', borderRadius: 4, border: theme === 'dark' ? '1px solid #fed7aa' : '1px solid #c2410c', background: theme === 'dark' ? '#431407' : '#ffedd5', color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 10, fontWeight: 900, cursor: 'pointer', textTransform: 'uppercase' } as const; }
 
 const crewStripLabelStyle = { color: '#f97316', fontSize: 10, fontWeight: 900, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8 } as const;
 const crewRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 } as const;
