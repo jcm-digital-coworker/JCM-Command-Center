@@ -83,7 +83,9 @@ export default function WorkCenterWorkflowPanelV2({
   const groups = getWorkCenterWorkflowGroups(workCenter);
   const activeCount = groups.reduce((total: number, group: any) => total + group.cards.length, 0);
   const readyCount = travelers.filter((traveler) => traveler.visualSignal === 'READY').length;
-  const blockedCount = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
+  const blockedTravelers = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD');
+  const blockerFocusTraveler = blockedTravelers[0] ?? null;
+  const blockedCount = blockedTravelers.length;
   const reviewTravelers = travelers.filter((traveler) => needsClassificationReview(traveler));
 
   useEffect(() => {
@@ -132,6 +134,28 @@ export default function WorkCenterWorkflowPanelV2({
           <div style={eyebrowStyle}>CREW ON SHIFT</div>
           <div style={wrapRowStyle}>
             {deptCrew.map((person) => <CrewChip key={person.id} person={person} theme={theme} />)}
+          </div>
+        </section>
+      ) : null}
+
+      {blockerFocusTraveler ? (
+        <section style={blockerFocusStyle(theme)}>
+          <div style={headerRowStyle}>
+            <div>
+              <div style={eyebrowStyle}>BLOCKER FOCUS</div>
+              <strong style={strongTextStyle(theme)}>#{blockerFocusTraveler.order.orderNumber} needs help now</strong>
+              <div style={bodyTextStyle(theme)}>{blockerFocusTraveler.currentInstruction}</div>
+            </div>
+            <span style={badge('#ef4444')}>{blockerFocusTraveler.visualSignal}</span>
+          </div>
+          <div style={wrapRowStyle}>
+            <span style={badge('#f97316')}>{formatToken(blockerFocusTraveler.materialStatus)}</span>
+            <span style={badge(getConfidenceColor(blockerFocusTraveler.productClassification.confidence))}>{formatToken(blockerFocusTraveler.productClassification.confidence)}</span>
+            <span style={badge(blockerFocusTraveler.qaRequired ? '#f97316' : '#64748b')}>{blockerFocusTraveler.qaRequired ? 'QA REQUIRED' : 'QA NOT REQUIRED'}</span>
+          </div>
+          <div style={noticeStyle(theme)}>
+            This card identifies the leading blocked or held traveler. Opening it does not clear the blocker, approve the route, or dispatch work.
+            <button type="button" style={buttonStyle('#ef4444')} onClick={() => setSelectedTraveler(blockerFocusTraveler)}>Open traveler detail</button>
           </div>
         </section>
       ) : null}
@@ -479,6 +503,7 @@ function badge(color: string): CSSProperties {
 
 function panelStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 16, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', display: 'grid', gap: 16 }; }
 function subPanelStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
+function blockerFocusStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#fff7ed', border: '1px solid rgba(239,68,68,0.55)', borderLeft: '5px solid #ef4444', display: 'grid', gap: 10 }; }
 function groupStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function workflowCardStyle(theme: 'dark' | 'light', color: string): CSSProperties { return { padding: 14, borderRadius: 8, border: `1px solid ${color}`, borderLeft: `5px solid ${color}`, background: theme === 'dark' ? '#0f172a' : '#f8fafc' }; }
 function travelerCardStyle(theme: 'dark' | 'light', color: string): CSSProperties { return { width: '100%', textAlign: 'left', padding: 13, borderRadius: 8, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, cursor: 'pointer' }; }
