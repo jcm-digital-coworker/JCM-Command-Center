@@ -15,14 +15,15 @@ Current emphasis:
 - Digital Co-worker is a flyout, not prime page content.
 - Copy Station Link supports QR/deep-link station tablet behavior.
 - Department descriptions now flow through a shared operating profile layer instead of scattered hardcoded page copies.
+- Workflow action buttons must not imply resolution unless the app actually resolves something.
 - Validate live tablet use before more UI collapse, panel reordering, or route certainty.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25290831236
-Commit: 53ba61a2d3d68ab063db6987a8233d3fc2039d44
+Run ID: 25292083563
+Commit: 1d91f574a08f2b5b97e80dde9fb85388972bd372
 Status: GREEN
 ```
 
@@ -36,6 +37,46 @@ Passed:
 - Record latest action run
 
 ## Most Recent Completed App Work
+
+### Workflow Action Routing Fix
+
+Files:
+
+```text
+src/components/WorkCenterWorkflowPanelV2.tsx
+```
+
+PR:
+
+```text
+#8 Fix workflow action routing
+```
+
+Problem fixed:
+
+- Generic workflow card buttons containing `Blocker` or `Lead` were treated as blocker resolution.
+- The action logged `BLOCKER_RESOLUTION`, applied `RESOLVE_BLOCKER`, and opened Maintenance.
+- This could make the app look like it resolved a blocker when it only navigated away.
+
+Current behavior:
+
+- Generic `Resolve Blocker` copy is shown as `Review blocker`.
+- Generic blocker review stays in the workflow context.
+- Generic blocker review logs a local workflow action only.
+- Generic blocker review does not open Maintenance.
+- Generic blocker review does not clear blockers.
+- Generic blocker review does not change route/runtime state.
+- Maintenance opens only for explicit maintenance/machine/service/repair/alarm/down/downtime actions.
+- Material actions still open Receiving material request.
+- Engineering/hold actions still open Engineering escalation.
+
+Guardrail:
+
+- No route approval.
+- No dispatch behavior.
+- No classifier mutation.
+- No confidence increases.
+- Do not label a button as resolution unless the workflow actually has a resolution path.
 
 ### Department Truth Alignment Audit
 
@@ -92,15 +133,6 @@ Targeted scan results:
 - Crew guidance remains decision logic, not department identity copy.
 - Plant assets remain asset-level facts and are intentionally not flattened into department summaries.
 
-Guardrail:
-
-- This is descriptive alignment only.
-- No route approval.
-- No dispatch behavior.
-- No classifier mutation.
-- No confidence increases.
-- No App.tsx routing change.
-
 ### Tablet Action Console And Help Target Cleanup
 
 Files:
@@ -118,73 +150,6 @@ Fixes:
 - The confusing standalone Tablet Operating Mode strip was removed from the page.
 - The current operating mode is now the action-console title.
 - Digital Co-worker is centered as an inline flyout panel and contains dynamic mode/ready/help/review counts.
-
-Green build for this cleanup:
-
-```text
-Run ID: 25290237530
-Commit: 2390613f6331cf7462bed1e2d69f0c21ffd86833
-Status: GREEN
-```
-
-### Work Center Tablet Validation Results
-
-Added:
-
-```text
-docs/WORK_CENTER_TABLET_VALIDATION_RESULTS.md
-```
-
-This records a source-grounded validation pass, not a live floor/device test.
-
-Source-verified findings:
-
-- Copy Station Link builds `?wc=<workCenter.id>` station URLs.
-- Digital Co-worker is a flyout, not a full-width main-flow panel.
-- Operator Next Best Action renders before the main workflow panel.
-- Lane buttons exist for workflow, help, review, and handoff.
-- Review Needed reuses the existing review-target storage/event path.
-- Existing `productionOrders` data contains real validation cases, so no fake demo data is needed.
-- Review targeting is currently the most mature precision path.
-
-Still needs live validation:
-
-- Whether an operator can tell what to do first within 5 seconds.
-- Whether the flyout covers important controls on tablet/mobile viewport sizes.
-- Whether Copy Station Link opens the expected work center in the deployed app.
-- Whether Go to Help lands close enough to the actual blocker.
-- Whether lower panels are useful or distracting during real work.
-- Whether HELP FIRST still feels right when a department also has ready work.
-
-Recommendation:
-
-```text
-Do not collapse or hide lower tablet panels yet.
-Run the live Work Center Tablet validation checklist first.
-```
-
-### Work Center Tablet Validation Checklist
-
-Added:
-
-```text
-docs/WORK_CENTER_TABLET_VALIDATION.md
-```
-
-Purpose:
-
-- Validate the live Work Center Tablet flow before adding more UI collapse, reordering, or route certainty.
-- Confirm whether the tablet already feels fast enough before hiding more information.
-- Prevent assumptions about lower panels.
-
-The checklist validates:
-
-- normal ready work center flow.
-- help/blocker work center flow.
-- review-needed work center flow.
-- handoff-oriented work center flow.
-- Copy Station Link / QR deep-link behavior.
-- whether lower panels are actually used or ignored.
 
 ## Important Repo Correction From CLAUDE.md
 
@@ -466,7 +431,7 @@ Avoid:
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
 - Work Center Tablet lane drill-ins are mostly scroll/navigation; make them smarter only if operators need precise panel/item focus.
 - HELP FIRST priority may need clearer copy if departments also have ready work.
-- Go to Help may need more precise targeting if live validation shows the support section is too broad.
+- Live validation should confirm that `Review blocker` is understood as review/logging only, not final resolution.
 
 ## Next Recommended Move
 
@@ -478,7 +443,9 @@ Run live Work Center Tablet validation on the deployed/tablet view.
 
 Why:
 
-- The most obvious department-description drift has been centralized behind shared operating profiles.
+- The app is green on main after the workflow-action routing fix.
+- Generic blocker review no longer pretends to resolve blockers or sends workers to Maintenance without a real maintenance-owned issue.
+- Department-description drift has been centralized behind shared operating profiles.
 - Remaining route uncertainty is plant-truth uncertainty, not a UI-description alignment problem.
 - Lower panel collapse/reordering should still be based on live use.
 
