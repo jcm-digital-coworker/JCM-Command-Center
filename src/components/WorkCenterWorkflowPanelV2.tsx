@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { WorkCenter } from '../types/plant';
 import type { CoveragePerson } from '../types/coverage';
 import type { DynamicTraveler } from '../types/dynamicTraveler';
@@ -10,11 +10,7 @@ import { getWorkCenterWorkflowGroups } from '../logic/workflowPanelSelectors';
 import { generateDynamicTravelers } from '../logic/dynamicTraveler';
 import { addWorkflowAction } from '../logic/workflowActions';
 import { applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
-import {
-  getConfirmationsForTraveler,
-  loadClassificationReviewConfirmations,
-  saveClassificationReviewConfirmation,
-} from '../logic/classificationReviewConfirmations';
+import { getConfirmationsForTraveler, loadClassificationReviewConfirmations, saveClassificationReviewConfirmation } from '../logic/classificationReviewConfirmations';
 import TravelerDetailModal from './travelers/TravelerDetailModal';
 import ClassificationReviewCapture from './travelers/ClassificationReviewCapture';
 
@@ -25,6 +21,8 @@ type Props = {
   onOpenEngineering?: () => void;
   onOpenMaintenance?: () => void;
 };
+
+type ActionDeps = Pick<Props, 'onOpenReceiving' | 'onOpenEngineering' | 'onOpenMaintenance'>;
 
 const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
 const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
@@ -48,6 +46,7 @@ export default function WorkCenterWorkflowPanelV2({
   const [reviewTargetVersion, setReviewTargetVersion] = useState(0);
   const [reviewDraft, setReviewDraft] = useState<ClassificationReviewDraft>(defaultReviewDraft);
   const [reviewConfirmations, setReviewConfirmations] = useState<ClassificationReviewConfirmation[]>(() => loadClassificationReviewConfirmations());
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [coveragePeople] = useState<CoveragePerson[]>(() => loadCoverage());
 
   useEffect(() => {
@@ -71,7 +70,7 @@ export default function WorkCenterWorkflowPanelV2({
   }, []);
 
   const deptCrew = useMemo(
-    () => coveragePeople.filter((p) => p.department === workCenter.department),
+    () => coveragePeople.filter((person) => person.department === workCenter.department),
     [coveragePeople, workCenter.department],
   );
 
@@ -81,60 +80,61 @@ export default function WorkCenterWorkflowPanelV2({
   );
 
   const reviewTarget = useMemo(() => loadReviewTarget(), [reviewTargetVersion, workCenter.department]);
-
   const groups = getWorkCenterWorkflowGroups(workCenter);
-  const activeCount = groups.reduce((total, group) => total + group.cards.length, 0);
-  const travelerReadyCount = travelers.filter((traveler) => traveler.visualSignal === 'READY').length;
-  const travelerBlockedCount = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
+  const activeCount = groups.reduce((total: number, group: any) => total + group.cards.length, 0);
+  const readyCount = travelers.filter((traveler) => traveler.visualSignal === 'READY').length;
+  const blockedCount = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
   const reviewTravelers = travelers.filter((traveler) => needsClassificationReview(traveler));
 
   useEffect(() => {
     const targetedTraveler = reviewTarget?.department === workCenter.department
       ? reviewTravelers.find((traveler) => traveler.order.orderNumber === reviewTarget.orderNumber)
       : null;
-    if (!targetedTraveler) return;
-    setSelectedReviewTraveler(targetedTraveler);
+    if (targetedTraveler) setSelectedReviewTraveler(targetedTraveler);
   }, [reviewTarget, reviewTravelers, workCenter.department]);
 
-  const saveReviewCapture = () => {
+  function saveReviewCapture() {
     if (!selectedReviewTraveler) return;
     const next = saveClassificationReviewConfirmation(selectedReviewTraveler, reviewDraft);
     setReviewConfirmations(next);
     setReviewDraft(defaultReviewDraft);
-  };
+  }
 
-  const clearReviewTarget = () => {
+  function clearReviewTarget() {
     localStorage.removeItem(REVIEW_TARGET_STORAGE_KEY);
     setReviewTargetVersion((version) => version + 1);
     window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
-  };
+  }
+
+  function runAction(label: string, orderNumber: string) {
+    const notice = act(label, orderNumber, workCenter.department, {
+      onOpenReceiving,
+      onOpenEngineering,
+      onOpenMaintenance,
+    });
+    setActionNotice(notice);
+  }
 
   return (
     <section style={panelStyle(theme)}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, gap: 12 }}>
+      <div style={headerRowStyle}>
         <div>
-          <div style={{ color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: 1.2 }}>LIVE WORKFLOW</div>
-          <h3 style={{ margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }}>Station Order Truth</h3>
+          <div style={eyebrowStyle}>LIVE WORKFLOW</div>
+          <h3 style={titleStyle(theme)}>Station Order Truth</h3>
         </div>
-        <strong style={{ color: '#f97316', whiteSpace: 'nowrap' }}>{activeCount + travelers.length} VISIBLE</strong>
+        <strong style={visibleCountStyle}>{activeCount + travelers.length} VISIBLE</strong>
       </div>
 
-      {deptCrew.length > 0 && (
-        <div style={crewStripStyle(theme)}>
-          <div style={crewStripLabelStyle}>CREW ON SHIFT</div>
-          <div style={crewRowStyle}>
-            {deptCrew.map((person) => (
-              <div key={person.id} style={crewChipStyle(person.status, theme)}>
-                <div style={crewDotStyle(person.status)} />
-                <div>
-                  <div style={crewNameStyle(theme)}>{person.name}</div>
-                  <div style={crewStationStyle}>{person.station}</div>
-                </div>
-              </div>
-            ))}
+      {actionNotice ? <div style={noticeStyle(theme)}>{actionNotice}</div> : null}
+
+      {deptCrew.length > 0 ? (
+        <section style={subPanelStyle(theme)}>
+          <div style={eyebrowStyle}>CREW ON SHIFT</div>
+          <div style={wrapRowStyle}>
+            {deptCrew.map((person) => <CrewChip key={person.id} person={person} theme={theme} />)}
           </div>
-        </div>
-      )}
+        </section>
+      ) : null}
 
       <ClassificationReviewSummary
         travelers={reviewTravelers}
@@ -152,123 +152,135 @@ export default function WorkCenterWorkflowPanelV2({
         onClearTarget={clearReviewTarget}
       />
 
-      <div style={travelerPanelStyle(theme)}>
-        <div style={travelerHeaderStyle}>
+      <section style={subPanelStyle(theme)}>
+        <div style={headerRowStyle}>
           <div>
-            <div style={{ color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase' }}>Dynamic Travelers</div>
-            <div style={{ color: '#64748b', fontSize: 12, fontWeight: 700, marginTop: 3 }}>
-              Department-scoped work instructions: what to run, where to run it, and where it goes next.
-            </div>
+            <div style={eyebrowStyle}>DYNAMIC TRAVELERS</div>
+            <div style={mutedTextStyle(theme)}>Department-scoped work instructions: what to run, where to run it, and where it goes next.</div>
           </div>
-          <div style={travelerCountRowStyle}>
-            <span style={badge('#10b981')}>{travelerReadyCount} READY</span>
-            <span style={badge('#ef4444')}>{travelerBlockedCount} BLOCKED / HOLD</span>
+          <div style={wrapRowStyle}>
+            <span style={badge('#10b981')}>{readyCount} READY</span>
+            <span style={badge('#ef4444')}>{blockedCount} BLOCKED / HOLD</span>
           </div>
         </div>
-
         {travelers.length === 0 ? (
-          <div style={{ color: '#64748b', fontWeight: 700, fontSize: 13 }}>No Dynamic Travelers are mapped for this work center yet.</div>
+          <Empty theme={theme}>No Dynamic Travelers are mapped for this work center yet.</Empty>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={stackStyle}>
             {travelers.slice(0, 4).map((traveler) => (
-              <button key={traveler.id} type="button" style={travelerCardStyle(traveler.visualSignal, theme)} onClick={() => setSelectedTraveler(traveler)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                  <div>
-                    <strong style={{ color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>#{traveler.order.orderNumber} • {traveler.order.productFamily}</strong>
-                    <div style={{ color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 13, fontWeight: 800, lineHeight: 1.4, marginTop: 6 }}>{traveler.currentInstruction}</div>
-                  </div>
-                  <span style={badge(getTravelerSignalColor(traveler.visualSignal))}>{traveler.visualSignal}</span>
-                </div>
-                <TravelerIntelBadges traveler={traveler} />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginTop: 10 }}>
-                  <Info label="Resource" value={traveler.bestResource?.label ?? 'No capable resource'} theme={theme} />
-                  <Info label="Next" value={String(traveler.nextHandoff ?? 'Not assigned')} theme={theme} />
-                  <Info label="Material" value={formatToken(String(traveler.materialStatus))} theme={theme} />
-                  <Info label="QA" value={formatToken(String(traveler.qaStatus))} theme={theme} />
-                </div>
-              </button>
+              <TravelerCard key={traveler.id} traveler={traveler} theme={theme} onOpen={() => setSelectedTraveler(traveler)} />
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {groups.length === 0 ? <div style={{ color: '#64748b' }}>No active order signals for this work center.</div> : null}
+      {groups.length === 0 ? <Empty theme={theme}>No active order signals for this work center.</Empty> : null}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {groups.map((group) => (
-          <div key={group.key} style={groupStyle(theme)}>
+      <div style={stackStyle}>
+        {groups.map((group: any) => (
+          <section key={group.key} style={groupStyle(theme)}>
             <div style={{ marginBottom: 10 }}>
-              <div style={{ color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase' }}>{group.title}</div>
-              <div style={{ color: '#64748b', fontSize: 12, fontWeight: 700, marginTop: 3 }}>{group.description}</div>
+              <div style={eyebrowStyle}>{group.title}</div>
+              <div style={mutedTextStyle(theme)}>{group.description}</div>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {group.cards.map((card) => {
-                const order = card.order;
-                const signal = card.signal;
-                const packet = card.packet;
-
-                return (
-                  <article key={order.id} style={{ padding: 14, borderRadius: 8, border: `1px solid ${card.urgency.color}`, borderLeft: `5px solid ${card.urgency.color}`, background: theme === 'dark' ? '#0f172a' : '#f8fafc' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                      <div>
-                        <strong style={{ color: theme === 'dark' ? '#f8fafc' : '#0f172a' }}>Order {order.orderNumber} • {order.productFamily}</strong>
-                        <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>{order.partNumber ?? order.assemblyPartNumber ?? 'No part number'}</div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                        <span style={badge(card.urgency.color)}>{card.urgency.label}</span>
-                        <span style={badge(card.due.color)}>{card.due.label}</span>
-                        <span style={badge('#38bdf8')}>PRESSURE {signal.pressureScore}</span>
-                      </div>
-                    </div>
-
-                    <div style={constraintStyle(theme)}>
-                      <strong>{card.relationshipLabel}:</strong> {card.operatorConstraint}
-                    </div>
-                    <div style={reasonStyle(theme)}>{card.relationshipReason}</div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, marginTop: 12 }}>
-                      <Info label="Status" value={String(packet.status)} theme={theme} />
-                      <Info label="Checkpoint" value={String(signal.checkpoint)} theme={theme} />
-                      <Info label="Primary Owner" value={String(signal.gate)} theme={theme} />
-                      <Info label="Strength" value={String(signal.strength)} theme={theme} />
-                    </div>
-
-                    <p style={{ color: theme === 'dark' ? '#cbd5e1' : '#475569', fontWeight: 800 }}>{signal.message}</p>
-                    <p style={{ color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontWeight: 900 }}>Next: {signal.action}</p>
-
-                    {packet.operation ? <div style={{ color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontWeight: 800 }}>Operation: {packet.operation}</div> : null}
-                    {packet.blockers?.map((blocker) => <div key={blocker} style={{ color: '#fecaca', marginTop: 6 }}>Blocked: {blocker}</div>)}
-                    {order.lastAction ? <div style={reasonStyle(theme)}>Last action: {order.lastAction}</div> : null}
-
-                    {signal.parallelActions.length > 0 ? <SignalList title="Parallel actions" items={signal.parallelActions} theme={theme} /> : null}
-                    {signal.watchers.length > 0 ? <SignalList title="Watchers" items={signal.watchers} theme={theme} /> : null}
-
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                      <button type="button" style={button(card.urgency.color)} onClick={() => act(card.buttons.primary, order.orderNumber, workCenter.department, onOpenReceiving, onOpenEngineering, onOpenMaintenance)}>{card.buttons.primary}</button>
-                      <button type="button" style={button('#64748b')} onClick={() => act(card.buttons.secondary, order.orderNumber, workCenter.department, onOpenReceiving, onOpenEngineering, onOpenMaintenance)}>{card.buttons.secondary}</button>
-                    </div>
-                  </article>
-                );
-              })}
+            <div style={stackStyle}>
+              {group.cards.map((card: any) => (
+                <WorkflowCard key={card.order.id} card={card} theme={theme} onAction={runAction} />
+              ))}
             </div>
-          </div>
+          </section>
         ))}
       </div>
 
       {selectedTraveler ? (
-        <TravelerDetailModal
-          traveler={selectedTraveler}
-          theme={theme}
-          onClose={() => setSelectedTraveler(null)}
-        />
+        <TravelerDetailModal traveler={selectedTraveler} theme={theme} onClose={() => setSelectedTraveler(null)} />
       ) : null}
     </section>
   );
 }
 
-function Info({ label, value, theme }: { label: string; value: string; theme: 'dark' | 'light' }) {
-  return <div style={{ padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#fff', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0' }}><div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 900 }}>{label}</div><div style={{ color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontWeight: 900 }}>{value}</div></div>;
+function CrewChip({ person, theme }: { person: CoveragePerson; theme: 'dark' | 'light' }) {
+  const color = crewDotColor(person.status);
+  return (
+    <div style={{ ...chipCardStyle(theme), borderLeft: `3px solid ${color}` }}>
+      <span style={{ width: 8, height: 8, borderRadius: 999, background: color, marginTop: 4 }} />
+      <div>
+        <div style={strongTextStyle(theme)}>{person.name}</div>
+        <div style={tinyTextStyle}>{person.station}</div>
+      </div>
+    </div>
+  );
+}
+
+function TravelerCard({ traveler, theme, onOpen }: { traveler: DynamicTraveler; theme: 'dark' | 'light'; onOpen: () => void }) {
+  const signalColor = getTravelerSignalColor(traveler.visualSignal);
+  return (
+    <button type="button" style={travelerCardStyle(theme, signalColor)} onClick={onOpen}>
+      <div style={headerRowStyle}>
+        <div>
+          <strong style={strongTextStyle(theme)}>#{traveler.order.orderNumber} • {traveler.order.productFamily}</strong>
+          <div style={bodyTextStyle(theme)}>{traveler.currentInstruction}</div>
+        </div>
+        <span style={badge(signalColor)}>{traveler.visualSignal}</span>
+      </div>
+      <div style={wrapRowStyle}>
+        <span style={badge('#38bdf8')}>FINISH: {traveler.finishHints[0] ? formatToken(traveler.finishHints[0]) : 'Unknown'}</span>
+        <span style={badge(traveler.qaRequired ? '#f97316' : '#64748b')}>{traveler.qaRequired ? 'QA REQUIRED' : 'QA NOT REQUIRED'}</span>
+        <span style={badge(needsClassificationReview(traveler) ? '#f97316' : '#10b981')}>{needsClassificationReview(traveler) ? 'REVIEW NEEDED' : 'CLASSIFIED'}</span>
+        <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
+      </div>
+      <div style={infoGridStyle}>
+        <Info label="Resource" value={traveler.bestResource?.label ?? 'No capable resource'} theme={theme} />
+        <Info label="Next" value={String(traveler.nextHandoff ?? 'Not assigned')} theme={theme} />
+        <Info label="Material" value={formatToken(String(traveler.materialStatus))} theme={theme} />
+        <Info label="QA" value={formatToken(String(traveler.qaStatus))} theme={theme} />
+      </div>
+    </button>
+  );
+}
+
+function WorkflowCard({ card, theme, onAction }: { card: any; theme: 'dark' | 'light'; onAction: (label: string, orderNumber: string) => void }) {
+  const order = card.order;
+  const signal = card.signal;
+  const packet = card.packet;
+  return (
+    <article style={workflowCardStyle(theme, card.urgency.color)}>
+      <div style={headerRowStyle}>
+        <div>
+          <strong style={strongTextStyle(theme)}>Order {order.orderNumber} • {order.productFamily}</strong>
+          <div style={tinyTextStyle}>{order.partNumber ?? order.assemblyPartNumber ?? 'No part number'}</div>
+        </div>
+        <div style={rightBadgeColumnStyle}>
+          <span style={badge(card.urgency.color)}>{card.urgency.label}</span>
+          <span style={badge(card.due.color)}>{card.due.label}</span>
+          <span style={badge('#38bdf8')}>PRESSURE {signal.pressureScore}</span>
+        </div>
+      </div>
+
+      <div style={constraintStyle(theme)}><strong>{card.relationshipLabel}:</strong> {card.operatorConstraint}</div>
+      <div style={mutedTextStyle(theme)}>{card.relationshipReason}</div>
+
+      <div style={infoGridStyle}>
+        <Info label="Status" value={String(packet.status)} theme={theme} />
+        <Info label="Checkpoint" value={String(signal.checkpoint)} theme={theme} />
+        <Info label="Primary Owner" value={String(signal.gate)} theme={theme} />
+        <Info label="Strength" value={String(signal.strength)} theme={theme} />
+      </div>
+
+      <p style={bodyTextStyle(theme)}>{signal.message}</p>
+      <p style={nextTextStyle(theme)}>Next: {signal.action}</p>
+      {packet.operation ? <div style={bodyTextStyle(theme)}>Operation: {packet.operation}</div> : null}
+      {packet.blockers?.map((blocker: string) => <div key={blocker} style={blockerTextStyle}>Blocked: {blocker}</div>)}
+      {order.lastAction ? <div style={mutedTextStyle(theme)}>Last action: {order.lastAction}</div> : null}
+      {signal.parallelActions.length > 0 ? <SignalList title="Parallel actions" items={signal.parallelActions} theme={theme} /> : null}
+      {signal.watchers.length > 0 ? <SignalList title="Watchers" items={signal.watchers} theme={theme} /> : null}
+
+      <div style={wrapRowStyle}>
+        <button type="button" style={buttonStyle(card.urgency.color)} onClick={() => onAction(card.buttons.primary, order.orderNumber)}>{safeButtonLabel(card.buttons.primary)}</button>
+        <button type="button" style={buttonStyle('#64748b')} onClick={() => onAction(card.buttons.secondary, order.orderNumber)}>{safeButtonLabel(card.buttons.secondary)}</button>
+      </div>
+    </article>
+  );
 }
 
 function ClassificationReviewSummary({
@@ -296,15 +308,12 @@ function ClassificationReviewSummary({
 }) {
   if (travelers.length === 0) {
     return (
-      <div style={reviewSummaryStyle(theme, false)}>
-        <div style={reviewSummaryHeaderStyle}>
-          <div>
-            <div style={reviewSummaryEyebrowStyle('#10b981')}>Classification Review</div>
-            <strong style={reviewSummaryTitleStyle(theme)}>No route/product review warnings in this work center.</strong>
-          </div>
+      <section style={reviewStyle(theme, false)}>
+        <div style={headerRowStyle}>
+          <strong style={strongTextStyle(theme)}>No route/product review warnings in this work center.</strong>
           <span style={badge('#10b981')}>CLEAR</span>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -312,104 +321,105 @@ function ClassificationReviewSummary({
   const activeTravelerConfirmations = getConfirmationsForTraveler(confirmations, activeTraveler);
 
   return (
-    <div style={reviewSummaryStyle(theme, true)}>
-      <div style={reviewSummaryHeaderStyle}>
+    <section style={reviewStyle(theme, true)}>
+      <div style={headerRowStyle}>
         <div>
-          <div style={reviewSummaryEyebrowStyle('#f97316')}>Classification Review Needed</div>
-          <strong style={reviewSummaryTitleStyle(theme)}>{travelers.length} traveler{travelers.length === 1 ? '' : 's'} need route/product confirmation.</strong>
+          <div style={eyebrowStyle}>CLASSIFICATION REVIEW NEEDED</div>
+          <strong style={strongTextStyle(theme)}>{travelers.length} traveler{travelers.length === 1 ? '' : 's'} need route/product confirmation.</strong>
           {targetOrderNumber ? (
-            <div style={targetNoticeBoxStyle(theme)}>
-              <div>
-                <div style={targetNoticeStyle(theme)}>Opened from global queue for order {targetOrderNumber}.</div>
-                <div style={targetInstructionStyle(theme)}>This traveler is preselected below. Clear the target after the review is handled.</div>
-              </div>
-              <button type="button" style={clearTargetButtonStyle(theme)} onClick={onClearTarget}>Clear Target</button>
+            <div style={noticeStyle(theme)}>
+              Opened from global queue for order {targetOrderNumber}. This traveler is preselected below.
+              <button type="button" style={buttonStyle('#f97316')} onClick={onClearTarget}>Clear Target</button>
             </div>
           ) : null}
         </div>
         <span style={badge('#f97316')}>{travelers.length} REVIEW</span>
       </div>
-      <div style={reviewItemListStyle}>
+      <div style={stackStyle}>
         {travelers.slice(0, 3).map((traveler) => {
           const travelerConfirmations = getConfirmationsForTraveler(confirmations, traveler);
-          const isSelected = activeTraveler.id === traveler.id;
-          const isTarget = targetOrderNumber === traveler.order.orderNumber;
+          const isSelected = activeTraveler.id === traveler.id || targetOrderNumber === traveler.order.orderNumber;
           return (
-            <button key={traveler.id} type="button" style={reviewItemStyle(theme, isSelected || isTarget)} onClick={() => onSelectTraveler(traveler)}>
-              <div style={reviewItemTopStyle}>
+            <button key={traveler.id} type="button" style={reviewItemStyle(theme, isSelected)} onClick={() => onSelectTraveler(traveler)}>
+              <div style={headerRowStyle}>
                 <strong>#{traveler.order.orderNumber} • {traveler.productClassification.modelSignal ?? 'No model'}</strong>
                 <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
               </div>
-              <div style={reviewReasonTextStyle(theme)}>{traveler.classificationReviewReasons[0] ?? 'Classification needs human review.'}</div>
-              <div style={reviewMetaStyle(theme)}>
-                {formatToken(traveler.productClassification.productFamily)} · {formatHintList(traveler.finishHints)} · {traveler.productClassification.routeHint.length > 0 ? traveler.productClassification.routeHint.join(' → ') : 'No route hint'}
-              </div>
-              {isTarget ? <div style={targetTextStyle(theme)}>Selected from global review queue</div> : null}
-              {travelerConfirmations.length > 0 ? <div style={reviewSavedTextStyle(theme)}>{travelerConfirmations.length} structured confirmation{travelerConfirmations.length === 1 ? '' : 's'} saved</div> : null}
+              <div style={bodyTextStyle(theme)}>{traveler.classificationReviewReasons[0] ?? 'Classification needs human review.'}</div>
+              <div style={tinyTextStyle}>{formatToken(traveler.productClassification.productFamily)} • {traveler.finishHints.length ? traveler.finishHints.map(formatToken).join(', ') : 'No finish hint'}</div>
+              {travelerConfirmations.length > 0 ? <div style={savedTextStyle}>{travelerConfirmations.length} structured confirmation{travelerConfirmations.length === 1 ? '' : 's'} saved</div> : null}
             </button>
           );
         })}
       </div>
-
-      <ClassificationReviewCapture
-        traveler={activeTraveler}
-        confirmations={activeTravelerConfirmations}
-        draft={draft}
-        theme={theme}
-        onDraftChange={onDraftChange}
-        onSave={onSave}
-      />
-    </div>
-  );
-}
-
-function TravelerIntelBadges({ traveler }: { traveler: DynamicTraveler }) {
-  const primaryFinishHint = traveler.finishHints[0] ? formatToken(traveler.finishHints[0]) : 'Finish Unknown';
-  const confidence = formatToken(traveler.productClassification.confidence);
-  const needsReview = needsClassificationReview(traveler);
-
-  return (
-    <div style={intelBadgeRowStyle}>
-      <span style={badge('#38bdf8')}>FINISH: {primaryFinishHint}</span>
-      {traveler.qaRequired ? <span style={badge('#f97316')}>QA REQUIRED</span> : <span style={badge('#64748b')}>QA NOT REQUIRED</span>}
-      {needsReview ? <span style={badge('#f97316')}>REVIEW NEEDED</span> : <span style={badge('#10b981')}>CLASSIFIED</span>}
-      <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{confidence}</span>
-    </div>
+      <ClassificationReviewCapture traveler={activeTraveler} confirmations={activeTravelerConfirmations} draft={draft} theme={theme} onDraftChange={onDraftChange} onSave={onSave} />
+    </section>
   );
 }
 
 function SignalList({ title, items, theme }: { title: string; items: Array<{ owner: string; reason: string; action: string; urgency: string }>; theme: 'dark' | 'light' }) {
   return (
-    <div style={{ marginTop: 10, padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#fff', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
-      <div style={{ color: '#f97316', fontSize: 10, fontWeight: 900, marginBottom: 6 }}>{title.toUpperCase()}</div>
-      {items.map((item) => (
-        <div key={`${item.owner}-${item.reason}`} style={{ color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 700, marginTop: 4 }}>
-          {item.owner}: {item.action} ({item.urgency})
-        </div>
-      ))}
+    <div style={signalListStyle(theme)}>
+      <div style={eyebrowStyle}>{title}</div>
+      {items.map((item) => <div key={`${item.owner}-${item.reason}`} style={bodyTextStyle(theme)}>{item.owner}: {item.action} ({item.urgency})</div>)}
     </div>
   );
 }
 
-function act(label: string, orderNumber: string, dept: WorkCenter['department'], rec?: Props['onOpenReceiving'], eng?: Props['onOpenEngineering'], maint?: Props['onOpenMaintenance']) {
-  if (label === 'No Action') return;
+function Info({ label, value, theme }: { label: string; value: string; theme: 'dark' | 'light' }) {
+  return (
+    <div style={infoBoxStyle(theme)}>
+      <div style={tinyLabelStyle}>{label}</div>
+      <div style={strongTextStyle(theme)}>{value}</div>
+    </div>
+  );
+}
+
+function Empty({ children, theme }: { children: string; theme: 'dark' | 'light' }) {
+  return <div style={emptyStyle(theme)}>{children}</div>;
+}
+
+function act(label: string, orderNumber: string, dept: WorkCenter['department'], deps: ActionDeps): string | null {
+  if (label === 'No Action') return null;
+
   if (label.includes('Engineering') || label.includes('Hold')) {
     addWorkflowAction({ orderNumber, actionType: 'ENGINEERING_ESCALATION', department: 'Engineering', note: label });
     applyWorkflowRuntimeAction(orderNumber, 'ESCALATE_ENGINEERING', label);
-    return eng?.();
+    deps.onOpenEngineering?.();
+    return 'Engineering escalation recorded.';
   }
+
   if (label.includes('Material') || label.includes('Areas')) {
     addWorkflowAction({ orderNumber, actionType: 'MATERIAL_REQUEST', department: 'Receiving', note: label });
     applyWorkflowRuntimeAction(orderNumber, 'REQUEST_MATERIAL', label);
-    return rec?.('submit', dept);
+    deps.onOpenReceiving?.('submit', dept);
+    return 'Material request started through Receiving.';
   }
+
+  if (isMaintenanceAction(label)) {
+    addWorkflowAction({ orderNumber, actionType: 'BLOCKER_RESOLUTION', department: 'Maintenance', note: label });
+    deps.onOpenMaintenance?.();
+    return 'Maintenance follow-up opened. The blocker remains until the issue is actually cleared.';
+  }
+
   if (label.includes('Blocker') || label.includes('Lead')) {
     addWorkflowAction({ orderNumber, actionType: 'BLOCKER_RESOLUTION', department: dept, note: label });
-    applyWorkflowRuntimeAction(orderNumber, 'RESOLVE_BLOCKER', label);
-    return maint?.();
+    return 'Blocker review logged here. No blocker was cleared and no route changed; assign the owning department or use material/engineering/maintenance when that is the true owner.';
   }
+
   addWorkflowAction({ orderNumber, actionType: 'WORK_STARTED', department: dept, note: label });
   applyWorkflowRuntimeAction(orderNumber, 'START_WORK', label);
+  return 'Work action recorded.';
+}
+
+function isMaintenanceAction(label: string): boolean {
+  return /maintenance|machine|service|repair|alarm|down|downtime/i.test(label);
+}
+
+function safeButtonLabel(label: string): string {
+  if (label.includes('Resolve Blocker')) return 'Review blocker';
+  if (label.includes('Blocker')) return label.replace('Blocker', 'blocker');
+  return label;
 }
 
 function loadCoverage(): CoveragePerson[] {
@@ -463,43 +473,38 @@ function formatToken(value: string) {
   return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function formatHintList(values: string[]) {
-  if (values.length === 0) return 'No finish hint';
-  return values.map(formatToken).join(', ');
+function badge(color: string): CSSProperties {
+  return { display: 'inline-block', padding: '4px 7px', borderRadius: 999, border: `1px solid ${color}66`, background: `${color}18`, color, fontSize: 10, fontWeight: 900, letterSpacing: '0.5px', textTransform: 'uppercase', whiteSpace: 'nowrap' };
 }
 
-function crewStripStyle(theme: 'dark' | 'light') { return { padding: '10px 14px', borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0', marginBottom: 14 } as const; }
-function crewChipStyle(status: string, theme: 'dark' | 'light') { const color = crewDotColor(status); return { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 6, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: `1px solid ${color}44`, borderLeft: `3px solid ${color}` } as const; }
-function crewDotStyle(status: string) { return { width: 8, height: 8, borderRadius: 999, background: crewDotColor(status), marginTop: 4, flexShrink: 0 } as const; }
-function crewNameStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 12, fontWeight: 900 } as const; }
-function travelerPanelStyle(theme: 'dark' | 'light') { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', marginBottom: 16 } as const; }
-function travelerCardStyle(signal: DynamicTraveler['visualSignal'], theme: 'dark' | 'light') { const color = getTravelerSignalColor(signal); return { width: '100%', textAlign: 'left', padding: 13, borderRadius: 8, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, cursor: 'pointer' } as const; }
-function reviewSummaryStyle(theme: 'dark' | 'light', needsReview: boolean) { const color = needsReview ? '#f97316' : '#10b981'; return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, marginBottom: 16 } as const; }
-function reviewSummaryEyebrowStyle(color: string) { return { color, fontSize: 11, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 } as const; }
-function reviewSummaryTitleStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 14 } as const; }
-function reviewItemStyle(theme: 'dark' | 'light', selected: boolean) { return { width: '100%', textAlign: 'left', padding: 10, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: selected ? '1px solid #f97316' : theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', cursor: 'pointer' } as const; }
-function reviewReasonTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 12, fontWeight: 800, lineHeight: 1.4, marginTop: 6 } as const; }
-function reviewMetaStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 700, marginTop: 5, lineHeight: 1.35 } as const; }
-function reviewSavedTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#86efac' : '#166534', fontSize: 11, fontWeight: 900, marginTop: 6 } as const; }
-function targetNoticeStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 12, fontWeight: 900, marginTop: 5 } as const; }
-function targetTextStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#38bdf8' : '#0369a1', fontSize: 11, fontWeight: 900, marginTop: 6 } as const; }
-function targetNoticeBoxStyle(theme: 'dark' | 'light') { return { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 8, padding: '8px 10px', borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#fff7ed', border: theme === 'dark' ? '1px solid #7c2d12' : '1px solid #fed7aa' } as const; }
-function targetInstructionStyle(theme: 'dark' | 'light') { return { color: theme === 'dark' ? '#94a3b8' : '#9a3412', fontSize: 11, fontWeight: 800, marginTop: 3 } as const; }
-function clearTargetButtonStyle(theme: 'dark' | 'light') { return { padding: '7px 9px', borderRadius: 4, border: theme === 'dark' ? '1px solid #fed7aa' : '1px solid #c2410c', background: theme === 'dark' ? '#431407' : '#ffedd5', color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 10, fontWeight: 900, cursor: 'pointer', textTransform: 'uppercase' } as const; }
+function panelStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 16, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', display: 'grid', gap: 16 }; }
+function subPanelStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
+function groupStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
+function workflowCardStyle(theme: 'dark' | 'light', color: string): CSSProperties { return { padding: 14, borderRadius: 8, border: `1px solid ${color}`, borderLeft: `5px solid ${color}`, background: theme === 'dark' ? '#0f172a' : '#f8fafc' }; }
+function travelerCardStyle(theme: 'dark' | 'light', color: string): CSSProperties { return { width: '100%', textAlign: 'left', padding: 13, borderRadius: 8, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, cursor: 'pointer' }; }
+function reviewStyle(theme: 'dark' | 'light', active: boolean): CSSProperties { const color = active ? '#f97316' : '#10b981'; return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}` }; }
+function reviewItemStyle(theme: 'dark' | 'light', selected: boolean): CSSProperties { return { width: '100%', textAlign: 'left', padding: 10, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: selected ? '1px solid #f97316' : theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', cursor: 'pointer' }; }
+function chipCardStyle(theme: 'dark' | 'light'): CSSProperties { return { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 6, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
+function infoBoxStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0' }; }
+function signalListStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 10, padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0' }; }
+function noticeStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 10, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#fff7ed', border: theme === 'dark' ? '1px solid #7c2d12' : '1px solid #fed7aa', color: theme === 'dark' ? '#fed7aa' : '#9a3412', fontSize: 12, fontWeight: 800, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }; }
+function emptyStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', padding: 12, borderRadius: 6, border: theme === 'dark' ? '1px dashed #334155' : '1px dashed #cbd5e1', fontSize: 13, fontWeight: 700 }; }
+function buttonStyle(color: string): CSSProperties { return { padding: '8px 10px', borderRadius: 4, border: `1px solid ${color}`, background: `${color}18`, color, fontSize: 11, fontWeight: 900, letterSpacing: '0.6px', cursor: 'pointer', textTransform: 'uppercase' }; }
+function strongTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 13, fontWeight: 900 }; }
+function bodyTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 750, lineHeight: 1.45, marginTop: 8 }; }
+function mutedTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12, fontWeight: 700, lineHeight: 1.35 }; }
+function titleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }; }
+function nextTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 13, fontWeight: 900 }; }
+function constraintStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 10, padding: 10, borderRadius: 6, background: theme === 'dark' ? '#111827' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 12, fontWeight: 800 }; }
 
-const crewStripLabelStyle = { color: '#f97316', fontSize: 10, fontWeight: 900, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 8 } as const;
-const crewRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 } as const;
-const crewStationStyle = { color: '#64748b', fontSize: 11, fontWeight: 700, marginTop: 2 } as const;
-const travelerHeaderStyle = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap' } as const;
-const travelerCountRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' } as const;
-const intelBadgeRowStyle = { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 } as const;
-const reviewSummaryHeaderStyle = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' } as const;
-const reviewItemListStyle = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 } as const;
-const reviewItemTopStyle = { display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' } as const;
-
-function panelStyle(theme: 'dark' | 'light') { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#fff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
-function groupStyle(theme: 'dark' | 'light') { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' } as const; }
-function constraintStyle(theme: 'dark' | 'light') { return { marginTop: 12, padding: 10, borderRadius: 6, color: theme === 'dark' ? '#f8fafc' : '#0f172a', background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', fontSize: 13, fontWeight: 800 } as const; }
-function reasonStyle(theme: 'dark' | 'light') { return { marginTop: 6, color: theme === 'dark' ? '#94a3b8' : '#475569', fontSize: 12, fontWeight: 700 } as const; }
-function badge(color: string) { return { whiteSpace: 'nowrap', padding: '5px 7px', borderRadius: 4, border: `1px solid ${color}`, color, background: `${color}1f`, fontSize: 10, fontWeight: 900 } as const; }
-function button(color: string) { return { padding: '9px 11px', borderRadius: 4, border: `1px solid ${color}`, background: `${color}26`, color, fontSize: 11, fontWeight: 900, cursor: 'pointer' } as const; }
+const headerRowStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' };
+const wrapRowStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 };
+const stackStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 10 };
+const infoGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, marginTop: 10 };
+const rightBadgeColumnStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' };
+const eyebrowStyle: CSSProperties = { color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase' };
+const visibleCountStyle: CSSProperties = { color: '#f97316', whiteSpace: 'nowrap' };
+const tinyTextStyle: CSSProperties = { color: '#64748b', fontSize: 11, fontWeight: 700, marginTop: 3 };
+const tinyLabelStyle: CSSProperties = { color: '#94a3b8', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' };
+const blockerTextStyle: CSSProperties = { color: '#fecaca', marginTop: 6, fontSize: 12, fontWeight: 800 };
+const savedTextStyle: CSSProperties = { color: '#86efac', fontSize: 11, fontWeight: 900, marginTop: 6 };
