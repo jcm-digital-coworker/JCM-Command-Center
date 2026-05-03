@@ -23,12 +23,13 @@ Current slice completed:
 - Safe drill-in navigation from global Classification Review Queue to department/work-center review capture.
 - Review-target awareness so drill-in preselects/highlights the selected traveler in the department workflow panel.
 - Review-target banner with a user-controlled Clear Target action in the department workflow panel.
+- Plant Truth Checklist inside the existing Classification Review Queue, powered by existing structured confirmations.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25285595610
-Commit: f0852ebf685b96a668e5c01eaf5c049d2b65c9b7
+Run ID: 25285901743
+Commit: ece0a5cda28233ba37196ed8236e017f10d6afac
 Status: GREEN
 ```
 
@@ -42,6 +43,36 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Plant Truth Checklist In Classification Review Queue
+
+Added/updated:
+
+```text
+src/data/classificationReviewChecklist.ts
+src/components/dashboard/ClassificationReviewQueue.tsx
+```
+
+The dashboard Classification Review Queue now includes a Plant Truth Checklist that exposes unresolved plant-truth questions without creating a second confirmation system.
+
+It now:
+
+- seeds loose-end questions for 412, 401-404, 405-408, and 502.
+- reuses existing `ClassificationReviewQuestion` and `ClassificationReviewAnswer` vocabulary.
+- reads existing saved confirmations from `jcm-classification-review-confirmations-v1`.
+- shows each loose-end question as OPEN, TOUCHED, CONFIRMED, or NOT APPLICABLE.
+- shows model signal, product family, department/lane, prompt, why it matters, current app stance, matching traveler count, and latest confirmation when present.
+- points users back to existing department review capture instead of adding a second capture form.
+
+Important guardrail:
+
+- The checklist is visibility/tracking only.
+- It does not approve routes.
+- It does not mutate classifier rules.
+- It does not raise confidence.
+- It does not remove review warnings.
+- It does not dispatch work.
+- Existing structured traveler confirmations remain the local confirmation source.
 
 ### Review-Target Banner And Clear Target Action
 
@@ -463,14 +494,14 @@ Main active risks:
 Recommended next move:
 
 ```text
-Pause coding and collect plant facts from docs/LOOSE_ENDS.md.
+Use the Plant Truth Checklist during floor review, then update confirmed plant facts before changing classifier rules.
 ```
 
 Why:
 
 - Global queue can route users to the correct work-center page and preselect the review item.
 - The review target banner now explains the landing context and can clear the stored target.
-- The next useful improvement is plant truth, not more UI chrome.
+- The Plant Truth Checklist keeps unresolved plant questions visible without creating a second truth system.
 - Route-rule expansion should wait for plant confirmations.
 
 Most valuable confirmations:
