@@ -1,5 +1,6 @@
 import type { Department } from './machine';
 import type { ProductionOrder, FlowBlocker, MaterialStatus, QaStatus } from './productionOrder';
+import type { FinishHint, ProductClassification } from './productClassification';
 
 export type TravelerStepStatus = 'NOT_READY' | 'READY' | 'ACTIVE' | 'BLOCKED' | 'DONE' | 'HOLD';
 
@@ -77,6 +78,10 @@ export type DynamicTraveler = {
   blockers: FlowBlocker[];
   materialStatus: MaterialStatus;
   qaStatus: QaStatus;
+  productClassification: ProductClassification;
+  finishHints: FinishHint[];
+  qaRequired: boolean;
+  classificationReviewReasons: string[];
   actions: TravelerAction[];
   priorityScore: number;
   visualSignal: 'READY' | 'BLOCKED' | 'WATCH' | 'HOLD' | 'DONE';
@@ -89,6 +94,11 @@ export type PlantTraveler = {
   order: ProductionOrder;
   route: Department[];
   departmentSteps: DynamicTraveler[];
+  productClassification: ProductClassification;
+  finishHints: FinishHint[];
+  qaRequired: boolean;
+  suggestedRoute: Department[];
+  classificationReviewReasons: string[];
   activeDepartment?: Department;
   nextDepartment?: Department | 'Complete';
   overallStatus: PlantTravelerStatus;
