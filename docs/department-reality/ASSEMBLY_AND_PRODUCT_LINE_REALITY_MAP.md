@@ -28,7 +28,7 @@ Special Fab → Coating → Special Assembly
 432 Fab → Coating → 432 Assembly
 452 Fab → Coating → 452 Assembly
 Coupling fabrication / press-building coupling work → Coating or direct path as confirmed → Couplings Assembly
-Saddles product line → Saddles Dept integrated assembly
+Receiving → Coating → Saddles Dept integrated assembly
 Patch Clamp product line → Patch Clamp stand-alone department
 Clamps product line → Clamps integrated build/assembly
 ```
@@ -154,19 +154,43 @@ Saddles are a different product line and their assembly is integrated within Sad
 
 Known flow:
 
-- Saddle castings are shipped in.
+- Uncoated saddle castings are shipped in.
+- Saddle castings come through Receiving.
+- Uncoated saddles move from Receiving to Coating.
+- Coating coats the saddles.
+- Coated saddles move to Saddles Dept.
 - Straps are sheared in the Press Building.
 - The two LV4500 machines are in Saddles Dept, not Machine Shop.
 - Saddles Dept assembles saddle products.
 
+Known route:
+
+```text
+Receiving
+↓
+Coating
+↓
+Saddles Dept
+```
+
+Parallel / dependency route:
+
+```text
+Press Building shears straps
+↓
+Saddles Dept
+```
+
 Important correction:
 
 - The two LV4500 machines belong to Saddles Dept, not Machine Shop.
+- Uncoated saddles come from Receiving to Coating, then move to Saddles Dept.
 
 Traveler implications:
 
-- Saddles traveler logic must include casting receipt, strap readiness from Press Building, LV4500 work, and Saddles Dept assembly.
+- Saddles traveler logic must include Receiving/coating of uncoated saddle castings, strap readiness from Press Building, LV4500 work, and Saddles Dept assembly.
 - Saddles should not be routed to generic Assembly unless confirmed as an exception.
+- Saddles should not be routed through Machine Shop just because LV4500s are machine resources. LV4500 ownership is Saddles Dept.
 
 Needs confirmation:
 
@@ -174,8 +198,8 @@ Needs confirmation:
 - Whether both LV4500s have the same capability.
 - Which saddle models use the LV4500s.
 - Whether saddle straps always come from the Press Building.
-- Whether saddle castings go through Receiving before Saddles Dept.
-- Coating route for saddle bodies/straps and when assembly occurs relative to coating.
+- Exact coating type/process for uncoated saddle castings.
+- Whether straps are coated before or after LV4500/Saddles Dept work.
 
 ### Clamps Dept
 
@@ -247,8 +271,9 @@ Special Fab → Coating → Special Assembly
 Product-line routes may bypass generic Assembly entirely:
 
 ```text
+Receiving → Coating → Saddles Dept
+Press Building straps → Saddles Dept
 Press Building shear → Clamps Dept build/assembly
-Press Building straps + received castings + LV4500 work → Saddles Dept assembly
 Patch Clamp product line → Patch Clamp stand-alone department
 ```
 
@@ -278,7 +303,7 @@ Send to 432 Assembly.
 or:
 
 ```text
-Send to Saddles Dept after Press Building straps and LV4500 work are ready.
+Send coated saddle to Saddles Dept after Receiving and Coating are complete; confirm Press Building straps are ready.
 ```
 
 ## Assembly / Product-Line Traveler Questions
@@ -301,7 +326,8 @@ A downstream traveler should answer:
 - What happens to West Wing industrial work after Coating.
 - Whether product-line departments share supervisors or leads.
 - Exact equipment/resources in Special Assembly, 412 Assembly, 432 Assembly, 452 Assembly, Couplings, Saddles, Clamps, and Patch Clamp.
-- Coating timing for Saddles, Clamps, Patch Clamps, and Couplings.
+- Coating timing for Clamps, Patch Clamps, and Couplings.
+- Exact coating process for saddle castings and straps.
 - Whether QA is a separate step after each assembly lane.
 - Which finished products go straight to Shipping vs QA first.
 
