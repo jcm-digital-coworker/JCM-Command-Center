@@ -15,12 +15,13 @@ Current slice completed:
 - Product Intelligence display in Department Traveler detail modal.
 - Product Intelligence display in full Plant Traveler modal.
 - Compact Product Intelligence badges on Dynamic Traveler workflow cards.
+- Service saddle classification rule refinement.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25267352767
-Commit: d500f91340f522da812228b50cbc1ea5569fbd61
+Run ID: 25267450016
+Commit: 1f3e2f0e15b4a962f72d621f222071541f1450f5
 Status: GREEN
 ```
 
@@ -34,6 +35,28 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Service Saddle Classification Refinement
+
+Updated:
+
+```text
+src/data/productClassificationRules.ts
+```
+
+Service saddle rules were tightened only for the Saddles product family:
+
+- 401/402/403/404 standard service saddles now use confirmed route: Receiving -> Coating -> Saddles Dept.
+- 401/402/403/404 confidence raised to HIGH for route confidence, while preserving review warning for exact shop-coat sub-lane and strap coating timing.
+- 405/406/407/408 coated service saddles use confirmed route: Receiving -> Coating -> Saddles Dept.
+- 405/406/407/408 keep MEDIUM confidence because fusion plastic coating process still needs confirmation.
+- 502 stainless service saddle remains LOW and human-review-required until stainless/passivation handling and route are confirmed.
+
+Important guardrail:
+
+- This does not make automatic dispatch final.
+- Coating sub-lane details still require review.
+- No Couplings, Clamps, Patch Clamp, 412, 432, or 452 route assumptions were expanded.
 
 ### Product Intelligence Badges On Workflow Traveler Cards
 
@@ -385,36 +408,39 @@ Do not jump straight to automatic dispatch.
 Recommended next code slice:
 
 ```text
-Refine route rules for one product family only, likely Saddles.
+Refine one more product family only, likely 412.
 ```
 
 Why:
 
-- Saddles route is clearer than Couplings/Clamps/Patch Clamp.
-- Receiving -> Coating -> Saddles Dept is confirmed.
-- LV4500 ownership is corrected.
-- Strap dependency from Press Building is known.
-- This can improve classifier confidence without generalizing too broadly.
+- 412 route has partial confirmation from Fab and Assembly maps.
+- 412 still needs outlet threshold confirmation before route confidence can be raised too far.
+- It is a good next isolated route-rule slice.
 
 Alternate next move:
 
 ```text
-Find other workflow list/card surfaces and add the same compact Product Intelligence badges if they render travelers separately.
+Ask shop-floor questions for Saddles coating details before raising 405-408 confidence.
 ```
+
+Important Saddles questions:
+
+- Does fusion plastic coating equal pizza oven plus fluidized bed?
+- Do straps get coated before or after Saddles Dept/LV4500 work?
+- Does 502 follow the same Saddles Dept path?
+- Is 502 passivated in Coating/passivation room?
 
 ## Exact Next Action
 
 If continuing route rules:
 
-1. Start with Saddles only.
-2. Add/refine route/data rules behind human-review guardrails.
-3. Confirm or preserve review warnings for uncertain coating details.
-4. Do not generalize to Couplings/Clamps/Patch Clamp yet.
-5. Build and verify CI.
-
-If continuing UI visibility:
-
-1. Search for other traveler list/card renderers.
-2. Add badges only where DynamicTraveler is directly rendered.
-3. Do not add write actions.
+1. Start with 412 only.
+2. Preserve human-review guardrails around the 12 inch outlet threshold and coating type.
+3. Do not generalize to 432 or 452 until stainless/passivation details are confirmed.
 4. Build and verify CI.
+
+If continuing knowledge capture:
+
+1. Ask/answer the Saddles coating questions above.
+2. Update service saddle rules only after confirmation.
+3. Build and verify CI if code changes.
