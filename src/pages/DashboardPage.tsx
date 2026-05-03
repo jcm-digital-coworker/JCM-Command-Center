@@ -9,6 +9,7 @@ import type { ProductionOrder } from '../types/productionOrder';
 import { getOrderStatusLabel, getOrderBlockReason, formatBlockedReason } from '../logic/orderReadiness';
 import { getDashboardRuntimeTruth } from '../logic/dashboardRuntimeSelectors';
 import { getQuickActionsForRole, formatRoleLabel, type QuickAction } from '../logic/dashboardQuickActions';
+import { getNavigationTab } from '../logic/navigationContracts';
 import { getCommandRecommendation } from '../logic/commandRecommendations';
 import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import AccordionSection from '../components/common/AccordionSection';
@@ -236,7 +237,7 @@ function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: 
       </div>
       <div style={dashboardQuickActionsGridStyle}>
         {visibleActions.map((action) => (
-          <button key={action.label} type="button" style={getDashboardQuickActionButtonStyle(theme, action.tone)} onClick={() => onGoToTab(action.target)}>
+          <button key={action.label} type="button" style={getDashboardQuickActionButtonStyle(theme, action.tone)} onClick={() => onGoToTab(getNavigationTab(action.intent))}>
             <span style={getDashboardQuickActionLabelStyle(action.tone)}>{action.label}{action.count ? ` (${action.count})` : ''}</span>
             <span style={dashboardQuickActionDetailStyle}>{action.detail}</span>
           </button>
