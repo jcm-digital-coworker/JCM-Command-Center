@@ -26,12 +26,13 @@ Current slice completed:
 - Plant Truth Checklist inside the existing Classification Review Queue, powered by existing structured confirmations.
 - Useful-info Department Focus cards that surface existing work-center ownership, focus, coverage, truth strength, and next-module signals.
 - Operator Next Best Action console on the Work Center Tablet page.
+- Operator Next Best Action selector extracted into `src/logic/operatorNextBestActions.ts`.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25286324789
-Commit: f98d34061f63d44ce527155d790942fd2d7921da
+Run ID: 25286430170
+Commit: c63d7b446fe0c80b737852a7061c4cbecba3ec47
 Status: GREEN
 ```
 
@@ -45,6 +46,35 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Operator Next Best Action Selector Refactor
+
+Added/updated:
+
+```text
+src/logic/operatorNextBestActions.ts
+src/pages/WorkCenterDetailPage.tsx
+```
+
+The Work Center Tablet action-console decision logic was moved out of the page and into a small selector module.
+
+It now:
+
+- builds an `OperatorNextBestActionModel` from existing work-center, traveler, risk, maintenance, and review signals.
+- returns four lane models: Run Now, Needs Help, Review Needed, and Next Handoff.
+- keeps tone/color intent as data through `OperatorActionLaneTone`.
+- exports the shared `needsClassificationReview` helper for the page.
+- lets `WorkCenterDetailPage.tsx` compose and render the model instead of owning the decision logic.
+
+Important guardrail:
+
+- This is architecture cleanup only.
+- It preserves existing tablet behavior.
+- It does not approve routes.
+- It does not mutate classifier rules.
+- It does not raise confidence.
+- It does not dispatch work.
+- It keeps the page aligned with the doctrine: pages compose, modules think.
 
 ### Operator Next Best Action Console
 
@@ -88,10 +118,6 @@ Important guardrail:
 - It does not raise confidence.
 - It does not dispatch work.
 - It does not create a new truth system.
-
-Suggested future refactor:
-
-- If the action console proves useful, move selector logic into `src/logic/operatorNextBestActions.ts` instead of growing more logic inside `WorkCenterDetailPage.tsx`.
 
 ### Useful-Info Department Focus Cards
 
@@ -567,21 +593,22 @@ Main active risks:
 - 412/432/452 rules need confirmation before route hints become dispatch logic.
 - Classifier should not overrule human review.
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
-- Work Center Tablet action-console selector logic currently lives in `WorkCenterDetailPage.tsx`; move it to `src/logic` if the pattern grows.
+- Work Center Tablet action-console lane actions are not clickable yet; add focused drill-ins only if operators need faster lane-level navigation.
 
 ## Next Recommended Move
 
 Recommended next move:
 
 ```text
-Evaluate the Work Center Tablet action console in use, then either refactor its selector logic into src/logic or add focused drill-in actions to each lane.
+Evaluate the Work Center Tablet action console in use, then consider focused drill-in actions for each lane.
 ```
 
 Why:
 
 - Department cards now explain why to open a department.
 - The Work Center Tablet now explains what local action deserves attention first.
-- The next useful improvement is either architectural cleanup if the pattern sticks, or better lane-level action buttons if operators need faster drill-in.
+- The action-console selector logic now lives in `src/logic/operatorNextBestActions.ts` instead of growing inside the page.
+- The next useful improvement is better lane-level action buttons only if operators need faster drill-in.
 
 Guardrails:
 
