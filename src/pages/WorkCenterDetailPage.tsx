@@ -357,6 +357,12 @@ function OperatorNextBestActionPanel({
         </div>
       </div>
 
+      <div style={getOperatingModeStripStyle(theme)}>
+        <span style={getOperatingModeLabelStyle(theme)}>TABLET OPERATING MODE</span>
+        <strong style={getOperatingModeValueStyle(theme)}>{getOperatingModeLabel(model)}</strong>
+        <span style={getOperatingModeDetailStyle(theme)}>Tap a lane to jump to the work, help, review, or handoff area without changing dispatch authority.</span>
+      </div>
+
       <div style={getActionLaneGridStyle()}>
         {model.lanes.map((lane) => (
           <ActionLane key={lane.title} lane={lane} theme={theme} onSelectLane={onSelectLane} />
@@ -386,6 +392,13 @@ function ActionLane({
       </button>
     </article>
   );
+}
+
+function getOperatingModeLabel(model: OperatorNextBestActionModel) {
+  if (model.helpCount > 0) return 'HELP FIRST';
+  if (model.pendingReviewCount > 0) return 'REVIEW FIRST';
+  if (model.readyCount > 0) return 'RUN READY WORK';
+  return 'MONITOR / STAGE';
 }
 
 function scrollToOperatorLaneTarget(target: OperatorActionLaneTarget) {
@@ -499,6 +512,10 @@ function getFlyoutStyle(theme: 'dark' | 'light'): CSSProperties { return { posit
 function getFlyoutCloseStyle(theme: 'dark' | 'light'): CSSProperties { return { border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: 'transparent', color: theme === 'dark' ? '#94a3b8' : '#64748b', borderRadius: 4, padding: '5px 7px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }; }
 function getFlyoutPriorityStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 16, lineHeight: 1.4, fontWeight: 850, margin: '0 0 12px 0' }; }
 function getActionConsoleStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 18, borderRadius: 8, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#111827' : '#ffffff', boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }; }
+function getOperatingModeStripStyle(theme: 'dark' | 'light'): CSSProperties { return { display: 'grid', gridTemplateColumns: 'auto auto 1fr', gap: 10, alignItems: 'center', padding: 12, marginBottom: 12, borderRadius: 7, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', background: theme === 'dark' ? '#0f172a' : '#f8fafc' }; }
+function getOperatingModeLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 10, fontWeight: 900, letterSpacing: '0.9px', textTransform: 'uppercase' }; }
+function getOperatingModeValueStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 13, fontWeight: 950, letterSpacing: '0.7px', whiteSpace: 'nowrap' }; }
+function getOperatingModeDetailStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, lineHeight: 1.35, fontWeight: 750 }; }
 function getSectionTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 16, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase' }; }
 function getTwoColumnGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }; }
 function getActionLaneGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }; }
