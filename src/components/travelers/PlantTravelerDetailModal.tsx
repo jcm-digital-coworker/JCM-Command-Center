@@ -51,6 +51,8 @@ export default function PlantTravelerDetailModal({ plantTraveler, theme, onClose
           <Info label="Ship Date" value={order.projectedShipDate ?? 'Not scheduled'} theme={theme} />
         </div>
 
+        <ProductIntelligencePanel plantTraveler={plantTraveler} theme={theme} />
+
         <section style={sectionBlockStyle}>
           <div style={smallLabelStyle(theme)}>Plant Route</div>
           <div style={routeListStyle}>
@@ -76,6 +78,42 @@ export default function PlantTravelerDetailModal({ plantTraveler, theme, onClose
         </section>
       </div>
     </div>
+  );
+}
+
+function ProductIntelligencePanel({ plantTraveler, theme }: { plantTraveler: PlantTraveler; theme: 'dark' | 'light' }) {
+  const classification = plantTraveler.productClassification;
+  const reviewReasons = plantTraveler.classificationReviewReasons;
+  const matchedLabel = classification.matchedRule?.label ?? 'No matched model rule';
+  const routeLabel = plantTraveler.suggestedRoute.length > 0 ? plantTraveler.suggestedRoute.join(' → ') : 'No suggested route';
+
+  return (
+    <section style={productIntelStyle(theme, reviewReasons.length > 0)}>
+      <div style={smallLabelStyle(theme)}>Product Intelligence</div>
+      <div style={infoGridStyle}>
+        <Info label="Model Signal" value={classification.modelSignal ?? 'Not found'} theme={theme} />
+        <Info label="Matched Rule" value={matchedLabel} theme={theme} />
+        <Info label="Product Family" value={formatToken(classification.productFamily)} theme={theme} />
+        <Info label="Material" value={formatToken(classification.materialClass)} theme={theme} />
+        <Info label="Finish Hint" value={formatHintList(plantTraveler.finishHints)} theme={theme} />
+        <Info label="QA Required" value={plantTraveler.qaRequired ? 'Yes' : 'No'} theme={theme} />
+        <Info label="Confidence" value={formatToken(classification.confidence)} theme={theme} />
+        <Info label="Suggested Route" value={routeLabel} theme={theme} />
+      </div>
+
+      {reviewReasons.length > 0 ? (
+        <div style={reviewBoxStyle(theme)}>
+          <strong>Needs review before automatic dispatch:</strong>
+          <ul style={reviewListStyle}>
+            {reviewReasons.slice(0, 5).map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div style={readyNoticeStyle(theme)}>No classification review warning is listed for this plant traveler.</div>
+      )}
+    </section>
   );
 }
 
@@ -119,6 +157,11 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
 
 function formatToken(value: string) {
   return value.replaceAll('_', ' ').replaceAll('-', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatHintList(values: string[]) {
+  if (values.length === 0) return 'No finish hint';
+  return values.map(formatToken).join(', ');
 }
 
 function getPlantStatusColor(status: PlantTraveler['overallStatus']) {
@@ -184,6 +227,11 @@ const closeButtonStyle: CSSProperties = {
   fontSize: 11,
   fontWeight: 900,
   cursor: 'pointer',
+};
+
+const reviewListStyle: CSSProperties = {
+  margin: '8px 0 0',
+  paddingLeft: 18,
 };
 
 function modalCardStyle(theme: 'dark' | 'light', color: string): CSSProperties {
@@ -259,6 +307,32 @@ function progressFillStyle(color: string, percent: number): CSSProperties {
 
 function progressSubTextStyle(theme: 'dark' | 'light'): CSSProperties {
   return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12, fontWeight: 700, marginTop: 8 };
+}
+
+function productIntelStyle(theme: 'dark' | 'light', needsReview: boolean): CSSProperties {
+  const color = needsReview ? '#f97316' : '#10b981';
+  return {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    background: theme === 'dark' ? 'rgba(15,23,42,0.9)' : '#f8fafc',
+    border: `1px solid ${color}66`,
+    borderLeft: `4px solid ${color}`,
+  };
+}
+
+function reviewBoxStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 6,
+    background: theme === 'dark' ? 'rgba(124,45,18,0.32)' : '#ffedd5',
+    border: '1px solid #f97316',
+    color: theme === 'dark' ? '#fed7aa' : '#9a3412',
+    fontSize: 12,
+    lineHeight: 1.45,
+    fontWeight: 750,
+  };
 }
 
 function stepCardStyle(theme: 'dark' | 'light', color: string): CSSProperties {
