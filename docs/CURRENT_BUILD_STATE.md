@@ -21,12 +21,13 @@ Current slice completed:
 - Structured local confirmation capture for classification review items.
 - Global dashboard Classification Review Queue.
 - Safe drill-in navigation from global Classification Review Queue to department/work-center review capture.
+- Review-target awareness so drill-in preselects/highlights the selected traveler in the department workflow panel.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25284841016
-Commit: 19f8eed122024a8f433d1509684c4177350254cb
+Run ID: 25285097140
+Commit: 6b45a6de6cf2d265afdafc207164ec55452ad8f0
 Status: GREEN
 ```
 
@@ -40,6 +41,34 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Review-Target Awareness For Classification Review Drill-In
+
+Added/updated:
+
+```text
+src/components/dashboard/ClassificationReviewQueue.tsx
+src/components/WorkCenterWorkflowPanelV2.tsx
+```
+
+The dashboard review queue now stores the clicked review target before opening the work center.
+
+It now:
+
+- stores the selected review target under `jcm-classification-review-target-v1`.
+- dispatches `jcm-classification-review-target-updated`.
+- opens the matching work center through the existing drill-in path.
+- lets `WorkCenterWorkflowPanelV2` read the target and preselect the matching review-needed traveler.
+- shows a target notice when the user lands in the department review panel from the global queue.
+- highlights the targeted review item.
+
+Important guardrail:
+
+- Target awareness only improves navigation/visibility.
+- It does not approve routes.
+- It does not mutate classifier rules.
+- It does not raise confidence.
+- It does not dispatch work.
 
 ### Global Queue Drill-In Navigation
 
@@ -77,15 +106,9 @@ src/components/dashboard/ClassificationReviewQueue.tsx
 src/pages/DashboardPage.tsx
 ```
 
-The Plant Command Center dashboard now shows a plant-wide Classification Review Queue after Plant Signals.
+The Plant Command Center dashboard shows a plant-wide Classification Review Queue after Plant Signals.
 
-It now:
-
-- gathers review-needed Dynamic Travelers across the plant.
-- shows plant-wide unresolved route/product/classification risks.
-- shows order number, department, model signal, product family, finish hint, confidence, QA required/not required, review reason, suggested route, current instruction, and saved confirmation count.
-- listens for local confirmation updates so saved confirmation counts refresh.
-- separates captured confirmations from unresolved review items.
+It gathers review-needed Dynamic Travelers across the plant and shows order number, department, model signal, product family, finish hint, confidence, QA required/not required, review reason, suggested route, current instruction, and saved confirmation count.
 
 Important guardrail:
 
@@ -106,17 +129,9 @@ src/components/travelers/ClassificationReviewCapture.tsx
 src/components/WorkCenterWorkflowPanelV2.tsx
 ```
 
-The workflow panel now supports local-only structured confirmation capture for classification review items.
+The workflow panel supports local-only structured confirmation capture for classification review items.
 
-It now:
-
-- uses controlled selection fields for confirmation questions.
-- uses controlled answer values.
-- captures reviewer source as a structured selection.
-- allows a short optional note, but selections remain the source of truth.
-- saves confirmations to localStorage under `jcm-classification-review-confirmations-v1`.
-- shows saved confirmation counts per review-needed traveler.
-- shows recent confirmations for the active traveler.
+It uses controlled selection fields, saves confirmations to localStorage under `jcm-classification-review-confirmations-v1`, shows saved confirmation counts per review-needed traveler, and shows recent confirmations for the active traveler.
 
 Important guardrail:
 
@@ -124,7 +139,6 @@ Important guardrail:
 - Confirmations do not approve routes automatically.
 - Confirmations do not raise confidence automatically.
 - Confirmations do not dispatch work.
-- This is a capture layer only.
 
 ### Classification Review Summary
 
@@ -136,22 +150,6 @@ src/components/WorkCenterWorkflowPanelV2.tsx
 
 Added a display-only Classification Review Summary above the Dynamic Travelers list.
 
-It now:
-
-- counts travelers needing route/product/classification review.
-- shows top review-needed travelers.
-- shows order number, model signal, confidence, first review reason, finish hint, product family, and route hint.
-- opens the existing traveler detail modal when a review item is selected.
-- shows CLEAR when no route/product review warnings exist for the work center.
-
-Important guardrail:
-
-- No write actions were added.
-- No approve button was added.
-- No route changes were added.
-- No confidence increases were added.
-- This only makes uncertainty visible.
-
 ### 412 Carbon Tapping Sleeve Classification Refinement
 
 Updated:
@@ -160,26 +158,7 @@ Updated:
 src/data/productClassificationRules.ts
 ```
 
-412 rule was tightened only for the carbon 412 tapping sleeve family:
-
-- Product family remains TAPPING_SLEEVE.
-- Material class remains CARBON_STEEL.
-- Size/outlet hints remain SMALL / UNDER_12_INCH.
-- Route hint remains Material Handling -> Machine Shop -> Fab -> Coating -> Assembly.
-- Ownership notes now specify Material Handling + Machine Shop feed 412 Fab components.
-- Ownership notes now specify 412 Fab owns carbon small-body fabrication with 12 inch and under outlets.
-- Ownership notes now specify Coating handles shop coat or optional fusion epoxy review after 412 Fab.
-- Ownership notes now specify 412 Assembly builds after Coating.
-- Confidence remains MEDIUM.
-- Review warning preserved for 12 inch outlet threshold and exact coating lane.
-
-Important guardrail:
-
-- This does not make automatic dispatch final.
-- 12 inch threshold still needs confirmation.
-- Coating lane still needs confirmation.
-- 432 and 452 stainless paths were not touched.
-- Couplings, Clamps, and Patch Clamp were not touched.
+412 rule was tightened only for the carbon 412 tapping sleeve family. Confidence remains MEDIUM. Review warning remains for 12 inch outlet threshold and exact coating lane.
 
 ### Service Saddle Classification Refinement
 
@@ -189,19 +168,7 @@ Updated:
 src/data/productClassificationRules.ts
 ```
 
-Service saddle rules were tightened only for the Saddles product family:
-
-- 401/402/403/404 standard service saddles now use confirmed route: Receiving -> Coating -> Saddles Dept.
-- 401/402/403/404 confidence raised to HIGH for route confidence, while preserving review warning for exact shop-coat sub-lane and strap coating timing.
-- 405/406/407/408 coated service saddles use confirmed route: Receiving -> Coating -> Saddles Dept.
-- 405/406/407/408 keep MEDIUM confidence because fusion plastic coating process still needs confirmation.
-- 502 stainless service saddle remains LOW and human-review-required until stainless/passivation handling and route are confirmed.
-
-Important guardrail:
-
-- This does not make automatic dispatch final.
-- Coating sub-lane details still require review.
-- No Couplings, Clamps, Patch Clamp, 432, or 452 route assumptions were expanded.
+401-404 route confidence is HIGH for Receiving -> Coating -> Saddles Dept. 405-408 stay MEDIUM until coating process is confirmed. 502 remains LOW and human-review-required.
 
 ### Product Intelligence Badges On Workflow Traveler Cards
 
@@ -211,14 +178,7 @@ Updated:
 src/components/WorkCenterWorkflowPanelV2.tsx
 ```
 
-Dynamic Traveler cards now show compact Product Intelligence badges before opening the modal:
-
-- finish hint
-- QA required / QA not required
-- review needed / classified
-- confidence
-
-This is display-only. It does not change dispatch behavior.
+Dynamic Traveler cards show finish hint, QA status, review status, and confidence.
 
 ### Product Classification Foundation
 
@@ -230,20 +190,7 @@ src/data/productClassificationRules.ts
 src/logic/classifyProductionOrder.ts
 ```
 
-Classifier outputs:
-
-- product line
-- product family
-- material class
-- size/outlet/body clues when known
-- finish hints
-- engineered requirement
-- QA requirement
-- QA reason
-- route hint
-- department ownership hint
-- confidence
-- human review reasons
+Classifier outputs product line, product family, material class, size/outlet/body clues, finish hints, engineered requirement, QA requirement, route hint, ownership hint, confidence, and human review reasons.
 
 ### Traveler Wiring
 
@@ -254,47 +201,13 @@ src/types/dynamicTraveler.ts
 src/logic/dynamicTraveler.ts
 ```
 
-DynamicTraveler now carries:
-
-- productClassification
-- finishHints
-- qaRequired
-- classificationReviewReasons
-
-PlantTraveler now carries:
-
-- productClassification
-- finishHints
-- qaRequired
-- suggestedRoute
-- classificationReviewReasons
+DynamicTraveler and PlantTraveler carry classification intelligence, finish hints, QA requirement, suggested route, and review reasons.
 
 Important behavior guardrail:
 
 - Product classification can influence route only when it does not require human review.
 - RequiredDepartments still override classifier route hints.
 - Classification is a mapmaker, not full dispatch authority.
-
-### Traveler UI Visibility
-
-Updated:
-
-```text
-src/components/travelers/TravelerDetailModal.tsx
-src/components/travelers/PlantTravelerDetailModal.tsx
-```
-
-Both modals now show Product Intelligence:
-
-- Model Signal
-- Matched Rule
-- Product Family
-- Material
-- Finish Hint
-- QA Required
-- Confidence
-- Suggested Route
-- Review warnings before automatic dispatch
 
 ## Current Durable Plant Truth
 
@@ -324,19 +237,7 @@ Do not show machines that cannot run the size/type/material.
 
 ### Material Handling
 
-Material Handling is production, not support.
-
-Owns or influences:
-
-- burning plate
-- plasma cutting
-- laser cutting
-- rolling
-- saw cutting pipe/bar/round stock
-- press work
-- large-diameter coupling expansion
-- press brake work
-- some coupling welding
+Material Handling is production, not support. It owns or influences burning, plasma, laser, rolling, saw cutting, press work, large-diameter coupling expansion, press brake work, and some coupling welding.
 
 Important resources:
 
@@ -458,35 +359,15 @@ Important:
 
 ### QA
 
-QA is conditional, not universal.
-
-QA required for:
-
-- engineered orders
-- returns
-- specifically assigned cases
-
-Regular production:
-
-- mostly spot-check unless QA is assigned.
-
-Do not route every order through QA by default.
+QA is conditional, not universal. QA required for engineered orders, returns, and specifically assigned cases. Regular production is mostly spot-check unless QA is assigned.
 
 ### Shipping / JIT
 
-- Everything eventually funnels to Shipping.
-- Shipping is final outbound gate.
-- JCM runs just-in-time.
-- Expedited orders are common, not rare.
-- Priority logic must eventually account for ship pressure, route position, blockers, QA/documentation readiness, and Shipping readiness.
+Everything eventually funnels to Shipping. JCM runs just-in-time, so expedited orders are common.
 
 ### Maintenance
 
-- Maintenance is stand-alone.
-- JCM is starting from scratch on machine reliability.
-- Existing maintenance work order request flow should become the first reliability backbone.
-- Do not fake mature reliability analytics yet.
-- First goal: trustworthy machine/resource status and repair history.
+Maintenance is stand-alone. JCM is starting from scratch on machine reliability. Existing maintenance work order request flow should become the first reliability backbone.
 
 ## Current Product Intelligence Docs
 
@@ -554,14 +435,14 @@ Do not jump straight to automatic dispatch.
 Recommended next code slice:
 
 ```text
-Add review-target awareness so drill-in can highlight or preselect the selected traveler in the department workflow panel.
+Add a lightweight global review-target clear/dismiss affordance or start collecting plant facts from docs/LOOSE_ENDS.md.
 ```
 
 Why:
 
-- Global queue can now route users to the correct work-center page.
-- The next refinement is helping the worker land directly on the relevant review item/capture panel.
-- This is still navigation/visibility only, not approval behavior.
+- Global queue can route users to the correct work-center page and preselect the review item.
+- The next useful UI improvement would let users clear the stored target after reviewing, but this is optional.
+- Route-rule expansion should wait for plant confirmations.
 
 Guardrails:
 
@@ -587,18 +468,3 @@ Most valuable confirmations:
 - Do saddle straps get coated before or after Saddles Dept/LV4500 work?
 - Does 502 follow the same Saddles Dept path?
 - Is 502 passivated in Coating/passivation room?
-
-## Exact Next Action
-
-If continuing code:
-
-1. Pass the selected queue order/traveler target through drill-in navigation.
-2. Let the work-center workflow panel highlight or preselect the matching review item.
-3. Do not add approval behavior.
-4. Build and verify CI.
-
-If continuing knowledge capture:
-
-1. Answer items from docs/LOOSE_ENDS.md.
-2. Update only affected docs/rules.
-3. Build and verify CI if code changes.
