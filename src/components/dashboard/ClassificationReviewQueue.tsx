@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { DynamicTraveler } from '../../types/dynamicTraveler';
+import type { WorkCenter } from '../../types/plant';
 import { productionOrders } from '../../data/productionOrders';
 import { generateDynamicTravelers } from '../../logic/dynamicTraveler';
 import {
@@ -11,9 +12,11 @@ import type { DashboardTheme } from './dashboardStyles';
 
 type ClassificationReviewQueueProps = {
   theme: DashboardTheme;
+  workCenters: WorkCenter[];
+  onOpenWorkCenter: (workCenter: WorkCenter) => void;
 };
 
-export default function ClassificationReviewQueue({ theme }: ClassificationReviewQueueProps) {
+export default function ClassificationReviewQueue({ theme, workCenters, onOpenWorkCenter }: ClassificationReviewQueueProps) {
   const [confirmationsVersion, setConfirmationsVersion] = useState(0);
   const confirmations = useMemo(() => loadClassificationReviewConfirmations(), [confirmationsVersion]);
   const travelers = useMemo(() => generateDynamicTravelers(productionOrders, 'All'), []);
@@ -33,6 +36,11 @@ export default function ClassificationReviewQueue({ theme }: ClassificationRevie
       window.removeEventListener('jcm-classification-review-confirmations-updated', refresh);
     };
   }, []);
+
+  function openTravelerWorkCenter(traveler: DynamicTraveler) {
+    const matchingWorkCenter = workCenters.find((workCenter) => workCenter.department === traveler.department);
+    if (matchingWorkCenter) onOpenWorkCenter(matchingWorkCenter);
+  }
 
   if (reviewTravelers.length === 0) {
     return (
@@ -68,6 +76,7 @@ export default function ClassificationReviewQueue({ theme }: ClassificationRevie
         {reviewTravelers.slice(0, 6).map((traveler) => {
           const travelerConfirmations = getConfirmationsForTraveler(confirmations, traveler);
           const firstReason = traveler.classificationReviewReasons[0] ?? 'Classification needs human review.';
+          const canDrillIn = workCenters.some((workCenter) => workCenter.department === traveler.department);
           return (
             <article key={traveler.id} style={queueItemStyle(theme, travelerConfirmations.length > 0)}>
               <div style={queueItemTopStyle}>
@@ -89,9 +98,19 @@ export default function ClassificationReviewQueue({ theme }: ClassificationRevie
 
               <div style={queueFooterStyle}>
                 <span style={smallTextStyle(theme)}>Current: {traveler.currentInstruction}</span>
-                <span style={badgeStyle(travelerConfirmations.length > 0 ? '#10b981' : '#64748b')}>
-                  {travelerConfirmations.length} CONFIRMATION{travelerConfirmations.length === 1 ? '' : 'S'}
-                </span>
+                <div style={footerActionRowStyle}>
+                  <span style={badgeStyle(travelerConfirmations.length > 0 ? '#10b981' : '#64748b')}>
+                    {travelerConfirmations.length} CONFIRMATION{travelerConfirmations.length === 1 ? '' : 'S'}
+                  </span>
+                  <button
+                    type="button"
+                    style={drillInButtonStyle(theme, canDrillIn)}
+                    disabled={!canDrillIn}
+                    onClick={() => openTravelerWorkCenter(traveler)}
+                  >
+                    OPEN REVIEW CAPTURE
+                  </button>
+                </div>
               </div>
             </article>
           );
@@ -164,6 +183,14 @@ const queueFooterStyle: CSSProperties = {
   alignItems: 'center',
   flexWrap: 'wrap',
   marginTop: 9,
+};
+
+const footerActionRowStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+  justifyContent: 'flex-end',
+  alignItems: 'center',
 };
 
 function queueShellStyle(theme: DashboardTheme, needsReview: boolean): CSSProperties {
@@ -257,6 +284,19 @@ function smallTextStyle(theme: DashboardTheme): CSSProperties {
     fontSize: 11,
     fontWeight: 700,
     lineHeight: 1.35,
+  };
+}
+
+function drillInButtonStyle(theme: DashboardTheme, enabled: boolean): CSSProperties {
+  return {
+    border: enabled ? '1px solid #38bdf8' : '1px solid #64748b',
+    background: enabled ? 'rgba(56,189,248,0.16)' : 'rgba(100,116,139,0.12)',
+    color: enabled ? '#38bdf8' : theme === 'dark' ? '#64748b' : '#94a3b8',
+    borderRadius: 4,
+    padding: '5px 7px',
+    fontSize: 10,
+    fontWeight: 900,
+    cursor: enabled ? 'pointer' : 'not-allowed',
   };
 }
 
