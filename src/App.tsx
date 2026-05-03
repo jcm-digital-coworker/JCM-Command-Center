@@ -196,6 +196,12 @@ export default function App() {
       return;
     }
 
+    if (nextDepartment === 'Engineering') {
+      setSelectedWorkCenter(null);
+      navigateTo('engineering');
+      return;
+    }
+
     const matchingWorkCenter = workCenters.find((workCenter) => workCenter.department === nextDepartment);
     setSelectedWorkCenter(matchingWorkCenter ?? null);
     navigateTo('dashboard');
