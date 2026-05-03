@@ -17,15 +17,15 @@ Current emphasis:
 - Department descriptions flow through a shared operating profile layer.
 - Workflow buttons must not imply resolution unless the app actually resolves something.
 - Blocker navigation must land on visible blocker context.
-- Engineering escalation must land on Engineering, not Orders/Production.
+- Engineering escalation and Engineering quick selection must land on Engineering, not Orders/Production or generic dashboard/work-center routing.
 - Navigation contracts should be audited as route contracts, not patched with timing workarounds.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25293871221
-Commit: 026f22dbcfee22b58ea1ad69d86718af8b0c6775
+Run ID: 25294225129
+Commit: 62b6a947fce4bfb6e01dc1336a3436e63882caac
 Status: GREEN
 ```
 
@@ -39,6 +39,49 @@ Passed:
 - Record latest action run
 
 ## Most Recent Completed App Work
+
+### Engineering Quick Selection Route Fix
+
+Files:
+
+```text
+src/App.tsx
+```
+
+PR:
+
+```text
+#11 Fix Engineering quick selection route
+```
+
+Problem fixed:
+
+- The work-station Engineering escalation button was fixed by PR #10, but the quick department/work-center selector still used `openWorkCenterForDepartment`.
+- That selector treated Engineering like a shop-floor work center and sent it through the generic dashboard/work-center path.
+
+Current behavior:
+
+```text
+if (nextDepartment === 'Engineering') {
+  setSelectedWorkCenter(null);
+  navigateTo('engineering');
+  return;
+}
+```
+
+Result:
+
+- Engineering quick selection opens the Engineering page.
+- Work-station card Engineering escalation opens the Engineering page.
+- This is a source-route correction, not a timing workaround.
+
+Guardrail:
+
+- Navigation only.
+- No route approval.
+- No dispatch behavior.
+- No classifier mutation.
+- No confidence increase.
 
 ### Root Engineering Route Fix
 
@@ -69,16 +112,7 @@ onOpenEngineering={() => {
 }}
 ```
 
-This is the corrective root fix. It is not a timing workaround.
-
-Guardrail:
-
-- Navigation only.
-- No route approval.
-- No dispatch behavior.
-- No classifier mutation.
-- No confidence increase.
-- Engineering escalation remains a visibility/escalation handoff, not an automatic resolution.
+This is the corrective root fix for the workstation-card path.
 
 Remaining cleanup item:
 
@@ -87,7 +121,7 @@ src/logic/workflowActions.ts
 ```
 
 - A previous mitigation still dispatches Engineering navigation events after `ENGINEERING_ESCALATION` is logged.
-- The root App callback now handles the route correctly, so this mitigation is no longer needed.
+- The root App callback and quick selector now handle the route correctly, so this mitigation is no longer needed.
 - Attempts to remove the mitigation were blocked by the connector write safety layer in this session.
 - Remove it in a future cleanup pass so `workflowActions.ts` is a pure action-log module again.
 
@@ -103,7 +137,7 @@ It should check every action button as:
 visible label -> action handler -> callback prop -> App tab/page -> expected destination
 ```
 
-Use it before changing any action-console, workflow, maintenance, engineering, receiving, or review navigation.
+Use it before changing any action-console, workflow, maintenance, engineering, receiving, quick selector, drawer, or review navigation.
 
 ### Blocker Focus Card
 
@@ -279,7 +313,7 @@ Guardrail:
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
 - Work Center Tablet lane drill-ins are mostly scroll/navigation; make them smarter only if operators need precise panel/item focus.
 - HELP FIRST priority may need clearer copy if departments also have ready work.
-- Live validation should confirm Engineering escalation lands on the Engineering page and not Orders/Production after PR #10.
+- Live validation should confirm both Engineering paths land on the Engineering page: workstation card escalation and quick selection.
 - Live validation should confirm Blocker Focus is obvious enough and `Open traveler detail` is understood as review/visibility only.
 
 ## Repo-First Operating Rule
@@ -323,16 +357,15 @@ Avoid:
 Recommended next move:
 
 ```text
-Live-test Engineering escalation after redeploy/refresh. If it lands on Engineering, create the route contract auditor checklist/skill before more navigation work.
+Live-test both Engineering paths after redeploy/refresh. If both land on Engineering, create the route contract auditor checklist/skill before more navigation work.
 ```
 
 Use at least:
 
+- Work-station card: Escalate to Engineering.
+- Quick selector: Engineering.
 - Machine Shop: help/blocker and engineering escalation cases.
-- Assembly: mixed ready and blocked cases.
 - Fab: blocker, engineering escalation, and handoff cases.
-- Shipping: ready and blocked final-flow cases.
-- Saddles Dept: saddle/product-review-sensitive case.
 
 Guardrails:
 
