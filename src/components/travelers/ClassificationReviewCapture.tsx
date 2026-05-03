@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { DynamicTraveler } from '../../types/dynamicTraveler';
 import type {
   ClassificationReviewAnswer,
@@ -59,19 +60,19 @@ export default function ClassificationReviewCapture({ traveler, confirmations, d
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8, marginTop: 10 }}>
         <Field label="Question" theme={theme}>
-          <select style={selectStyle(theme, inputBackground, textColor, borderColor)} value={draft.question} onChange={(event) => onDraftChange({ ...draft, question: event.target.value as ClassificationReviewQuestion })}>
+          <select style={selectStyle(inputBackground, textColor, borderColor)} value={draft.question} onChange={(event) => onDraftChange({ ...draft, question: event.target.value as ClassificationReviewQuestion })}>
             {questionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </Field>
 
         <Field label="Answer" theme={theme}>
-          <select style={selectStyle(theme, inputBackground, textColor, borderColor)} value={draft.answer} onChange={(event) => onDraftChange({ ...draft, answer: event.target.value as ClassificationReviewAnswer })}>
+          <select style={selectStyle(inputBackground, textColor, borderColor)} value={draft.answer} onChange={(event) => onDraftChange({ ...draft, answer: event.target.value as ClassificationReviewAnswer })}>
             {answerOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </Field>
 
         <Field label="Reviewed By" theme={theme}>
-          <select style={selectStyle(theme, inputBackground, textColor, borderColor)} value={draft.reviewedBy} onChange={(event) => onDraftChange({ ...draft, reviewedBy: event.target.value as ClassificationReviewDraft['reviewedBy'] })}>
+          <select style={selectStyle(inputBackground, textColor, borderColor)} value={draft.reviewedBy} onChange={(event) => onDraftChange({ ...draft, reviewedBy: event.target.value as ClassificationReviewDraft['reviewedBy'] })}>
             {reviewerOptions.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         </Field>
@@ -110,7 +111,7 @@ export default function ClassificationReviewCapture({ traveler, confirmations, d
   );
 }
 
-function Field({ label, theme, children }: { label: string; theme: 'dark' | 'light'; children: React.ReactNode }) {
+function Field({ label, theme, children }: { label: string; theme: 'dark' | 'light'; children: ReactNode }) {
   return (
     <label style={{ display: 'grid', gap: 4, marginTop: 8, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }}>
       <span style={fieldLabelStyle}>{label}</span>
@@ -119,7 +120,7 @@ function Field({ label, theme, children }: { label: string; theme: 'dark' | 'lig
   );
 }
 
-function selectStyle(_theme: 'dark' | 'light', background: string, color: string, borderColor: string) {
+function selectStyle(background: string, color: string, borderColor: string) {
   return {
     width: '100%',
     borderRadius: 4,
