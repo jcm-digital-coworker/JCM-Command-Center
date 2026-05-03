@@ -14,14 +14,15 @@ Current emphasis:
 - Operator Next Best Action is the primary Work Center Tablet operating surface.
 - Digital Co-worker is a flyout, not prime page content.
 - Copy Station Link supports QR/deep-link station tablet behavior.
+- Department descriptions must come from a shared operating profile layer, not scattered hardcoded page copies.
 - Validate live tablet use before more UI collapse, panel reordering, or route certainty.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25289205624
-Commit: d5d73b2da8c4f243639764001d65a5dcfe03e8f5
+Run ID: 25290622464
+Commit: 0ca95ab6313d2a865bace66d8ae7ff6d543c3f1c
 Status: GREEN
 ```
 
@@ -34,7 +35,80 @@ Passed:
 - Upload demo build
 - Record latest action run
 
-## Latest Repo Notes / Docs
+## Most Recent Completed App Work
+
+### Department Truth Alignment Layer
+
+Added:
+
+```text
+src/data/departmentOperatingProfiles.ts
+```
+
+Purpose:
+
+- Give the app one shared descriptive layer for department operating meaning.
+- Stop Dashboard cards, shell department cards, and work-center data from each telling a separate story about the same department.
+- Preserve unresolved facts as unresolved instead of turning them into route certainty.
+
+Shared profile fields:
+
+- department.
+- resource label.
+- open-for signal.
+- truth strength: STRONG, PARTIAL, or PLACEHOLDER.
+- operating summary.
+
+Wired consumers:
+
+```text
+src/components/dashboard/DashboardWorkCenterCard.tsx
+src/components/shell/DepartmentCards.tsx
+src/data/workCenters.ts
+```
+
+What changed:
+
+- Dashboard cards no longer carry their own hardcoded department resource labels, open-for text, or truth-strength map.
+- Shell DepartmentCards now show the same shared resource label and operating summary used by Dashboard cards.
+- `workCenters.ts` now uses `departmentOperatingProfiles` for primary function text.
+- Stale “future/deferred” language was removed where it conflicted with current repo state.
+- Unresolved areas now say they need route/coverage confirmation instead of pretending they are complete or fake-future.
+
+Guardrail:
+
+- This is descriptive alignment only.
+- No route approval.
+- No dispatch behavior.
+- No classifier mutation.
+- No confidence increases.
+- No App.tsx routing change.
+
+### Tablet Action Console And Help Target Cleanup
+
+Files:
+
+```text
+src/logic/operatorNextBestActions.ts
+src/pages/WorkCenterDetailPage.tsx
+```
+
+Fixes:
+
+- Needs Help caused by a blocked/held traveler now targets the workflow panel and says `Go to blocker`.
+- Needs Help caused by risk/maintenance support still targets the lower support/risk area.
+- The lower risks/support panel now clarifies that traveler blockers, holds, and material shortages live in the workflow panel above.
+- The confusing standalone Tablet Operating Mode strip was removed from the page.
+- The current operating mode is now the action-console title.
+- Digital Co-worker is centered as an inline flyout panel and contains dynamic mode/ready/help/review counts.
+
+Latest green for this cleanup:
+
+```text
+Run ID: 25290237530
+Commit: 2390613f6331cf7462bed1e2d69f0c21ffd86833
+Status: GREEN
+```
 
 ### Work Center Tablet Validation Results
 
@@ -44,12 +118,6 @@ Added:
 docs/WORK_CENTER_TABLET_VALIDATION_RESULTS.md
 ```
 
-Commit:
-
-```text
-fb7db3401f41cfd7db9880417f66d3a143c3e439
-```
-
 This records a source-grounded validation pass, not a live floor/device test.
 
 Source-verified findings:
@@ -57,10 +125,8 @@ Source-verified findings:
 - Copy Station Link builds `?wc=<workCenter.id>` station URLs.
 - Digital Co-worker is a flyout, not a full-width main-flow panel.
 - Operator Next Best Action renders before the main workflow panel.
-- Tablet Operating Mode is visible inside the action console.
 - Lane buttons exist for workflow, help, review, and handoff.
 - Review Needed reuses the existing review-target storage/event path.
-- Operating mode is deterministic: HELP FIRST, REVIEW FIRST, RUN READY WORK, MONITOR / STAGE.
 - Existing `productionOrders` data contains real validation cases, so no fake demo data is needed.
 - Review targeting is currently the most mature precision path.
 
@@ -73,7 +139,7 @@ Still needs live validation:
 - Whether lower panels are useful or distracting during real work.
 - Whether HELP FIRST still feels right when a department also has ready work.
 
-Recommendation from this pass:
+Recommendation:
 
 ```text
 Do not collapse or hide lower tablet panels yet.
@@ -102,112 +168,6 @@ The checklist validates:
 - handoff-oriented work center flow.
 - Copy Station Link / QR deep-link behavior.
 - whether lower panels are actually used or ignored.
-
-## Most Recent Completed App Work
-
-### Tablet Operating Mode Emphasis
-
-Updated:
-
-```text
-src/pages/WorkCenterDetailPage.tsx
-```
-
-The Work Center Tablet visually emphasizes the Operator Next Best Action console as the active operating surface.
-
-Added a compact operating-mode strip inside the console:
-
-```text
-TABLET OPERATING MODE
-```
-
-Mode labels are derived from the current action model:
-
-- Help count greater than zero -> `HELP FIRST`.
-- Pending review count greater than zero -> `REVIEW FIRST`.
-- Ready count greater than zero -> `RUN READY WORK`.
-- Otherwise -> `MONITOR / STAGE`.
-
-The strip explains that lane taps jump to work, help, review, or handoff areas without changing dispatch authority.
-
-Preserved behavior:
-
-- Copy Station Link.
-- Digital Co-worker flyout.
-- Review target behavior.
-- Runtime workflow panel behavior.
-
-Guardrail:
-
-- Visual hierarchy only.
-- No dispatch change.
-- No route approval.
-- No classifier mutation.
-- No confidence change.
-- No App.tsx change.
-
-### Digital Co-worker Flyout
-
-Updated:
-
-```text
-src/pages/WorkCenterDetailPage.tsx
-```
-
-The full-width Digital Co-worker block was removed from the main Work Center Tablet flow and moved into a top-right hero button/flyout.
-
-The flyout contains:
-
-- Today's priority.
-- Supervisor info tiles when in supervisor view.
-- Worker station note when in worker/operator view.
-- Close button.
-
-Follow-up cleanup removed unused helpers after the flyout move:
-
-- `getNextMoveStyle`
-- `getLargeTextStyle`
-- `getThreeColumnGridStyle`
-
-### Precise Review Lane Targeting
-
-Updated:
-
-```text
-src/pages/WorkCenterDetailPage.tsx
-```
-
-The Review Needed lane reuses the existing review-target system.
-
-When tapped, it:
-
-- finds the leading review-needed traveler for the active work center.
-- stores it under `jcm-classification-review-target-v1`.
-- dispatches `jcm-classification-review-target-updated`.
-- scrolls to the workflow/review area.
-- lets `WorkCenterWorkflowPanelV2` preselect/highlight the targeted traveler.
-
-Guardrail:
-
-- Navigation only. No approval, dispatch, classifier mutation, confidence increase, or new review system.
-
-### Operator Next Best Action Console And Lane Drill-Ins
-
-Files:
-
-```text
-src/logic/operatorNextBestActions.ts
-src/pages/WorkCenterDetailPage.tsx
-```
-
-The Work Center Tablet includes four action lanes:
-
-- Run Now -> Go to workflow.
-- Needs Help -> Go to help.
-- Review Needed -> Go to review.
-- Next Handoff -> Go to handoff.
-
-The decision logic lives in `src/logic/operatorNextBestActions.ts`, keeping the page aligned with: pages compose, modules think.
 
 ## Important Repo Correction From CLAUDE.md
 
@@ -496,26 +456,18 @@ Avoid:
 Recommended next move:
 
 ```text
-Run the live Work Center Tablet validation checklist on the deployed/tablet view before adding more UI collapse, panel reordering, or route certainty.
+Continue the department truth alignment audit by checking remaining department-facing pages for direct hardcoded department descriptions before making more UI changes.
 ```
 
-Use at least:
+Priority checks:
 
-- Machine Shop: help/blocker and ready cases.
-- Assembly: mixed ready and blocked cases.
-- Fab: blocker and handoff cases.
-- Shipping: ready and blocked final-flow cases.
-- Saddles Dept: saddle/product-review-sensitive case.
+- Plant Map.
+- Workflow mobile / QR station flow.
+- Receiving page.
+- Saddles page.
+- Shipping and maintenance surfaces.
 
-Allowed post-validation outcomes:
-
-- Leave as-is.
-- Reorder panel.
-- Collapse panel.
-- Move panel behind action button.
-- Improve lane target.
-- Clarify text.
-- Fix bug.
+After that, run live Work Center Tablet validation on the deployed/tablet view.
 
 Guardrails:
 
