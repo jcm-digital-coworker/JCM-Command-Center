@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react';
 import { useMemo, useState } from 'react';
 import { plantAssets } from '../data/plantAssets';
+import { plantDepartmentOrder } from '../data/workCenters';
+import { getDepartmentOperatingProfile } from '../data/departmentOperatingProfiles';
 import type { PlantAsset } from '../types/plantAsset';
 import type { Department } from '../types/machine';
 
@@ -8,30 +10,15 @@ type PlantMapPageProps = {
   theme?: 'dark' | 'light';
 };
 
-const departmentOrder: Department[] = [
-  'Receiving',
-  'Material Handling',
-  'Machine Shop',
-  'Fab',
-  'Coating',
-  'Assembly',
-  'Saddles Dept',
-  'Clamps',
-  'Patch Clamps',
-  'QA',
-  'Shipping',
-  'Maintenance',
-  'Office',
-];
-
 export default function PlantMapPage({ theme = 'dark' }: PlantMapPageProps) {
   const [filter, setFilter] = useState<Department | 'All'>('All');
   const [selectedAsset, setSelectedAsset] = useState<PlantAsset | null>(null);
 
   const groupedAssets = useMemo(() => {
-    return departmentOrder
+    return plantDepartmentOrder
       .map((department) => ({
         department,
+        profile: getDepartmentOperatingProfile(department),
         assets: plantAssets.filter((asset) => asset.ownerDepartment === department),
       }))
       .filter((group) => group.assets.length > 0 && (filter === 'All' || group.department === filter));
@@ -48,7 +35,7 @@ export default function PlantMapPage({ theme = 'dark' }: PlantMapPageProps) {
           <div style={eyebrowStyle}>PLANT MAP</div>
           <h2 style={titleStyle(theme)}>Departments, Cells, Assets, and Process Zones</h2>
           <p style={subTextStyle(theme)}>
-            This is the first real battlefield map. Machine Shop and Material Handling get equipment. Fab gets work cells. Coating gets process zones. QA is tracked as a plant-wide validation layer.
+            Mapped assets are grouped by the same department operating profiles used by Dashboard, Department Cards, and Work Center data. Asset cards show equipment, work cells, process zones, ownership, confidence, and known risk flags.
           </p>
         </div>
       </div>
@@ -64,7 +51,7 @@ export default function PlantMapPage({ theme = 'dark' }: PlantMapPageProps) {
         <label style={smallLabelStyle(theme)}>Filter Department</label>
         <select value={filter} onChange={(event) => setFilter(event.target.value as Department | 'All')} style={selectStyle(theme)}>
           <option value="All">All mapped areas</option>
-          {departmentOrder.map((department) => (
+          {plantDepartmentOrder.map((department) => (
             <option key={department} value={department}>{department}</option>
           ))}
         </select>
@@ -74,7 +61,10 @@ export default function PlantMapPage({ theme = 'dark' }: PlantMapPageProps) {
       {groupedAssets.map((group) => (
         <section key={group.department} style={sectionStyle(theme)}>
           <div style={sectionHeaderStyle(theme)}>
-            <div>{group.department}</div>
+            <div>
+              <div>{group.department}</div>
+              <div style={sectionSubLabelStyle(theme)}>{group.profile.resourceLabel}</div>
+            </div>
             <span style={countPillStyle(theme)}>{group.assets.length} mapped</span>
           </div>
           <div style={assetGridStyle}>
@@ -202,6 +192,7 @@ function toolbarStyle(theme: 'dark' | 'light'): CSSProperties { return { padding
 function selectStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: '10px 12px', borderRadius: 6, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: theme === 'dark' ? '#0f172a' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontWeight: 800 }; }
 function sectionStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 8, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function sectionHeaderStyle(theme: 'dark' | 'light'): CSSProperties { return { marginBottom: 12, fontSize: 14, fontWeight: 900, letterSpacing: '1px', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }; }
+function sectionSubLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 4, fontSize: 10, fontWeight: 900, letterSpacing: '0.7px', color: theme === 'dark' ? '#94a3b8' : '#64748b' }; }
 function summaryTileStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function assetCardStyle(theme: 'dark' | 'light', status: string): CSSProperties { const color = status === 'DOWN' ? '#ef4444' : status === 'WATCH' ? '#f97316' : status === 'UNKNOWN' ? '#94a3b8' : '#10b981'; return { width: '100%', textAlign: 'left', padding: 14, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', borderLeft: `4px solid ${color}`, cursor: 'pointer' }; }
 function assetTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 15, fontWeight: 900 }; }
