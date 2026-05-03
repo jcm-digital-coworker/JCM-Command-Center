@@ -25,12 +25,13 @@ Current slice completed:
 - Review-target banner with a user-controlled Clear Target action in the department workflow panel.
 - Plant Truth Checklist inside the existing Classification Review Queue, powered by existing structured confirmations.
 - Useful-info Department Focus cards that surface existing work-center ownership, focus, coverage, truth strength, and next-module signals.
+- Operator Next Best Action console on the Work Center Tablet page.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25286090281
-Commit: 5d802b8511a5cb9952156d3a02c9b092fb216a05
+Run ID: 25286324789
+Commit: f98d34061f63d44ce527155d790942fd2d7921da
 Status: GREEN
 ```
 
@@ -44,6 +45,53 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Operator Next Best Action Console
+
+Updated:
+
+```text
+src/pages/WorkCenterDetailPage.tsx
+```
+
+The Work Center Tablet page now includes an Operator Next Best Action console between Today's Priority and the existing workflow panel.
+
+It borrows proven floor-board patterns without creating a new workflow system:
+
+- dispatch-board style local queue visibility.
+- triage-style attention lanes.
+- Andon-style color signaling.
+- checklist-style next-action clarity.
+
+It shows four local action lanes:
+
+- Run Now.
+- Needs Help.
+- Review Needed.
+- Next Handoff.
+
+It uses existing signals:
+
+- Dynamic Travelers generated for the active work center.
+- classification review warnings.
+- saved structured review confirmations.
+- active risk items.
+- active maintenance tasks.
+- `workCenter.stationTabletDefault` and daily focus fallbacks.
+
+Important guardrail:
+
+- This is display/navigation clarity only.
+- It does not replace `WorkCenterWorkflowPanelV2`.
+- It does not approve routes.
+- It does not mutate classifier rules.
+- It does not raise confidence.
+- It does not dispatch work.
+- It does not create a new truth system.
+
+Suggested future refactor:
+
+- If the action console proves useful, move selector logic into `src/logic/operatorNextBestActions.ts` instead of growing more logic inside `WorkCenterDetailPage.tsx`.
 
 ### Useful-Info Department Focus Cards
 
@@ -519,20 +567,21 @@ Main active risks:
 - 412/432/452 rules need confirmation before route hints become dispatch logic.
 - Classifier should not overrule human review.
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
+- Work Center Tablet action-console selector logic currently lives in `WorkCenterDetailPage.tsx`; move it to `src/logic` if the pattern grows.
 
 ## Next Recommended Move
 
 Recommended next move:
 
 ```text
-Use the upgraded Department Focus cards, then consider whether the department detail pages should mirror the same useful-info hierarchy.
+Evaluate the Work Center Tablet action console in use, then either refactor its selector logic into src/logic or add focused drill-in actions to each lane.
 ```
 
 Why:
 
 - Department cards now explain why to open a department.
-- They surface current ownership, daily focus, coverage, next module, and truth strength using existing work-center data.
-- The next likely improvement is consistency between dashboard cards and department detail pages, not more fields on the cards.
+- The Work Center Tablet now explains what local action deserves attention first.
+- The next useful improvement is either architectural cleanup if the pattern sticks, or better lane-level action buttons if operators need faster drill-in.
 
 Guardrails:
 
