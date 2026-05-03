@@ -27,12 +27,13 @@ Current slice completed:
 - Useful-info Department Focus cards that surface existing work-center ownership, focus, coverage, truth strength, and next-module signals.
 - Operator Next Best Action console on the Work Center Tablet page.
 - Operator Next Best Action selector extracted into `src/logic/operatorNextBestActions.ts`.
+- Operator Next Best Action lane drill-in buttons for workflow, help, review, and handoff sections.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25286430170
-Commit: c63d7b446fe0c80b737852a7061c4cbecba3ec47
+Run ID: 25286562195
+Commit: ccd53fa228b8786751430fddedf160c2cda23d0d
 Status: GREEN
 ```
 
@@ -46,6 +47,43 @@ Passed:
 - Record latest action run
 
 ## Last Completed Work
+
+### Operator Next Best Action Lane Drill-Ins
+
+Added/updated:
+
+```text
+src/logic/operatorNextBestActions.ts
+src/pages/WorkCenterDetailPage.tsx
+```
+
+The Work Center Tablet action console now supports fast click-through movement without adding dispatch/control behavior.
+
+Each lane now includes:
+
+- an `actionLabel`.
+- a lane `target`.
+- a visible button on the tablet console.
+
+Lane buttons:
+
+- Run Now -> Go to workflow.
+- Needs Help -> Go to help.
+- Review Needed -> Go to review.
+- Next Handoff -> Go to handoff.
+
+Behavior:
+
+- Buttons scroll to existing page sections using stable element IDs.
+- This is navigation only.
+- No work is approved.
+- No work is dispatched.
+- No classifier rules are changed.
+- No confidence levels are raised.
+
+Known limitation:
+
+- Review Needed currently scrolls to the review/workflow area instead of opening a precise review item inside `WorkCenterWorkflowPanelV2`. That is intentionally safe for now.
 
 ### Operator Next Best Action Selector Refactor
 
@@ -593,14 +631,14 @@ Main active risks:
 - 412/432/452 rules need confirmation before route hints become dispatch logic.
 - Classifier should not overrule human review.
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
-- Work Center Tablet action-console lane actions are not clickable yet; add focused drill-ins only if operators need faster lane-level navigation.
+- Work Center Tablet lane drill-ins are scroll anchors only; make them smarter only if operators need precise panel/item focus.
 
 ## Next Recommended Move
 
 Recommended next move:
 
 ```text
-Evaluate the Work Center Tablet action console in use, then consider focused drill-in actions for each lane.
+Use the Work Center Tablet lane drill-ins, then consider precise review-item targeting inside WorkCenterWorkflowPanelV2 only if the scroll-anchor behavior is too broad.
 ```
 
 Why:
@@ -608,7 +646,8 @@ Why:
 - Department cards now explain why to open a department.
 - The Work Center Tablet now explains what local action deserves attention first.
 - The action-console selector logic now lives in `src/logic/operatorNextBestActions.ts` instead of growing inside the page.
-- The next useful improvement is better lane-level action buttons only if operators need faster drill-in.
+- Lane buttons now provide fast movement to workflow, help, review, and handoff sections without dispatch/control behavior.
+- The next useful improvement is precision targeting, not more dashboard chrome.
 
 Guardrails:
 
