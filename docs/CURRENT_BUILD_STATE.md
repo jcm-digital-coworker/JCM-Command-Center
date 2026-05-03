@@ -22,12 +22,13 @@ Current slice completed:
 - Global dashboard Classification Review Queue.
 - Safe drill-in navigation from global Classification Review Queue to department/work-center review capture.
 - Review-target awareness so drill-in preselects/highlights the selected traveler in the department workflow panel.
+- Review-target banner with a user-controlled Clear Target action in the department workflow panel.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25285097140
-Commit: 6b45a6de6cf2d265afdafc207164ec55452ad8f0
+Run ID: 25285595610
+Commit: f0852ebf685b96a668e5c01eaf5c049d2b65c9b7
 Status: GREEN
 ```
 
@@ -42,6 +43,35 @@ Passed:
 
 ## Last Completed Work
 
+### Review-Target Banner And Clear Target Action
+
+Updated:
+
+```text
+src/components/WorkCenterWorkflowPanelV2.tsx
+```
+
+The department workflow panel now shows a stronger review-target banner when a worker lands from the global Classification Review Queue.
+
+It now:
+
+- explains that the active target came from the global queue.
+- shows the target order number.
+- explains that the traveler is preselected below.
+- provides a Clear Target button.
+- removes `jcm-classification-review-target-v1` from localStorage when cleared.
+- dispatches `jcm-classification-review-target-updated` after clearing.
+- refreshes panel state so the target notice/highlight can return to normal review display.
+
+Important guardrail:
+
+- Clear Target only clears navigation context.
+- It does not approve routes.
+- It does not mutate classifier rules.
+- It does not raise confidence.
+- It does not dispatch work.
+- It does not remove review warnings.
+
 ### Review-Target Awareness For Classification Review Drill-In
 
 Added/updated:
@@ -51,7 +81,7 @@ src/components/dashboard/ClassificationReviewQueue.tsx
 src/components/WorkCenterWorkflowPanelV2.tsx
 ```
 
-The dashboard review queue now stores the clicked review target before opening the work center.
+The dashboard review queue stores the clicked review target before opening the work center.
 
 It now:
 
@@ -79,7 +109,7 @@ src/components/dashboard/ClassificationReviewQueue.tsx
 src/pages/DashboardPage.tsx
 ```
 
-The Plant Command Center dashboard review queue now has a safe drill-in path.
+The Plant Command Center dashboard review queue has a safe drill-in path.
 
 It now:
 
@@ -430,33 +460,18 @@ Main active risks:
 
 ## Next Recommended Move
 
-Do not jump straight to automatic dispatch.
-
-Recommended next code slice:
+Recommended next move:
 
 ```text
-Add a lightweight global review-target clear/dismiss affordance or start collecting plant facts from docs/LOOSE_ENDS.md.
+Pause coding and collect plant facts from docs/LOOSE_ENDS.md.
 ```
 
 Why:
 
 - Global queue can route users to the correct work-center page and preselect the review item.
-- The next useful UI improvement would let users clear the stored target after reviewing, but this is optional.
+- The review target banner now explains the landing context and can clear the stored target.
+- The next useful improvement is plant truth, not more UI chrome.
 - Route-rule expansion should wait for plant confirmations.
-
-Guardrails:
-
-- No automatic route approval.
-- No classifier mutation.
-- No confidence increases without confirmed governance.
-- Keep structured selections as the source of truth.
-- Keep queue/capture visibility-first.
-
-Alternate next move:
-
-```text
-Pause coding and collect plant facts from docs/LOOSE_ENDS.md.
-```
 
 Most valuable confirmations:
 
@@ -468,3 +483,11 @@ Most valuable confirmations:
 - Do saddle straps get coated before or after Saddles Dept/LV4500 work?
 - Does 502 follow the same Saddles Dept path?
 - Is 502 passivated in Coating/passivation room?
+
+Guardrails:
+
+- No automatic route approval.
+- No classifier mutation.
+- No confidence increases without confirmed governance.
+- Keep structured selections as the source of truth.
+- Keep queue/capture visibility-first.
