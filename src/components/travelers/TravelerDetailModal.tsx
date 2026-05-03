@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { DynamicTraveler, TravelerAction, TravelerActionType, TravelerResource } from '../../types/dynamicTraveler';
 import { generatePlantTraveler } from '../../logic/dynamicTraveler';
-import { applyWorkflowRuntimeAction } from '../../logic/workflowRuntimeState';
+import { applyWorkflowRuntimeAction, getWorkflowRuntimeState } from '../../logic/workflowRuntimeState';
+import { getWorkflowActionLog } from '../../logic/workflowActions';
 import PlantTravelerDetailModal from './PlantTravelerDetailModal';
 import type { Department } from '../../types/machine';
 
@@ -129,6 +130,8 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
           </div>
         </section>
 
+        <OrderActivitySection orderNumber={order.orderNumber} theme={theme} />
+
         {onOpenOrders ? (
           <button type="button" style={openOrdersButtonStyle} onClick={onOpenOrders}>OPEN FULL ORDER</button>
         ) : null}
@@ -207,8 +210,6 @@ function ResourceContextPanel({ traveler, resource, theme }: { traveler: Dynamic
       <div style={infoGridStyle}>
         <Info label="Current State" value={formatToken(resource.status)} theme={theme} />
         <Info label="Traveler Fit" value="Capable for this traveler" theme={theme} />
-        <Info label="Current Job" value="Not connected yet" theme={theme} />
-        <Info label="Queue Impact" value="Traveler queue model pending" theme={theme} />
       </div>
 
       <div style={contextNoticeStyle(theme)}>
@@ -246,6 +247,122 @@ function ActionRow({ action, theme, onFire, fired }: { action: TravelerAction; t
     </div>
   );
 }
+
+function OrderActivitySection({ orderNumber, theme }: { orderNumber: string; theme: 'dark' | 'light' }) {
+  const runtimeOverride = getWorkflowRuntimeState()[orderNumber];
+  const actionLog = getWorkflowActionLog().filter((entry) => entry.orderNumber === orderNumber);
+
+  type TimelineEntry = { label: string; note: string; at: string };
+  const entries: TimelineEntry[] = [];
+
+  for (const entry of actionLog) {
+    entries.push({
+      label: entry.actionType.replaceAll('_', ' '),
+      note: entry.note,
+      at: entry.createdAt,
+    });
+  }
+
+  if (runtimeOverride?.lastAction && runtimeOverride.lastActionAt) {
+    const alreadyLogged = actionLog.some((e) => e.createdAt === runtimeOverride.lastActionAt);
+    if (!alreadyLogged) {
+      entries.unshift({
+        label: runtimeOverride.lastAction,
+        note: 'Runtime state update',
+        at: runtimeOverride.lastActionAt,
+      });
+    }
+  }
+
+  entries.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+
+  return (
+    <section style={sectionBlockStyle}>
+      <div style={smallLabelStyle(theme)}>Order Activity</div>
+      {entries.length === 0 ? (
+        <div style={activityEmptyStyle(theme)}>No recorded activity for this order yet.</div>
+      ) : (
+        <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
+          {entries.slice(0, 6).map((entry, i) => (
+            <div key={i} style={activityRowStyle(theme)}>
+              <div style={activityDotStyle} />
+              <div>
+                <div style={activityLabelStyle(theme)}>{entry.label}</div>
+                <div style={activityNoteStyle(theme)}>{entry.note}</div>
+              </div>
+              <div style={activityTimeStyle}>{formatActivityTime(entry.at)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function formatActivityTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const diffMs = Date.now() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h ago`;
+    return d.toLocaleDateString();
+  } catch {
+    return '';
+  }
+}
+
+function activityEmptyStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    marginTop: 6,
+    padding: '8px 10px',
+    borderRadius: 4,
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: 700,
+    background: theme === 'dark' ? 'rgba(15,23,42,0.6)' : '#f8fafc',
+    border: theme === 'dark' ? '1px dashed #334155' : '1px dashed #cbd5e1',
+  };
+}
+
+function activityRowStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'grid',
+    gridTemplateColumns: '10px 1fr auto',
+    gap: 8,
+    alignItems: 'start',
+    padding: '6px 8px',
+    borderRadius: 4,
+    background: theme === 'dark' ? 'rgba(15,23,42,0.7)' : '#f8fafc',
+    border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0',
+  };
+}
+
+const activityDotStyle: CSSProperties = {
+  width: 8,
+  height: 8,
+  borderRadius: '50%',
+  background: '#f97316',
+  marginTop: 4,
+  flexShrink: 0,
+};
+
+function activityLabelStyle(theme: 'dark' | 'light'): CSSProperties {
+  return { fontSize: 11, fontWeight: 900, color: theme === 'dark' ? '#cbd5e1' : '#334155', textTransform: 'uppercase', letterSpacing: '0.3px' };
+}
+
+function activityNoteStyle(theme: 'dark' | 'light'): CSSProperties {
+  return { fontSize: 10, color: theme === 'dark' ? '#64748b' : '#94a3b8', marginTop: 1 };
+}
+
+const activityTimeStyle: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  color: '#64748b',
+  whiteSpace: 'nowrap',
+};
 
 function formatToken(value: string) {
   return value.replaceAll('_', ' ').replaceAll('-', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());

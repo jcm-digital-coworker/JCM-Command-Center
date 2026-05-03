@@ -18,6 +18,7 @@ import DashboardOverviewPanels from '../components/dashboard/DashboardOverviewPa
 import DashboardWorkCenterCard from '../components/dashboard/DashboardWorkCenterCard';
 import CommandRecommendationCard from '../components/dashboard/CommandRecommendationCard';
 import ClassificationReviewQueue from '../components/dashboard/ClassificationReviewQueue';
+import DeptHealthTilesPanel from '../components/dashboard/DeptHealthTilesPanel';
 import {
   dashboardGridStyle,
   dashboardHeaderStyle,
@@ -68,10 +69,10 @@ export default function DashboardPage({
   theme = 'dark',
 }: DashboardPageProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [runtimeVersion, setRuntimeVersion] = useState(0);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   useEffect(() => {
-    const refresh = () => setRuntimeVersion((version) => version + 1);
+    const refresh = () => setLastUpdatedAt(new Date());
     window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
     window.addEventListener('storage', refresh);
     window.addEventListener('jcm-classification-review-confirmations-updated', refresh);
@@ -81,8 +82,6 @@ export default function DashboardPage({
       window.removeEventListener('jcm-classification-review-confirmations-updated', refresh);
     };
   }, []);
-
-  void runtimeVersion;
 
   const openRisks = risks.filter((risk) => risk.status === 'OPEN' || risk.status === 'IN_PROGRESS');
   const activeTasks = tasks.filter((task) => task.status !== 'OK');
@@ -119,6 +118,11 @@ export default function DashboardPage({
           <h2 style={getDashboardTitleStyle(theme)}>PLANT COMMAND CENTER</h2>
           <p style={dashboardSubtitleStyle}>Plant pulse, order flow, crew needs, and department-specific action</p>
         </div>
+        {lastUpdatedAt && (
+          <span style={lastUpdatedStyle}>
+            Updated {lastUpdatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </span>
+        )}
       </div>
 
       <CommandRecommendationCard
@@ -140,6 +144,8 @@ export default function DashboardPage({
         theme={theme}
         onGoToTab={onGoToTab}
       />
+
+      <DeptHealthTilesPanel onNavigate={onGoToTab} theme={theme} />
 
       <AccordionSection title="BLOCKED ORDERS" count={blockedOrders.length} color="#dc2626" expanded={expandedSection === 'blockedOrders'} onToggle={() => toggleSection('blockedOrders')} onViewAll={() => onGoToTab('orders')} theme={theme}>
         {blockedOrders.length > 0 ? (
@@ -244,6 +250,16 @@ function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: 
     </section>
   );
 }
+
+const lastUpdatedStyle: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  color: '#10b981',
+  letterSpacing: '0.5px',
+  whiteSpace: 'nowrap',
+  alignSelf: 'flex-start',
+  paddingTop: 4,
+};
 
 function getQuickActionsToggleStyle(theme: DashboardTheme): CSSProperties { return { border: theme === 'dark' ? '1px dashed #475569' : '1px dashed #cbd5e1', background: theme === 'dark' ? 'rgba(15, 23, 42, 0.55)' : '#f8fafc', color: '#94a3b8', borderRadius: 4, padding: '12px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase', minHeight: 54 }; }
 function formatOrderBlock(order: ProductionOrder) { const blockReason = getOrderBlockReason(order); return blockReason ? formatBlockedReason(blockReason) : 'No blocker listed'; }

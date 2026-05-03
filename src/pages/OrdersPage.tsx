@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { productionOrders } from '../data/productionOrders';
 import { productFamilies } from '../data/productFamilies';
 import {
   formatMaterialStatus,
@@ -10,6 +9,13 @@ import {
 } from '../logic/orderReadiness';
 import type { ProductionOrder } from '../types/productionOrder';
 import { getOrderLane, getProductFlow } from '../logic/flowLogic';
+import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import {
+  getOrderLastTouchedHours,
+  getBlockerAgeLabel,
+  getBlockerAgeTone,
+  getBlockerAgeToneColor,
+} from '../logic/blockerAge';
 
 type OrdersPageProps = {
   theme?: 'dark' | 'light';
@@ -20,11 +26,24 @@ type OrderSortMode = 'priority' | 'shipDate' | 'status' | 'orderNumber';
 export default function OrdersPage({ theme = 'dark' }: OrdersPageProps) {
   const [sortMode, setSortMode] = useState<OrderSortMode>('priority');
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
-  const blockedCount = productionOrders.filter((order) => getOrderBlockReason(order)).length;
-  const readyCount = productionOrders.filter((order) => String(order.status).toLowerCase() === 'ready').length;
-  const engineeredCount = productionOrders.filter((order) => order.orderType === 'ENGINEERED' || order.productFamily === 'ENGINEERED_FITTING').length;
+  const [, setTick] = useState(0);
 
-  const sortedOrders = useMemo(() => sortOrders(productionOrders, sortMode), [sortMode]);
+  useEffect(() => {
+    const refresh = () => setTick((n) => n + 1);
+    window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
+
+  const liveOrders = getRuntimeProductionOrders();
+  const blockedCount = liveOrders.filter((order) => getOrderBlockReason(order)).length;
+  const readyCount = liveOrders.filter((order) => String(order.status).toLowerCase() === 'ready').length;
+  const engineeredCount = liveOrders.filter((order) => order.orderType === 'ENGINEERED' || order.productFamily === 'ENGINEERED_FITTING').length;
+
+  const sortedOrders = useMemo(() => sortOrders(liveOrders, sortMode), [liveOrders, sortMode]);
 
   return (
     <div style={pageStyle}>
@@ -39,7 +58,7 @@ export default function OrdersPage({ theme = 'dark' }: OrdersPageProps) {
       </div>
 
       <div style={summaryGridStyle}>
-        <SummaryTile label="Total Orders" value={productionOrders.length} theme={theme} />
+        <SummaryTile label="Total Orders" value={liveOrders.length} theme={theme} />
         <SummaryTile label="Blocked" value={blockedCount} tone="bad" theme={theme} />
         <SummaryTile label="Ready" value={readyCount} tone="good" theme={theme} />
         <SummaryTile label="Engineered" value={engineeredCount} tone="watch" theme={theme} />
@@ -94,16 +113,29 @@ export default function OrdersPage({ theme = 'dark' }: OrdersPageProps) {
 function OrderCard({ order, theme, onOpen }: { order: ProductionOrder; theme: 'dark' | 'light'; onOpen: () => void }) {
   const blockReason = getOrderBlockReason(order);
   const flow = getProductFlow(order);
+  const isBlocked = Boolean(blockReason);
+  const lastTouchedHours = isBlocked ? getOrderLastTouchedHours(order.orderNumber) : null;
 
   return (
-    <button type="button" style={cardStyle(theme, Boolean(blockReason))} onClick={onOpen}>
+    <button type="button" style={cardStyle(theme, isBlocked)} onClick={onOpen}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div>
           <div style={orderNumberStyle(theme)}>{order.orderNumber}</div>
           <div style={miniTextStyle(theme)}>{order.customer}</div>
         </div>
-        <div style={statusBadgeStyle(order.status, Boolean(blockReason))}>{getOrderStatusLabel(order)}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <div style={statusBadgeStyle(order.status, isBlocked)}>{getOrderStatusLabel(order)}</div>
+          {isBlocked && lastTouchedHours !== null && (() => {
+            const tone = getBlockerAgeTone(lastTouchedHours);
+            const color = getBlockerAgeToneColor(tone);
+            return <div style={{ fontSize: 9, fontWeight: 900, color, letterSpacing: '0.4px' }}>UPDATED {getBlockerAgeLabel(lastTouchedHours).toUpperCase()}</div>;
+          })()}
+        </div>
       </div>
+
+      {isBlocked && blockReason && (
+        <div style={inlineBlockerStyle(theme)}>{formatStatus(blockReason)}</div>
+      )}
 
       <div style={detailGridStyle}>
         <Info label="Type" value={order.orderType ?? 'STANDARD'} theme={theme} />
@@ -245,6 +277,7 @@ function sectionStyle(theme: 'dark' | 'light'): CSSProperties { return { padding
 function sectionTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { marginBottom: 4, fontSize: 13, fontWeight: 900, letterSpacing: '1px', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', textTransform: 'uppercase' }; }
 function summaryTileStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function cardStyle(theme: 'dark' | 'light', blocked: boolean): CSSProperties { return { width: '100%', textAlign: 'left', padding: 14, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: blocked ? '1px solid #ef4444' : theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', borderLeft: blocked ? '4px solid #ef4444' : '4px solid #10b981', cursor: 'pointer' }; }
+function inlineBlockerStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 8, marginBottom: 4, padding: '5px 9px', borderRadius: 4, background: theme === 'dark' ? 'rgba(127,29,29,0.28)' : '#fee2e2', border: '1px solid rgba(239,68,68,0.45)', color: theme === 'dark' ? '#fca5a5' : '#991b1b', fontSize: 11, fontWeight: 800 }; }
 function familyCardStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function orderNumberStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 18, fontWeight: 900, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }; }
 function miniTextStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: '6px 0 0', color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12, lineHeight: 1.45 }; }
