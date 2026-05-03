@@ -4,7 +4,7 @@ import type { Machine } from '../types/machine';
 import type { MaintenanceTask } from '../types/maintenance';
 import type { RiskItem } from '../types/risk';
 import type { RoleView } from '../types/app';
-import type { OperatorActionLane, OperatorNextBestActionModel, OperatorActionLaneTone } from '../logic/operatorNextBestActions';
+import type { OperatorActionLane, OperatorNextBestActionModel, OperatorActionLaneTarget, OperatorActionLaneTone } from '../logic/operatorNextBestActions';
 import StatusBadge from '../components/StatusBadge';
 import ReceivingWorkflowPanel from '../components/ReceivingWorkflowPanel';
 import ReceivingClosurePanel from '../components/ReceivingClosurePanel';
@@ -112,15 +112,19 @@ export default function WorkCenterDetailPage({
         )}
       </section>
 
-      <OperatorNextBestActionPanel model={actionModel} theme={theme} />
+      <OperatorNextBestActionPanel model={actionModel} theme={theme} onSelectLane={scrollToOperatorLaneTarget} />
 
-      <WorkCenterWorkflowPanelV2
-        workCenter={workCenter}
-        theme={theme}
-        onOpenReceiving={onOpenReceiving}
-        onOpenEngineering={onOpenEngineering}
-        onOpenMaintenance={onGoToMaintenance}
-      />
+      <div id="operator-target-workflow">
+        <WorkCenterWorkflowPanelV2
+          workCenter={workCenter}
+          theme={theme}
+          onOpenReceiving={onOpenReceiving}
+          onOpenEngineering={onOpenEngineering}
+          onOpenMaintenance={onGoToMaintenance}
+        />
+      </div>
+
+      <div id="operator-target-review" style={anchorStyle} />
 
       {isReceiving ? <ReceivingClosurePanel theme={theme} /> : null}
       {showEngineeringLoop ? <EngineeringBacklogPanel theme={theme} /> : null}
@@ -142,6 +146,8 @@ export default function WorkCenterDetailPage({
         </Panel>
       ) : null}
 
+      <div id="operator-target-handoff" style={anchorStyle} />
+
       <div style={getMainGridStyle()}>
         <Panel title={isSupervisorView ? 'Department focus' : 'Today work'} theme={theme}>
           <List items={workCenter.dailyFocus} theme={theme} />
@@ -151,6 +157,8 @@ export default function WorkCenterDetailPage({
           <List items={tabletFocus} theme={theme} />
         </Panel>
       </div>
+
+      <div id="operator-target-support" style={anchorStyle} />
 
       <div style={getMainGridStyle()}>
         <Panel title={getAssetPanelTitle(workCenter.department, isMaintenanceView)} theme={theme}>
@@ -245,9 +253,11 @@ export default function WorkCenterDetailPage({
 function OperatorNextBestActionPanel({
   model,
   theme,
+  onSelectLane,
 }: {
   model: OperatorNextBestActionModel;
   theme: 'dark' | 'light';
+  onSelectLane: (target: OperatorActionLaneTarget) => void;
 }) {
   return (
     <section style={getActionConsoleStyle(theme)}>
@@ -265,7 +275,7 @@ function OperatorNextBestActionPanel({
 
       <div style={getActionLaneGridStyle()}>
         {model.lanes.map((lane) => (
-          <ActionLane key={lane.title} lane={lane} theme={theme} />
+          <ActionLane key={lane.title} lane={lane} theme={theme} onSelectLane={onSelectLane} />
         ))}
       </div>
     </section>
@@ -275,9 +285,11 @@ function OperatorNextBestActionPanel({
 function ActionLane({
   lane,
   theme,
+  onSelectLane,
 }: {
   lane: OperatorActionLane;
   theme: 'dark' | 'light';
+  onSelectLane: (target: OperatorActionLaneTarget) => void;
 }) {
   const tone = getActionLaneToneColor(lane.tone);
   return (
@@ -285,8 +297,23 @@ function ActionLane({
       <div style={{ color: tone, fontSize: 10, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' }}>{lane.title}</div>
       <strong style={getActionLaneValueStyle(theme)}>{lane.value}</strong>
       <p style={getActionLaneDetailStyle(theme)}>{lane.detail}</p>
+      <button type="button" style={getLaneButtonStyle(tone)} onClick={() => onSelectLane(lane.target)}>
+        {lane.actionLabel}
+      </button>
     </article>
   );
+}
+
+function scrollToOperatorLaneTarget(target: OperatorActionLaneTarget) {
+  const element = document.getElementById(getOperatorLaneTargetId(target));
+  element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function getOperatorLaneTargetId(target: OperatorActionLaneTarget) {
+  if (target === 'SUPPORT') return 'operator-target-support';
+  if (target === 'REVIEW') return 'operator-target-review';
+  if (target === 'HANDOFF') return 'operator-target-handoff';
+  return 'operator-target-workflow';
 }
 
 function getActionLaneToneColor(tone: OperatorActionLaneTone) {
@@ -375,6 +402,7 @@ const orangeDotStyle: CSSProperties = { width: 8, height: 8, borderRadius: 999, 
 const actionButtonStyle: CSSProperties = { padding: '8px 12px', borderRadius: 4, border: '1px solid #f97316', background: 'rgba(249, 115, 22, 0.12)', color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '0.8px', cursor: 'pointer' };
 const tileLabelStyle: CSSProperties = { color: '#94a3b8', fontSize: 11, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 };
 const consoleBadgeRowStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' };
+const anchorStyle: CSSProperties = { scrollMarginTop: 16 };
 function getBackButtonStyle(theme: 'dark' | 'light'): CSSProperties { return { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 4, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: theme === 'dark' ? '#1e293b' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', cursor: 'pointer', fontWeight: 900, letterSpacing: '0.7px' }; }
 function getHeroStyle(theme: 'dark' | 'light', status: WorkCenter['status']): CSSProperties { return { padding: 22, borderRadius: 8, border: `1px solid ${getStatusColor(status)}`, background: theme === 'dark' ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.22)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }; }
 function getHeroTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, fontSize: 30, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', letterSpacing: '0.4px' }; }
@@ -390,6 +418,7 @@ function getPanelStyle(theme: 'dark' | 'light'): CSSProperties { return { paddin
 function getActionLaneStyle(theme: 'dark' | 'light', tone: string): CSSProperties { return { padding: 13, borderRadius: 7, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${tone}55`, borderLeft: `4px solid ${tone}`, display: 'grid', gap: 6 }; }
 function getActionLaneValueStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 14, fontWeight: 900, lineHeight: 1.25 }; }
 function getActionLaneDetailStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 750, lineHeight: 1.4, margin: 0 }; }
+function getLaneButtonStyle(tone: string): CSSProperties { return { justifySelf: 'start', border: `1px solid ${tone}`, background: `${tone}18`, color: tone, borderRadius: 4, padding: '6px 8px', fontSize: 10, fontWeight: 900, letterSpacing: '0.6px', cursor: 'pointer', textTransform: 'uppercase' }; }
 function getConsoleBadgeStyle(color: string): CSSProperties { return { whiteSpace: 'nowrap', padding: '5px 8px', borderRadius: 4, border: `1px solid ${color}66`, color, background: `${color}18`, fontSize: 10, fontWeight: 900, letterSpacing: '0.6px' }; }
 function getInfoTileStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function getTileValueStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 14, lineHeight: 1.4, fontWeight: 800 }; }
