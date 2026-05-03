@@ -14,15 +14,15 @@ Current emphasis:
 - Operator Next Best Action is the primary Work Center Tablet operating surface.
 - Digital Co-worker is a flyout, not prime page content.
 - Copy Station Link supports QR/deep-link station tablet behavior.
-- Department descriptions must come from a shared operating profile layer, not scattered hardcoded page copies.
+- Department descriptions now flow through a shared operating profile layer instead of scattered hardcoded page copies.
 - Validate live tablet use before more UI collapse, panel reordering, or route certainty.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25290622464
-Commit: 0ca95ab6313d2a865bace66d8ae7ff6d543c3f1c
+Run ID: 25290831236
+Commit: 53ba61a2d3d68ab063db6987a8233d3fc2039d44
 Status: GREEN
 ```
 
@@ -37,19 +37,19 @@ Passed:
 
 ## Most Recent Completed App Work
 
-### Department Truth Alignment Layer
+### Department Truth Alignment Audit
 
-Added:
+Purpose:
+
+- Stop different pages from telling different stories about the same department.
+- Create one shared descriptive layer for department operating meaning.
+- Keep unresolved route/coverage facts visible as unresolved instead of turning them into fake certainty.
+
+Shared source:
 
 ```text
 src/data/departmentOperatingProfiles.ts
 ```
-
-Purpose:
-
-- Give the app one shared descriptive layer for department operating meaning.
-- Stop Dashboard cards, shell department cards, and work-center data from each telling a separate story about the same department.
-- Preserve unresolved facts as unresolved instead of turning them into route certainty.
 
 Shared profile fields:
 
@@ -59,12 +59,15 @@ Shared profile fields:
 - truth strength: STRONG, PARTIAL, or PLACEHOLDER.
 - operating summary.
 
-Wired consumers:
+Aligned consumers:
 
 ```text
 src/components/dashboard/DashboardWorkCenterCard.tsx
 src/components/shell/DepartmentCards.tsx
 src/data/workCenters.ts
+src/pages/PlantMapPage.tsx
+src/data/workCenterResources.ts
+src/pages/departments/DepartmentPageTools.tsx
 ```
 
 What changed:
@@ -73,7 +76,21 @@ What changed:
 - Shell DepartmentCards now show the same shared resource label and operating summary used by Dashboard cards.
 - `workCenters.ts` now uses `departmentOperatingProfiles` for primary function text.
 - Stale “future/deferred” language was removed where it conflicted with current repo state.
-- Unresolved areas now say they need route/coverage confirmation instead of pretending they are complete or fake-future.
+- Plant Map now uses `plantDepartmentOrder` and shared department resource labels for section headers.
+- Plant Map hero copy no longer carries its own separate department story.
+- `workCenterResources.ts` now includes Sales and Engineering.
+- `workCenterResources.ts` no longer implies unconfirmed certainty for Saddles, Clamps, or Patch Clamps.
+- Shared department `PageShell` now displays the shared operating summary, resource label, and truth-strength badge for specialized department pages.
+- Local department-page subtitle text remains as local detail under the shared profile summary instead of replacing the shared department truth.
+
+Targeted scan results:
+
+- No obvious leftover stale strings found for “future work center,” “deferred work center,” “future subgroups,” or old Plant Map “battlefield map” copy.
+- WorkflowMobilePage appears to use department names and traveler counts rather than competing department summaries.
+- ReceivingPage is workflow-specific and does not currently need profile wiring.
+- App.tsx remains a route/control shell.
+- Crew guidance remains decision logic, not department identity copy.
+- Plant assets remain asset-level facts and are intentionally not flattened into department summaries.
 
 Guardrail:
 
@@ -102,7 +119,7 @@ Fixes:
 - The current operating mode is now the action-console title.
 - Digital Co-worker is centered as an inline flyout panel and contains dynamic mode/ready/help/review counts.
 
-Latest green for this cleanup:
+Green build for this cleanup:
 
 ```text
 Run ID: 25290237530
@@ -456,18 +473,22 @@ Avoid:
 Recommended next move:
 
 ```text
-Continue the department truth alignment audit by checking remaining department-facing pages for direct hardcoded department descriptions before making more UI changes.
+Run live Work Center Tablet validation on the deployed/tablet view.
 ```
 
-Priority checks:
+Why:
 
-- Plant Map.
-- Workflow mobile / QR station flow.
-- Receiving page.
-- Saddles page.
-- Shipping and maintenance surfaces.
+- The most obvious department-description drift has been centralized behind shared operating profiles.
+- Remaining route uncertainty is plant-truth uncertainty, not a UI-description alignment problem.
+- Lower panel collapse/reordering should still be based on live use.
 
-After that, run live Work Center Tablet validation on the deployed/tablet view.
+Use at least:
+
+- Machine Shop: help/blocker and ready cases.
+- Assembly: mixed ready and blocked cases.
+- Fab: blocker and handoff cases.
+- Shipping: ready and blocked final-flow cases.
+- Saddles Dept: saddle/product-review-sensitive case.
 
 Guardrails:
 
