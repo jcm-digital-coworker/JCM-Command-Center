@@ -132,37 +132,81 @@ Reason:
 
 These routes still have unresolved department ownership, coating/passivation, or timing questions.
 
-## Recommended App Direction From These Loose Ends
+## Review Surfaces Already Built
 
-Best next code move:
+The earlier recommended code move was:
 
 ```text
 Add a Classification Review Summary surface.
 ```
 
-Purpose:
+That direction is now complete enough to stop treating it as the next build target.
 
-- List travelers/orders where classification needs human review.
-- Surface low-confidence route/product/coating warnings.
-- Keep unknowns visible before automatic dispatch logic exists.
-- Prevent hidden route assumptions from spreading.
+Built review visibility now includes:
 
-Suggested summary fields:
+- Classification Review Summary in `WorkCenterWorkflowPanelV2`.
+- Plant-wide Classification Review Queue on the dashboard.
+- Safe drill-in from the global queue to matching work center review capture.
+- Review-target storage under `jcm-classification-review-target-v1`.
+- Review-target preselection/highlight in the workflow panel.
+- User-controlled Clear Target action.
+- Plant Truth Checklist inside the existing Classification Review Queue.
+- Structured local confirmation capture saved under `jcm-classification-review-confirmations-v1`.
+- Work Center Tablet Review Needed lane targeting the leading review-needed traveler.
+
+Important guardrail:
+
+- These surfaces are visibility, navigation, and structured confirmation support.
+- They do not approve routes.
+- They do not dispatch work.
+- They do not mutate classifier rules.
+- They do not raise confidence automatically.
+
+## Best Current App Direction From These Loose Ends
+
+Best next move is not another automatic classification UI surface.
+
+Best next move:
 
 ```text
-Order number
-Product family/model signal
-Confidence
-Review reason
-Finish hint
-Suggested route
-QA required
-Current department
+Collect plant facts and validate live tablet use before adding more route certainty or collapsing more tablet panels.
+```
+
+Why:
+
+- The review surfaces already expose uncertain orders and product-family warnings.
+- The Work Center Tablet now has Operator Next Best Action, lane drill-ins, review targeting, Digital Co-worker flyout, Copy Station Link, and operating-mode emphasis.
+- The remaining uncertainty is mostly real plant truth, not missing UI chrome.
+- Collapsing lower tablet panels may help, but should follow live-use validation instead of being assumed.
+
+Suggested validation questions:
+
+```text
+Can the operator tell what to do first?
+Can the operator tell what needs help?
+Can the operator tell what needs review?
+Can the operator jump to the right panel quickly?
+Does Copy Station Link create the expected station URL?
+Does the Digital Co-worker flyout stay out of the way?
+Which lower tablet panels are actually used during work?
+```
+
+Suggested plant-fact intake priorities:
+
+```text
+412 outlet threshold and exact coating lane.
+412 optional fusion epoxy source.
+405-408 fusion plastic coating process.
+401-408 strap coating/timing.
+502 stainless saddle route, passivation, and strap dependency.
+Couplings, Clamps, and Patch Clamp department ownership/timing.
 ```
 
 Guardrails:
 
-- Display-only first.
-- No write actions.
+- Display/navigation first.
 - No automatic route approval.
 - No route confidence increases without confirmed plant facts.
+- No classifier mutation from free text.
+- Structured selections remain the source of truth.
+- Notes explain exceptions only.
