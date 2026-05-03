@@ -4,12 +4,15 @@ import type { WorkCenter } from '../types/plant';
 import type { RiskItem } from '../types/risk';
 
 export type OperatorActionLaneTone = 'RUN' | 'HELP' | 'REVIEW' | 'HANDOFF';
+export type OperatorActionLaneTarget = 'WORKFLOW' | 'SUPPORT' | 'REVIEW' | 'HANDOFF';
 
 export type OperatorActionLane = {
   title: string;
   tone: OperatorActionLaneTone;
   value: string;
   detail: string;
+  actionLabel: string;
+  target: OperatorActionLaneTarget;
 };
 
 export type OperatorNextBestActionModel = {
@@ -47,24 +50,32 @@ export function getOperatorNextBestActionModel({
         tone: 'RUN',
         value: readyTraveler ? `#${readyTraveler.order.orderNumber}` : 'No ready traveler',
         detail: readyTraveler?.currentInstruction ?? getFallbackRunNow(workCenter),
+        actionLabel: 'Go to workflow',
+        target: 'WORKFLOW',
       },
       {
         title: 'Needs help',
         tone: 'HELP',
         value: blockedTraveler ? `#${blockedTraveler.order.orderNumber}` : `${activeRisks.length + activeTasks.length} support signal${activeRisks.length + activeTasks.length === 1 ? '' : 's'}`,
         detail: blockedTraveler?.currentInstruction ?? getSupportSignalDetail(activeRisks, activeTasks),
+        actionLabel: 'Go to help',
+        target: 'SUPPORT',
       },
       {
         title: 'Review needed',
         tone: 'REVIEW',
         value: reviewTraveler ? `#${reviewTraveler.order.orderNumber}` : 'No active review target',
         detail: reviewTraveler?.classificationReviewReasons[0] ?? 'No local classification review warning is leading this work center.',
+        actionLabel: 'Go to review',
+        target: 'REVIEW',
       },
       {
         title: 'Next handoff',
         tone: 'HANDOFF',
         value: handoffTraveler?.nextHandoff ? String(handoffTraveler.nextHandoff) : 'No handoff ready',
         detail: handoffTraveler ? `Order #${handoffTraveler.order.orderNumber}: ${handoffTraveler.currentInstruction}` : workCenter.stationTabletDefault,
+        actionLabel: 'Go to handoff',
+        target: 'HANDOFF',
       },
     ],
   };
