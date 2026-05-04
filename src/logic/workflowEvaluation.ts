@@ -113,7 +113,7 @@ export function evaluateEngineeringReview(order: ProductionOrder, blueprint?: Pa
     return result('ENGINEERING_REVIEW', 'HARD_STOP', 'Engineering', getOrderUrgency(order), 'Engineered order has no blueprint or part definition attached.', 'Create and release the engineering packet.');
   }
 
-  if (order.engineeringRequired === true && order.engineeringStatus !== 'RELEASED') {
+  if (order.engineeringRequired === true && normalizeToken(order.engineeringStatus) !== 'RELEASED') {
     return result('ENGINEERING_REVIEW', 'HARD_STOP', 'Engineering', getOrderUrgency(order), 'Engineering release is required before production can proceed.', 'Complete Engineering release.');
   }
 
@@ -133,7 +133,7 @@ export function evaluateSupervisorPriority(order: ProductionOrder): WorkflowChec
 }
 
 export function evaluateMaterialReadiness(order: ProductionOrder): WorkflowCheckpointResult {
-  const materialStatus = String(order.materialStatus ?? 'UNKNOWN').toUpperCase();
+  const materialStatus = normalizeToken(order.materialStatus);
   const materialBlocker = order.blockers.find((blocker) => blocker.type === 'material');
 
   if (materialStatus === 'ORDER_REQUIRED') {
@@ -177,7 +177,7 @@ export function evaluateStationExecution(order: ProductionOrder): WorkflowCheckp
 
 export function evaluateQaRelease(order: ProductionOrder): WorkflowCheckpointResult {
   const qualityBlocker = order.blockers.find((blocker) => blocker.type === 'quality');
-  const qaStatus = String(order.qaStatus ?? 'UNKNOWN').toUpperCase();
+  const qaStatus = normalizeToken(order.qaStatus);
 
   if (qaStatus === 'HOLD' || qaStatus === 'FAILED' || qualityBlocker) {
     return result('QA_RELEASE', 'HARD_STOP', 'QA', getOrderUrgency(order), qualityBlocker?.message ?? 'QA release is holding this order.', 'Complete QA release or clear quality hold.');
@@ -199,7 +199,7 @@ export function evaluateShippingRelease(order: ProductionOrder): WorkflowCheckpo
     return result('SHIPPING_RELEASE', 'SOFT_ACTION', 'Shipping', getOrderUrgency(order), laborBlocker.message, 'Assign qualified shipping/material handling coverage.');
   }
 
-  if (order.currentDepartment === 'Shipping' && String(order.status).toLowerCase() === 'ready') {
+  if (order.currentDepartment === 'Shipping' && normalizeToken(order.status) === 'READY') {
     return result('SHIPPING_RELEASE', 'SOFT_ACTION', 'Shipping', getOrderUrgency(order), 'Order is ready for shipping action.', 'Pack, stage, and confirm shipment paperwork.');
   }
 
@@ -220,7 +220,8 @@ function choosePrimaryGate(results: WorkflowCheckpointResult[], order: Productio
 }
 
 function getPressureScore(order: ProductionOrder, results: WorkflowCheckpointResult[]): number {
-  const priorityScore = String(order.priority).toLowerCase() === 'critical' ? 80 : String(order.priority).toLowerCase() === 'hot' ? 45 : 15;
+  const priority = normalizeToken(order.priority);
+  const priorityScore = priority === 'CRITICAL' ? 80 : priority === 'HOT' ? 45 : 15;
   const dueScore = getDuePressure(order.projectedShipDate);
   const blockerScore = results.reduce((total, checkpoint) => total + (checkpoint.strength === 'HARD_STOP' ? 60 : checkpoint.strength === 'SOFT_ACTION' ? 30 : checkpoint.strength === 'WATCH_ONLY' ? 5 : 0), 0);
   const urgencyScore = results.reduce((total, checkpoint) => total + URGENCY_SCORE[checkpoint.urgency], 0);
@@ -240,10 +241,10 @@ function getDuePressure(projectedShipDate?: string): number {
 }
 
 function getOrderUrgency(order: ProductionOrder): WorkflowUrgency {
-  const priority = String(order.priority).toLowerCase();
+  const priority = normalizeToken(order.priority);
   const duePressure = getDuePressure(order.projectedShipDate);
-  if (priority === 'critical' || duePressure >= 65) return 'critical';
-  if (priority === 'hot' || duePressure >= 20) return 'action';
+  if (priority === 'CRITICAL' || duePressure >= 65) return 'critical';
+  if (priority === 'HOT' || duePressure >= 20) return 'action';
   return 'watch';
 }
 
@@ -283,4 +284,8 @@ function result(
   action: string
 ): WorkflowCheckpointResult {
   return { checkpoint, strength, owner, urgency, reason, action };
+}
+
+function normalizeToken(value: unknown): string {
+  return String(value ?? '').trim().toUpperCase();
 }
