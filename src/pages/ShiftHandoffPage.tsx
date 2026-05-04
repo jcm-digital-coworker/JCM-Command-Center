@@ -26,7 +26,7 @@ function saveShiftSnapshot(orders: ProductionOrder[], maintCount: number): Shift
     ts: Date.now(),
     orderNums: orders.map((o) => o.orderNumber),
     blockedNums: orders
-      .filter((o) => String(o.flowStatus).toLowerCase() === 'blocked' || (o.blockers ?? []).length > 0)
+      .filter(isBlockedOrder)
       .map((o) => o.orderNumber),
     maintCount,
   };
@@ -65,15 +65,10 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
   }
 
   const readyToRun = liveOrders.filter((o) =>
-    String(o.status).toLowerCase() === 'ready' &&
-    String(o.flowStatus).toLowerCase() !== 'blocked',
+    !isBlockedOrder(o) && !isHoldOrder(o) && isRunnableOrder(o),
   );
-  const blocked = liveOrders.filter((o) =>
-    String(o.flowStatus).toLowerCase() === 'blocked' || (o.blockers ?? []).length > 0,
-  );
-  const onHold = liveOrders.filter((o) =>
-    String(o.status).toLowerCase() === 'hold',
-  );
+  const blocked = liveOrders.filter(isBlockedOrder);
+  const onHold = liveOrders.filter(isHoldOrder);
   const openMaint = maintenanceRequests.filter((r) =>
     ['NEW', 'CLAIMED', 'IN_PROGRESS'].includes(r.status),
   );
@@ -87,12 +82,12 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
     if (!snapshot) return null;
     const currentBlockedNums = new Set(
       liveOrders
-        .filter((o) => String(o.flowStatus).toLowerCase() === 'blocked' || (o.blockers ?? []).length > 0)
+        .filter(isBlockedOrder)
         .map((o) => o.orderNumber),
     );
     const completed = snapshot.orderNums.filter((num) => {
       const order = liveOrders.find((o) => o.orderNumber === num);
-      return !order || String(order.status).toLowerCase() === 'done';
+      return !order || isClosedOrder(order);
     });
     const prevBlocked = new Set(snapshot.blockedNums);
     const newlyBlocked = [...currentBlockedNums].filter((num) => !prevBlocked.has(num));
@@ -107,37 +102,37 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
       hour: 'numeric', minute: '2-digit', hour12: true,
     });
 
-    const lines: string[] = ['=== JCM INDUSTRIES — SHIFT HANDOFF REPORT ===', `Generated: ${now}`, ''];
+    const lines: string[] = ['=== JCM INDUSTRIES - SHIFT HANDOFF REPORT ===', `Generated: ${now}`, ''];
 
     if (included.crew) {
       lines.push(`--- CREW ON SHIFT (${coverage.length}) ---`,
-        ...coverage.map((p) => `  ${p.name} | ${p.role} | ${p.station} | ${p.status}${p.assignedTo ? ` → ${p.assignedTo}` : ''}`), '');
+        ...coverage.map((p) => `  ${p.name} | ${p.role} | ${p.station} | ${p.status}${p.assignedTo ? ` -> ${p.assignedTo}` : ''}`), '');
     }
     if (included.ready) {
       lines.push(`--- READY TO RUN (${readyToRun.length}) ---`,
         ...(readyToRun.length > 0
-          ? readyToRun.map((o) => `  #${o.orderNumber} ${o.productFamily} — ${o.currentDepartment}${o.nextDepartment ? ` → ${o.nextDepartment}` : ''}`)
+          ? readyToRun.map((o) => `  #${o.orderNumber} ${o.productFamily} - ${o.currentDepartment}${o.nextDepartment ? ` -> ${o.nextDepartment}` : ''}`)
           : ['  None']), '');
     }
     if (included.blocked) {
       lines.push(`--- BLOCKED ORDERS (${blocked.length}) ---`,
         ...(blocked.length > 0
           ? blocked.map((o) => {
-              const reasons = (o.blockers ?? []).map((b) => b.message).join('; ') || 'See order';
-              return `  #${o.orderNumber} ${o.productFamily} — ${reasons}`;
+              const reasons = (o.blockers ?? []).map((b) => b.message).join('; ') || 'Flow status is blocked. Review order details.';
+              return `  #${o.orderNumber} ${o.productFamily} - ${reasons}`;
             })
           : ['  None']), '');
     }
     if (included.hold) {
       lines.push(`--- ON HOLD (${onHold.length}) ---`,
         ...(onHold.length > 0
-          ? onHold.map((o) => `  #${o.orderNumber} ${o.productFamily} — ${o.currentDepartment}`)
+          ? onHold.map((o) => `  #${o.orderNumber} ${o.productFamily} - ${o.currentDepartment}`)
           : ['  None']), '');
     }
     if (included.maintenance) {
       lines.push(`--- OPEN MAINTENANCE REQUESTS (${openMaint.length}) ---`,
         ...(openMaint.length > 0
-          ? openMaint.map((r) => `  [${r.status}] ${r.machineName} — ${r.priority} — ${r.problem.slice(0, 80)}`)
+          ? openMaint.map((r) => `  [${r.status}] ${r.machineName} - ${r.priority} - ${r.problem.slice(0, 80)}`)
           : ['  None']), '');
     }
 
@@ -194,7 +189,7 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
       </div>
 
       {included.crew && (
-        <ReportSection title={`Crew on Shift — ${coverage.length} people`} theme={theme}>
+        <ReportSection title={`Crew on Shift - ${coverage.length} people`} theme={theme}>
           {coverage.length === 0
             ? <EmptyRow text="No crew signed in." theme={theme} />
             : coverage.map((p) => {
@@ -213,12 +208,12 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
       )}
 
       {included.ready && (
-        <ReportSection title={`Ready to Run — ${readyToRun.length}`} theme={theme}>
+        <ReportSection title={`Ready to Run - ${readyToRun.length}`} theme={theme}>
           {readyToRun.length === 0
             ? <EmptyRow text="No orders currently ready to run." theme={theme} />
             : readyToRun.map((o) => (
                 <Row key={o.orderNumber} theme={theme} accent="#10b981">
-                  <span style={boldStyle(theme)}>#{o.orderNumber} — {o.productFamily}</span>
+                  <span style={boldStyle(theme)}>#{o.orderNumber} - {o.productFamily}</span>
                   <span style={mutedStyle}>{o.currentDepartment}{o.nextDepartment ? ` → ${o.nextDepartment}` : ''}</span>
                 </Row>
               ))}
@@ -226,29 +221,33 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
       )}
 
       {included.blocked && (
-        <ReportSection title={`Blocked Orders — ${blocked.length}`} theme={theme}>
+        <ReportSection title={`Blocked Orders - ${blocked.length}`} theme={theme}>
           {blocked.length === 0
             ? <EmptyRow text="No blocked orders." theme={theme} />
             : blocked.map((o) => (
                 <Row key={o.orderNumber} theme={theme} accent="#ef4444">
-                  <span style={boldStyle(theme)}>#{o.orderNumber} — {o.productFamily}</span>
-                  {(o.blockers ?? []).map((b, i) => (
+                  <span style={boldStyle(theme)}>#{o.orderNumber} - {o.productFamily}</span>
+                  {(o.blockers ?? []).length > 0 ? (o.blockers ?? []).map((b, i) => (
                     <span key={i} style={{ ...mutedStyle, color: theme === 'dark' ? '#fca5a5' : '#991b1b' }}>
                       ⚠ {b.type}: {b.message}
                     </span>
-                  ))}
+                  )) : (
+                    <span style={{ ...mutedStyle, color: theme === 'dark' ? '#fca5a5' : '#991b1b' }}>
+                      ⚠ Flow status is blocked. Review order details.
+                    </span>
+                  )}
                 </Row>
               ))}
         </ReportSection>
       )}
 
       {included.hold && (
-        <ReportSection title={`On Hold — ${onHold.length}`} theme={theme}>
+        <ReportSection title={`On Hold - ${onHold.length}`} theme={theme}>
           {onHold.length === 0
             ? <EmptyRow text="No orders currently on hold." theme={theme} />
             : onHold.map((o) => (
                 <Row key={o.orderNumber} theme={theme} accent="#64748b">
-                  <span style={boldStyle(theme)}>#{o.orderNumber} — {o.productFamily}</span>
+                  <span style={boldStyle(theme)}>#{o.orderNumber} - {o.productFamily}</span>
                   <span style={mutedStyle}>{o.currentDepartment}</span>
                 </Row>
               ))}
@@ -256,7 +255,7 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
       )}
 
       {included.maintenance && (
-        <ReportSection title={`Open Maintenance Requests — ${openMaint.length}`} theme={theme}>
+        <ReportSection title={`Open Maintenance Requests - ${openMaint.length}`} theme={theme}>
           {openMaint.length === 0
             ? <EmptyRow text="No open maintenance requests." theme={theme} />
             : openMaint.map((r) => {
@@ -275,6 +274,29 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
       )}
     </div>
   );
+}
+
+function isBlockedOrder(order: ProductionOrder): boolean {
+  return normalizeToken(order.status) === 'BLOCKED' || normalizeToken(order.flowStatus) === 'BLOCKED' || (order.blockers ?? []).length > 0;
+}
+
+function isHoldOrder(order: ProductionOrder): boolean {
+  return normalizeToken(order.status) === 'HOLD';
+}
+
+function isClosedOrder(order: ProductionOrder): boolean {
+  const status = normalizeToken(order.status);
+  return status === 'DONE' || status === 'COMPLETE' || status === 'COMPLETED';
+}
+
+function isRunnableOrder(order: ProductionOrder): boolean {
+  const status = normalizeToken(order.status);
+  const flowStatus = normalizeToken(order.flowStatus);
+  return status === 'READY' || status === 'IN_PROGRESS' || status === 'RUNNING' || flowStatus === 'RUNNABLE';
+}
+
+function normalizeToken(value: unknown): string {
+  return String(value ?? '').trim().toUpperCase();
 }
 
 function ReportSection({ title, children, theme }: { title: string; children: React.ReactNode; theme: 'dark' | 'light' }) {
