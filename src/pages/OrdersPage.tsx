@@ -175,7 +175,7 @@ function OrderCard({ order, theme, onOpen, onGoToTab }: { order: ProductionOrder
             style={deptLinkStyle(theme)}
             onClick={(e) => { e.stopPropagation(); onGoToTab(deptTab); }}
           >
-            {order.currentDepartment} ->
+            {order.currentDepartment} {'->'}
           </button>
         )}
       </div>
