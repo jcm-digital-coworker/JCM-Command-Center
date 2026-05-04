@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import type { DynamicTraveler, TravelerAction, TravelerActionType, TravelerResource } from '../../types/dynamicTraveler';
 import { generatePlantTraveler } from '../../logic/dynamicTraveler';
 import { applyWorkflowRuntimeAction, getWorkflowRuntimeState } from '../../logic/workflowRuntimeState';
-import { getWorkflowActionLog } from '../../logic/workflowActions';
+import { addWorkflowAction, getWorkflowActionLog } from '../../logic/workflowActions';
 import PlantTravelerDetailModal from './PlantTravelerDetailModal';
 import type { Department } from '../../types/machine';
 
@@ -36,7 +36,12 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
       onClose();
       return;
     } else if (type === 'REPORT_ISSUE') {
-      applyWorkflowRuntimeAction(orderNumber, 'RESOLVE_BLOCKER', 'Issue reported — blocker cleared');
+      addWorkflowAction({
+        orderNumber,
+        actionType: 'NOTIFICATION',
+        department: traveler.department,
+        note: 'Issue reported from traveler; blocker preserved for review',
+      });
     }
     setLastFired(type);
     setTimeout(() => setLastFired(null), 2000);
@@ -122,7 +127,7 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
 
         <section style={sectionBlockStyle}>
           <div style={smallLabelStyle(theme)}>Traveler Actions</div>
-          <p style={helperTextStyle(theme)}>Enabled actions update order state in real time. Locked actions require preconditions to be met first.</p>
+          <p style={helperTextStyle(theme)}>Enabled actions record activity or update order state in real time. Locked actions require preconditions to be met first.</p>
           <div style={listStyle}>
             {visibleActions.map((action) => (
               <ActionRow key={action.type} action={action} theme={theme} onFire={handleAction} fired={lastFired === action.type} />
