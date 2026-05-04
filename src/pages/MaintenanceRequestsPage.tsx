@@ -6,8 +6,12 @@ import {
   resetMaintenanceRequests,
   reloadMaintenanceRequests,
 } from '../data/maintenanceRequests';
+import { machines } from '../data/machine';
+import { maintenanceTasks } from '../data/maintenance';
 import type { MaintenanceRequest } from '../types/maintenanceRequest';
 import MaintenanceSubmitPage from './MaintenanceSubmitPage';
+import MaintenanceCommandPanel from '../components/maintenance/MaintenanceCommandPanel';
+import { getMaintenanceCommandModel } from '../logic/maintenanceCommand';
 
 export default function MaintenanceRequestsPage({ theme = 'dark' }: { theme?: 'dark' | 'light' }) {
   const [, forceUpdate] = useState({});
@@ -22,6 +26,8 @@ export default function MaintenanceRequestsPage({ theme = 'dark' }: { theme?: 'd
   useEffect(() => {
     refresh();
   }, []);
+
+  const commandModel = getMaintenanceCommandModel({ machines, tasks: maintenanceTasks, requests: maintenanceRequests });
 
   const sortedRequests = [...maintenanceRequests].sort((a, b) => {
     const priorityOrder = { SAFETY: 0, LINE_DOWN: 1, MACHINE_DOWN: 1, URGENT: 2, NORMAL: 3 };
@@ -47,6 +53,30 @@ export default function MaintenanceRequestsPage({ theme = 'dark' }: { theme?: 'd
       });
       refresh();
     }
+  };
+
+  const handleWaiting = (requestId: string, status: 'WAITING_ON_PARTS' | 'WAITING_ON_VENDOR' | 'WAITING_ON_PRODUCTION_WINDOW') => {
+    const partsNeeded = status === 'WAITING_ON_PARTS' ? prompt('What parts are needed?') ?? undefined : undefined;
+    updateMaintenanceRequest(requestId, {
+      status,
+      partsNeeded,
+      erpSyncStatus: 'NOT_READY',
+    });
+    refresh();
+  };
+
+  const handleEpicorReady = (requestId: string) => {
+    const downtimeText = prompt('Downtime minutes, if known:');
+    const failureCode = prompt('Failure code or short failure note:') ?? undefined;
+    const rootCauseCode = prompt('Root cause code or short root cause note:') ?? undefined;
+    const downtimeMinutes = downtimeText ? Number(downtimeText) : undefined;
+    updateMaintenanceRequest(requestId, {
+      downtimeMinutes: Number.isFinite(downtimeMinutes) ? downtimeMinutes : undefined,
+      failureCode,
+      rootCauseCode,
+      erpSyncStatus: 'READY_TO_EXPORT',
+    });
+    refresh();
   };
 
   const handleComplete = (requestId: string) => {
@@ -90,13 +120,15 @@ export default function MaintenanceRequestsPage({ theme = 'dark' }: { theme?: 'd
 
   return (
     <div>
+      <MaintenanceCommandPanel model={commandModel} theme={theme} />
+
       <div style={getHeaderStyle(theme)}>
         <div>
           <h2 style={getTitleStyle(theme)}>
             MAINTENANCE REQUESTS
           </h2>
           <p style={getSubtitleStyle(theme)}>
-            {openRequests.length} OPEN
+            {openRequests.length} OPEN • {commandModel.criticalRequests.length} CRITICAL • {commandModel.epicorReadyCount} EPICOR READY
           </p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
@@ -122,6 +154,8 @@ export default function MaintenanceRequestsPage({ theme = 'dark' }: { theme?: 'd
                 setExpandedId(expandedId === request.id ? null : request.id)
               }
               onClaim={handleClaim}
+              onWaiting={handleWaiting}
+              onEpicorReady={handleEpicorReady}
               onComplete={handleComplete}
               theme={theme}
             />
@@ -150,6 +184,8 @@ interface RequestCardProps {
   expanded: boolean;
   onToggle: () => void;
   onClaim: (id: string) => void;
+  onWaiting: (id: string, status: 'WAITING_ON_PARTS' | 'WAITING_ON_VENDOR' | 'WAITING_ON_PRODUCTION_WINDOW') => void;
+  onEpicorReady: (id: string) => void;
   onComplete: (id: string) => void;
   theme: 'dark' | 'light';
 }
@@ -159,6 +195,8 @@ function RequestCard({
   expanded,
   onToggle,
   onClaim,
+  onWaiting,
+  onEpicorReady,
   onComplete,
   theme,
 }: RequestCardProps) {
@@ -221,6 +259,24 @@ function RequestCard({
               <span style={getValueStyle(theme)}>{request.partsNeeded}</span>
             </div>
           )}
+          {request.erpSyncStatus && (
+            <div style={detailRowStyle}>
+              <span style={getLabelStyle(theme)}>ERP Status:</span>
+              <span style={getValueStyle(theme)}>{request.erpSyncStatus.replaceAll('_', ' ')}</span>
+            </div>
+          )}
+          {request.downtimeMinutes !== undefined && (
+            <div style={detailRowStyle}>
+              <span style={getLabelStyle(theme)}>Downtime:</span>
+              <span style={getValueStyle(theme)}>{request.downtimeMinutes} minutes</span>
+            </div>
+          )}
+          {(request.failureCode || request.rootCauseCode) && (
+            <div style={detailRowStyle}>
+              <span style={getLabelStyle(theme)}>Epicor Notes:</span>
+              <span style={getValueStyle(theme)}>{[request.failureCode, request.rootCauseCode].filter(Boolean).join(' / ')}</span>
+            </div>
+          )}
           {request.claimedBy && (
             <>
               <div style={detailRowStyle}>
@@ -252,12 +308,7 @@ function RequestCard({
           )}
 
           <div
-            style={{
-              marginTop: 16,
-              display: 'flex',
-              gap: 12,
-              justifyContent: 'flex-end',
-            }}
+            style={requestActionRowStyle}
             onClick={(e) => e.stopPropagation()}
           >
             {request.status === 'NEW' && (
@@ -265,7 +316,23 @@ function RequestCard({
                 CLAIM
               </button>
             )}
-            {(request.status === 'CLAIMED' || request.status === 'IN_PROGRESS') && (
+            {request.status !== 'COMPLETED' && (
+              <>
+                <button onClick={() => onWaiting(request.id, 'WAITING_ON_PARTS')} style={waitingButtonStyle}>
+                  WAITING PARTS
+                </button>
+                <button onClick={() => onWaiting(request.id, 'WAITING_ON_VENDOR')} style={waitingButtonStyle}>
+                  WAITING VENDOR
+                </button>
+                <button onClick={() => onWaiting(request.id, 'WAITING_ON_PRODUCTION_WINDOW')} style={waitingButtonStyle}>
+                  NEED WINDOW
+                </button>
+                <button onClick={() => onEpicorReady(request.id)} style={erpButtonStyle}>
+                  EPICOR READY
+                </button>
+              </>
+            )}
+            {(request.status === 'CLAIMED' || request.status === 'IN_PROGRESS' || request.status.startsWith('WAITING_')) && (
               <button onClick={() => onComplete(request.id)} style={completeButtonStyle}>
                 COMPLETE
               </button>
@@ -588,6 +655,14 @@ const badgeStyle: CSSProperties = {
   letterSpacing: '0.5px',
 };
 
+const requestActionRowStyle: CSSProperties = {
+  marginTop: 16,
+  display: 'flex',
+  gap: 10,
+  justifyContent: 'flex-end',
+  flexWrap: 'wrap',
+};
+
 const claimButtonStyle: CSSProperties = {
   padding: '10px 18px',
   background: 'linear-gradient(135deg, #065f46 0%, #047857 100%)',
@@ -598,6 +673,30 @@ const claimButtonStyle: CSSProperties = {
   cursor: 'pointer',
   fontSize: 13,
   letterSpacing: '0.5px',
+};
+
+const waitingButtonStyle: CSSProperties = {
+  padding: '10px 12px',
+  background: 'rgba(245, 158, 11, 0.14)',
+  color: '#fbbf24',
+  border: '1px solid rgba(245, 158, 11, 0.45)',
+  borderRadius: 4,
+  fontWeight: 800,
+  cursor: 'pointer',
+  fontSize: 12,
+  letterSpacing: '0.4px',
+};
+
+const erpButtonStyle: CSSProperties = {
+  padding: '10px 12px',
+  background: 'rgba(56, 189, 248, 0.12)',
+  color: '#38bdf8',
+  border: '1px solid rgba(56, 189, 248, 0.45)',
+  borderRadius: 4,
+  fontWeight: 800,
+  cursor: 'pointer',
+  fontSize: 12,
+  letterSpacing: '0.4px',
 };
 
 const completeButtonStyle: CSSProperties = {
