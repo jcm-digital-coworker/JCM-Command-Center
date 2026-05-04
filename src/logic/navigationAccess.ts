@@ -24,6 +24,21 @@ const supportRoles: RoleView[] = ['Support'];
 const plantLeadershipRoles: RoleView[] = [...departmentLeadershipRoles, ...managementRoles];
 const supportAndLeadershipRoles: RoleView[] = [...supportRoles, ...plantLeadershipRoles];
 
+const legacyRoleMap: Record<string, RoleView> = {
+  Operator: 'Production',
+  operator: 'Production',
+  'Lead / Supervisor': 'Department Lead',
+  lead: 'Department Lead',
+  supervisor: 'Department Supervisor',
+  Manager: 'Management',
+  management: 'Management',
+  Maintenance: 'Maintenance',
+  maintenance: 'Maintenance',
+  'Forklift / Receiving': 'Support',
+  QA: 'Support',
+  qa: 'Support',
+};
+
 export const navigationGroups: NavigationGroup[] = [
   {
     id: 'command',
@@ -44,7 +59,7 @@ export const navigationGroups: NavigationGroup[] = [
       { id: 'plantMap', label: 'Plant Map', roles: [...plantLeadershipRoles, ...productionRoles, ...maintenanceRoles, ...supportRoles], description: 'Department and work-center overview.' },
       { id: 'machines', label: 'Equipment', roles: [...plantLeadershipRoles, ...productionRoles, ...maintenanceRoles], description: 'Equipment status and machine detail cards.' },
       { id: 'fab', label: 'Fab', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Fabrication department view.' },
-      { id: 'saddles', label: 'Saddles', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Saddles cell — LV4500 service saddle production.' },
+      { id: 'saddles', label: 'Saddles', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Saddles cell - LV4500 service saddle production.' },
       { id: 'coating', label: 'Coating', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Coating department view.' },
       { id: 'assembly', label: 'Assembly', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Assembly department view.' },
       { id: 'shipping', label: 'Shipping', roles: [...plantLeadershipRoles, ...productionRoles, ...supportRoles], description: 'Outbound readiness and shipping focus.' },
@@ -79,25 +94,32 @@ export const navigationGroups: NavigationGroup[] = [
 
 export function canRoleAccessTab(roleView: RoleView, tab: AppTab): boolean {
   if (tab === 'warRoomContext') return true;
+  const normalizedRole = normalizeRoleView(roleView);
   return navigationGroups.some((group) =>
-    group.items.some((item) => item.id === tab && canRoleAccessItem(roleView, item)),
+    group.items.some((item) => item.id === tab && canRoleAccessItem(normalizedRole, item)),
   );
 }
 
 export function getVisibleNavigationGroups(roleView: RoleView): NavigationGroup[] {
+  const normalizedRole = normalizeRoleView(roleView);
   return navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => canRoleAccessItem(roleView, item)),
+      items: group.items.filter((item) => canRoleAccessItem(normalizedRole, item)),
     }))
     .filter((group) => group.items.length > 0);
 }
 
 export function getHomeTabForRole(roleView: RoleView): AppTab {
-  if (roleView === 'Production') return 'workflow';
-  if (roleView === 'Maintenance') return 'maintenance';
-  if (roleView === 'Support') return 'receiving';
+  const normalizedRole = normalizeRoleView(roleView);
+  if (normalizedRole === 'Production') return 'workflow';
+  if (normalizedRole === 'Maintenance') return 'maintenance';
+  if (normalizedRole === 'Support') return 'receiving';
   return 'dashboard';
+}
+
+export function normalizeRoleView(roleView: RoleView): RoleView {
+  return legacyRoleMap[roleView] ?? roleView;
 }
 
 function canRoleAccessItem(roleView: RoleView, item: NavigationItem): boolean {
