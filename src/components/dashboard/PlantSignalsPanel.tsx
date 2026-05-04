@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { AppTab } from '../../types/app';
 import { productionOrders } from '../../data/productionOrders';
-import { applyQuickActionRuntimeIntent } from '../../logic/quickActionRuntimeExecutor';
 import { getPlantSignals, type PlantSignal } from '../../logic/plantSignals';
 import {
   getRuntimeProductionOrders,
@@ -41,7 +40,7 @@ export default function PlantSignalsPanel({ onNavigate }: PlantSignalsPanelProps
     return getPlantSignals(runtimeOrders);
   }, [runtimeOrders, runtimeVersion]);
 
-  const activeSignalCount = signals.filter((signal) => signal.intent || signal.tone !== 'green').length;
+  const activeSignalCount = signals.filter((signal) => signal.tone !== 'green').length;
   const summary = activeSignalCount > 0
     ? `${activeSignalCount} priority signal${activeSignalCount === 1 ? '' : 's'} available`
     : 'No active signal pressure';
@@ -62,7 +61,6 @@ export default function PlantSignalsPanel({ onNavigate }: PlantSignalsPanelProps
             <PlantSignalCard
               key={`${signal.title}-${signal.actionLabel}-${signal.priority}`}
               signal={signal}
-              runtimeOrders={runtimeOrders}
               onNavigate={onNavigate}
             />
           ))}
@@ -74,11 +72,9 @@ export default function PlantSignalsPanel({ onNavigate }: PlantSignalsPanelProps
 
 function PlantSignalCard({
   signal,
-  runtimeOrders,
   onNavigate,
 }: {
   signal: PlantSignal;
-  runtimeOrders: typeof productionOrders;
   onNavigate: (tab: AppTab) => void;
 }) {
   const color = getDashboardToneColor(signal.tone);
@@ -90,12 +86,7 @@ function PlantSignalCard({
       <button
         type="button"
         style={getDashboardPromptButtonStyle(color)}
-        onClick={() => {
-          if (signal.intent) {
-            applyQuickActionRuntimeIntent(signal.intent, runtimeOrders);
-          }
-          onNavigate(signal.routeTarget);
-        }}
+        onClick={() => onNavigate(signal.routeTarget)}
       >
         {signal.actionLabel.toUpperCase()}
       </button>
