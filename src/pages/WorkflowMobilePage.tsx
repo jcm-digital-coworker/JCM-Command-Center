@@ -1,13 +1,24 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import type { RoleView, DepartmentFilter, AppTab } from '../types/app';
 import type { Machine } from '../types/machine';
 import type { DynamicTraveler } from '../types/dynamicTraveler';
+import type { CoveragePerson } from '../types/coverage';
 import { productionOrders } from '../data/productionOrders';
 import { seedCoverage } from '../data/coverage';
 import { workCenters } from '../data/workCenters';
 import { generateDynamicTravelers } from '../logic/dynamicTraveler';
+import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import TravelerDetailModal from '../components/travelers/TravelerDetailModal';
+
+function getLiveCoverage(): CoveragePerson[] {
+  try {
+    const raw = localStorage.getItem('jcm_live_coverage_v1');
+    return raw ? (JSON.parse(raw) as CoveragePerson[]) : seedCoverage;
+  } catch {
+    return seedCoverage;
+  }
+}
 
 interface WorkflowMobilePageProps {
   roleView: RoleView;
@@ -30,19 +41,33 @@ export default function WorkflowMobilePage({
 }: WorkflowMobilePageProps) {
   const [selectedTraveler, setSelectedTraveler] = useState<DynamicTraveler | null>(null);
   const [showAllTravelers, setShowAllTravelers] = useState(false);
+  const [tick, setTick] = useState(0);
   const workflowMode = getWorkflowMode(roleView);
   const deptLabel = departmentFilter === 'All' ? 'All Departments' : departmentFilter;
 
+  useEffect(() => {
+    const bump = () => setTick((t) => t + 1);
+    window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, bump);
+    window.addEventListener('storage', bump);
+    return () => {
+      window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, bump);
+      window.removeEventListener('storage', bump);
+    };
+  }, []);
+
+  const runtimeOrders = useMemo(() => getRuntimeProductionOrders(productionOrders), [tick]);
+  const liveCoverage = useMemo(() => getLiveCoverage(), [tick]);
+
   const travelers = useMemo(() => {
-    return generateDynamicTravelers(productionOrders, workflowMode === 'management' ? 'All' : departmentFilter);
-  }, [departmentFilter, workflowMode]);
+    return generateDynamicTravelers(runtimeOrders, workflowMode === 'management' ? 'All' : departmentFilter);
+  }, [runtimeOrders, departmentFilter, workflowMode]);
 
   const visibleTravelers = showAllTravelers ? travelers : travelers.slice(0, 3);
   const hiddenTravelerCount = Math.max(travelers.length - visibleTravelers.length, 0);
   const nextTraveler = travelers[0];
   const readyCount = travelers.filter((traveler) => traveler.visualSignal === 'READY').length;
   const blockedCount = travelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
-  const crew = departmentFilter === 'All' ? seedCoverage : seedCoverage.filter((person) => person.department === departmentFilter);
+  const crew = departmentFilter === 'All' ? liveCoverage : liveCoverage.filter((person) => person.department === departmentFilter);
   const assignedCount = crew.filter((person) => person.status === 'ASSIGNED').length;
   const availableCount = crew.filter((person) => person.status === 'AVAILABLE').length;
 
@@ -123,7 +148,7 @@ export default function WorkflowMobilePage({
           <div style={getSectionTitleStyle(theme)}>DEPARTMENT SNAPSHOT</div>
           <div style={deptStripStyle}>
             {workCenters.slice(0, showAllTravelers ? undefined : 6).map((workCenter) => {
-              const deptTravelers = generateDynamicTravelers(productionOrders, workCenter.department);
+              const deptTravelers = generateDynamicTravelers(runtimeOrders, workCenter.department);
               const deptBlocked = deptTravelers.filter((traveler) => traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD').length;
               return (
                 <div key={workCenter.id} style={getDeptTileStyle(workCenter.status, theme)}>

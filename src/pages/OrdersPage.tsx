@@ -90,7 +90,9 @@ export default function OrdersPage({ theme = 'dark', onGoToTab }: OrdersPageProp
           </label>
         </div>
         <div style={{ display: 'grid', gap: 12 }}>
-          {sortedOrders.map((order) => (
+          {sortedOrders.length === 0 ? (
+            <div style={emptyStateStyle(theme)}>No orders match the current filter. All orders may be complete or cleared.</div>
+          ) : sortedOrders.map((order) => (
             <OrderCard key={order.orderNumber} order={order} theme={theme} onOpen={() => setSelectedOrder(order)} onGoToTab={onGoToTab} />
           ))}
         </div>
@@ -320,3 +322,4 @@ function sortSelectStyle(theme: 'dark' | 'light'): CSSProperties { return { minH
 function modalCardStyle(theme: 'dark' | 'light'): CSSProperties { return { width: 'min(720px, 100%)', maxHeight: '88vh', overflow: 'auto', padding: 16, borderRadius: 10, background: theme === 'dark' ? '#0f172a' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 20px 60px rgba(0,0,0,0.45)' }; }
 function closeButtonStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: '9px 11px', borderRadius: 6, border: '1px solid #f97316', background: 'rgba(249,115,22,0.12)', color: '#f97316', fontSize: 11, fontWeight: 900, cursor: 'pointer' }; }
 function blockerStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 14, padding: 10, borderRadius: 6, background: theme === 'dark' ? 'rgba(127,29,29,0.35)' : '#fee2e2', border: '1px solid #ef4444', color: theme === 'dark' ? '#fecaca' : '#991b1b', fontSize: 12, fontWeight: 800 }; }
+function emptyStateStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 20, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px dashed #334155' : '1px dashed #cbd5e1', color: '#64748b', fontSize: 13, fontWeight: 700, textAlign: 'center' }; }
