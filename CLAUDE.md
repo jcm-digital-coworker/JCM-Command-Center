@@ -118,7 +118,9 @@ src/
 │   │   └── OrderDetailModal.tsx     ← order detail modal (close + go-to-orders)
 │   ├── shell/
 │   │   ├── AppHeader.tsx            ← back button + menu button
-│   │   └── AppDrawer.tsx            ← nav drawer + Dev Tools section
+│   │   ├── AppDrawer.tsx            ← nav drawer + Dev Tools section
+│   │   ├── CommandNavigationBar.tsx ← command navigation bar (role-aware)
+│   │   └── DepartmentCards.tsx      ← (dead — not imported; safe to delete)
 │   ├── EngineeringBacklogPanel.tsx  ← engineering order backlog
 │   ├── LiveCoveragePanel.tsx        ← crew sign-in shortcuts (supervisor only)
 │   ├── MachineDetail.tsx
@@ -129,8 +131,11 @@ src/
 │   ├── WorkCenterWorkflowPanel.tsx  ← v1 (order signals, static)
 │   ├── WorkCenterWorkflowPanelV2.tsx ← v2 (grouped by operator responsibility, runtime-aware, crew strip)
 │   ├── Lv4500JcmSimulator.tsx
+│   ├── TabButton.tsx                ← shared tab button primitive
 │   └── travelers/
+│       ├── ClassificationReviewCapture.tsx ← classification review questionnaire UI
 │       ├── DynamicTravelerCard.tsx   ← order traveler card (route, status, actions)
+│       ├── PlantTravelerDetailModal.tsx ← full plant traveler modal
 │       └── TravelerDetailModal.tsx   ← action buttons; MARK_READY_FOR_HANDOFF + REPORT_ISSUE are notify-only
 ├── data/
 │   ├── classificationReviewChecklist.ts ← checklist items for order classification review
@@ -220,14 +225,27 @@ src/
 │       ├── SaddlesDepartmentPage.tsx    ← Saddles cell — LV4500 service saddle production
 │       └── QADepartmentPage.tsx
 ├── types/
-│   ├── app.ts              ← AppTab (includes saddles, shiftHandoff), RoleView, DepartmentFilter
-│   ├── dynamicTraveler.ts  ← DynamicTraveler, TravelerAction, TravelerActionType (incl. COMPLETE_ORDER)
-│   ├── machine.ts          ← Department type (includes Sales, Engineering, Saddles Dept)
-│   ├── maintenanceRequest.ts
+│   ├── app.ts                   ← AppTab (includes saddles, shiftHandoff), RoleView, DepartmentFilter
+│   ├── classificationReview.ts  ← ClassificationReviewQuestion/Answer/Confirmation
+│   ├── coverage.ts              ← CoveragePerson type
+│   ├── documents.ts             ← Document type
+│   ├── dynamicTraveler.ts       ← DynamicTraveler, TravelerAction, TravelerActionType (incl. COMPLETE_ORDER)
+│   ├── lv4500Jcm.ts             ← BossType, CastingData, TapCodeData for LV4500 simulation
+│   ├── machine.ts               ← Department type (includes Sales, Engineering, Saddles Dept)
 │   ├── maintenance.ts
-│   ├── partBlueprint.ts    ← blueprint packet types
-│   ├── productionOrder.ts  ← includes workflowOrigin, engineeringRequired, salesReleasedAt
-│   └── [more type definitions]
+│   ├── maintenanceRequest.ts
+│   ├── partBlueprint.ts         ← blueprint packet types
+│   ├── plant.ts                 ← WorkCenter and Plant types
+│   ├── plantAsset.ts            ← PlantAsset (physical hardware distinct from machines)
+│   ├── productClassification.ts ← ProductClassification, ProductClassificationRule
+│   ├── productFlow.ts           ← ProductFlow (per-lane routing)
+│   ├── productionOrder.ts       ← includes workflowOrigin, engineeringRequired, salesReleasedAt
+│   ├── receiving.ts             ← ReceivingOrder, ReceivingOrderDraft, ReceivingOrderStatus
+│   ├── resourceModel.ts         ← TravelerResource type (docks, cells, stations)
+│   ├── risk.ts                  ← RiskItem type
+│   ├── workCenterAsset.ts       ← WorkCenterAsset type
+│   ├── workRole.ts              ← WorkRole type
+│   └── worker.ts                ← Worker type with skills[]
 ├── utils/
 │   └── export.ts
 ├── App.tsx       ← routing only, tabHistory back navigation
@@ -366,6 +384,8 @@ accent: '#f97316' (safety orange)
 - `jcm_workflow_runtime_state` — WorkflowRuntimeState (order overrides keyed by orderNumber)
 - `jcm_receiving_orders_v1` — ReceivingOrder[]
 - `jcm-classification-review-confirmations-v1` — ClassificationReviewConfirmation[]
+- `jcm_role_view` — RoleView (persisted role selection from dev tools switcher)
+- `jcm-classification-review-target-v1` — orderNumber string (order queued for classification review; written by WorkCenterWorkflowPanelV2, read by ClassificationReviewQueue)
 
 ---
 
@@ -429,7 +449,7 @@ accent: '#f97316' (safety orange)
 - Login / authenticated role assignment
 
 **Dead code / known gaps:**
-- `DepartmentCards.tsx` is not imported anywhere in the app. Do not build on it. Safe to delete if it causes confusion.
+- `DepartmentCards.tsx` in `components/shell/` is not imported anywhere. Safe to delete.
 - Skill systems are split: `workers.ts` has typed `skills: WorkerSkill[]`, but `skillGapAlerts.ts` reads `coverage.ts` free-text `skillTags`. Not unified — fuzzy keyword matching bridges them for now.
 - No Office department page — 1 order with `currentDepartment: 'Office'` exists but it's admin-only, no dept page needed.
 
