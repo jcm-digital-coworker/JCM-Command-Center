@@ -25,12 +25,17 @@ Current emphasis:
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25294894057
-Commit: da1ff121cfd91931c9bac24181092bee600c2bca
+Run ID: 25295400249
+Commit: a9681adcaf6deb686d090ad6247177f7373e9281
 Status: GREEN
 ```
 
-Passed:
+Note:
+
+- PR #18 build was green before merge.
+- Post-merge run for #18 had not yet appeared when this memory update was written.
+
+Passed on latest confirmed main run:
 
 - Checkout
 - Setup Node
@@ -40,6 +45,53 @@ Passed:
 - Record latest action run
 
 ## Most Recent Completed App Work
+
+### Line-by-Line Audit Batch: Traveler Runtime and Operator Lane Cleanup
+
+Files:
+
+```text
+src/components/travelers/TravelerDetailModal.tsx
+src/logic/dynamicTraveler.ts
+src/logic/workflowRuntimeState.ts
+src/logic/operatorNextBestActions.ts
+```
+
+PRs:
+
+```text
+#15 Make traveler issue reporting non-destructive
+#16 Clarify traveler handoff readiness actions
+#17 Normalize workflow runtime status outputs
+#18 Clarify empty operator lane actions
+```
+
+Problems fixed:
+
+- `REPORT_ISSUE` in `TravelerDetailModal.tsx` called `RESOLVE_BLOCKER`, which could imply or trigger blocker clearing.
+- `MARK_READY_FOR_HANDOFF` in `TravelerDetailModal.tsx` called `START_WORK`, which changed order state toward in-progress behavior instead of simply recording readiness.
+- Traveler copy said `Resolve blocker before work begins` even though the app is a guidance/review system.
+- The traveler action label `Mark ready for next department` overstated what should be a recorded readiness signal.
+- `workflowRuntimeState.ts` emitted mixed-case runtime statuses such as `ready`, `runnable`, `BLOCKED`, and `RUNNABLE`.
+- Operator Next Best Action empty lanes said `Go to review` / `Go to handoff` even when there was no review or handoff target.
+
+Current behavior:
+
+- `Report issue on this order` records a workflow notification only.
+- Reporting an issue preserves blockers and does not call `RESOLVE_BLOCKER`.
+- `Record ready for handoff` records a workflow notification only and preserves order state.
+- Blocked traveler instructions say `Review blocker`, not `Resolve blocker`.
+- Runtime reducer outputs are normalized to uppercase `READY`, `BLOCKED`, and `RUNNABLE` where it writes new status values.
+- Empty Review and Handoff lanes now say `Check workflow` and route to workflow instead of sending operators to ghost anchors.
+
+Guardrail:
+
+- No automatic blocker clearing.
+- No hidden dashboard mutation.
+- No route approval.
+- No dispatch behavior.
+- No classifier mutation.
+- No confidence increase.
 
 ### Line-by-Line Audit Batch: Runtime and Plant Signals Cleanup
 
@@ -61,34 +113,13 @@ PRs:
 #14 Remove stale quick action runtime files
 ```
 
-Problems fixed:
-
-- `workflowActions.ts` still contained a stale Engineering navigation retry helper from an earlier temporary mitigation.
-- `workflowActions.ts` mixed action logging with navigation dispatch.
-- `workflowRuntimeState.ts` allowed `RESOLVE_BLOCKER` to wipe all blockers and mark the order READY.
-- `TravelerDetailModal` still had a stale `REPORT_ISSUE` path that called `RESOLVE_BLOCKER`; the runtime reducer now prevents that path from clearing blockers.
-- Plant Signals still used a stale quick-action runtime executor to mutate order state from dashboard prompts.
-- Plant Signals used labels like `Resolve first blocker` and routed blocked signals to Orders.
-- The old quick-action runtime executor and target helper carried hidden `resolve/stage/escalate first order` behavior and are now removed.
-
 Current behavior:
 
 - `workflowActions.ts` is an action-log module only.
-- `RESOLVE_BLOCKER` is non-destructive unless a future explicit resolution workflow is designed.
-- If stale UI reports an issue through `RESOLVE_BLOCKER`, blockers are preserved and the note is sanitized to `Issue reported - blocker preserved for review`.
 - Plant Signals are review/navigation only.
-- Blocked Plant Signals now say `Review blocker` and route to workflow.
-- Material Plant Signals now say `Open material issue` and route to Receiving.
+- Blocked Plant Signals say `Review blocker` and route to workflow.
+- Material Plant Signals say `Open material issue` and route to Receiving.
 - Plant Signals no longer call a runtime mutation executor.
-
-Guardrail:
-
-- No hidden dashboard mutation.
-- No automatic blocker clearing.
-- No route approval.
-- No dispatch behavior.
-- No classifier mutation.
-- No confidence increase.
 
 ### Dashboard Quick Action Navigation Contract Sweep
 
@@ -114,12 +145,6 @@ Current behavior:
 - Blocker Quick Actions say `Review Blockers` and resolve to workflow context.
 - Material Quick Actions say `Open Material Issues` and resolve to Receiving.
 
-Source contract:
-
-```text
-visible Quick Action label -> NavigationIntent -> navigationContracts -> AppTab
-```
-
 Important intent mappings:
 
 ```text
@@ -132,155 +157,54 @@ OPEN_QA_DEPARTMENT -> qa
 OPEN_ORDERS -> orders
 ```
 
-### Engineering Quick Selection Route Fix
+### Engineering Route Fixes
 
-Files:
-
-```text
-src/App.tsx
-```
-
-PR:
+PRs:
 
 ```text
+#10 Update app navigation
 #11 Fix Engineering quick selection route
 ```
 
 Current behavior:
 
-```text
-if (nextDepartment === 'Engineering') {
-  setSelectedWorkCenter(null);
-  navigateTo('engineering');
-  return;
-}
-```
+- Work-station card Engineering escalation opens Engineering.
+- Department quick selector Engineering opens Engineering.
+- Dashboard Quick Action Engineering review opens Engineering.
 
-Result:
+### Blocker Focus Card and Workflow Action Routing
 
-- Engineering quick selection opens the Engineering page.
-- Work-station card Engineering escalation opens the Engineering page.
-- Dashboard Quick Action Engineering review opens the Engineering page.
-
-### Root Engineering Route Fix
-
-Files:
+PRs:
 
 ```text
-src/App.tsx
-```
-
-PR:
-
-```text
-#10 Update app navigation
-```
-
-Current behavior:
-
-```text
-onOpenEngineering={() => {
-  setSelectedWorkCenter(null);
-  setDepartmentFilter('Engineering');
-  navigateTo('engineering');
-}}
-```
-
-This is the corrective root fix for the workstation-card path.
-
-### Blocker Focus Card
-
-Files:
-
-```text
-src/components/WorkCenterWorkflowPanelV2.tsx
-src/logic/operatorNextBestActions.ts
-```
-
-PR:
-
-```text
+#8 Fix workflow action routing
 #9 Add blocker focus card
 ```
 
 Current behavior:
 
-- Needs Help with a blocked/held Dynamic Traveler says `Open blocked traveler`.
-- Live Workflow renders a `BLOCKER FOCUS` card near the top when a blocked/held traveler exists.
-- The card identifies the leading blocked/held traveler by order number and current instruction.
-- The card includes `Open traveler detail`.
-- The card states opening it does not clear the blocker, approve the route, or dispatch work.
-
-### Workflow Action Routing Fix
-
-Files:
-
-```text
-src/components/WorkCenterWorkflowPanelV2.tsx
-```
-
-PR:
-
-```text
-#8 Fix workflow action routing
-```
-
-Current behavior:
-
-- Generic `Resolve Blocker` copy is shown as `Review blocker`.
-- Generic blocker review stays in the workflow context.
-- Generic blocker review logs a local workflow action only.
+- Generic blocker review stays in workflow context.
+- Generic blocker review logs local action only.
 - Generic blocker review does not open Maintenance.
 - Generic blocker review does not clear blockers.
-- Generic blocker review does not change route/runtime state.
-- Maintenance opens only for explicit maintenance/machine/service/repair/alarm/down/downtime actions.
-- Material actions still open Receiving material request.
-- Engineering/hold actions now route through the corrected App Engineering callback.
+- Needs Help with a blocked/held Dynamic Traveler opens the Blocker Focus context.
 
 ## Important Repo Correction From CLAUDE.md
 
-`CLAUDE.md` confirms repo behavior has moved beyond some older chat assumptions:
+Use repo state over stale chat assumptions.
+
+Known live behavior from repo:
 
 - Phase 2 workflow engine behavior is live.
 - `WorkCenterWorkflowPanelV2` is the primary station tablet card.
 - Runtime workflow state exists in `workflowRuntimeState.ts`.
-- `TravelerDetailModal` action buttons mutate runtime workflow state.
+- `TravelerDetailModal` action buttons mutate or log runtime/workflow state.
 - Sales and Engineering departments are live.
 - Saddles department page is live.
 - Shift Handoff page is live.
 - QR station deep-links exist through `?wc=<workCenterId>`.
 - Maintenance repeat offender detection is live.
 - Skill gap alerts are live.
-
-Use repo state over stale chat assumptions.
-
-## Classification Review / Plant Truth Work
-
-Key files:
-
-```text
-src/components/dashboard/ClassificationReviewQueue.tsx
-src/components/WorkCenterWorkflowPanelV2.tsx
-src/components/travelers/ClassificationReviewCapture.tsx
-src/logic/classificationReviewConfirmations.ts
-src/types/classificationReview.ts
-src/data/classificationReviewChecklist.ts
-```
-
-Current behavior:
-
-- Dashboard shows a plant-wide Classification Review Queue.
-- Queue can drill into matching work center review capture.
-- Review targets are saved to `jcm-classification-review-target-v1`.
-- Department workflow panel preselects/highlights targeted review-needed traveler.
-- Review target can be cleared by the user.
-- Plant Truth Checklist exposes unresolved plant-truth questions without a second confirmation system.
-- Structured confirmations stay local under `jcm-classification-review-confirmations-v1`.
-
-Guardrail:
-
-- Review/capture work is visibility and structured confirmation only.
-- It does not approve routes, mutate classifier rules, raise confidence, or dispatch work.
 
 ## Product Classification / Traveler Intelligence
 
@@ -325,9 +249,11 @@ Guardrail:
 - Everything eventually funnels to Shipping.
 - Maintenance is stand-alone and reliability is starting from the request flow.
 
-## Active Risks
+## Active Risks / Next Audit Targets
 
-- `TravelerDetailModal.tsx` still has stale wording/path naming around `REPORT_ISSUE`; runtime now protects blockers, but the UI should be refactored so reporting an issue logs/reviews rather than calling `RESOLVE_BLOCKER` at all.
+- Continue line-by-line audit with `WorkCenterWorkflowPanelV2.tsx`, `ClassificationReviewCapture.tsx`, and dashboard panels.
+- Verify if Production role should have direct drawer access to Engineering or only escalation access.
+- Review `SEND_TO_NEXT_DEPARTMENT` and `COMPLETE_ORDER` semantics. They still intentionally mutate flow state, but should be live-tested and may need stronger confirmation/copy.
 - Coating is still partly uncertain.
 - Couplings route relative to Coating is still uncertain.
 - Clamps and Patch Clamps need more detail.
@@ -335,10 +261,6 @@ Guardrail:
 - Classifier should not overrule human review.
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
 - Work Center Tablet lane drill-ins are mostly scroll/navigation; make them smarter only if operators need precise panel/item focus.
-- HELP FIRST priority may need clearer copy if departments also have ready work.
-- Live validation should confirm all Engineering paths land on the Engineering page: workstation card escalation, department quick selection, and Dashboard Quick Action.
-- Live validation should confirm Plant Signals do not mutate runtime state and only navigate to review surfaces.
-- Live validation should confirm Blocker Focus is obvious enough and `Open traveler detail` is understood as review/visibility only.
 
 ## Repo-First Operating Rule
 
@@ -381,7 +303,7 @@ Avoid:
 Recommended next move:
 
 ```text
-Continue line-by-line audit with TravelerDetailModal.tsx and dynamic traveler action generation.
+Continue line-by-line audit with WorkCenterWorkflowPanelV2.tsx and classification review capture.
 ```
 
 Use at least:
@@ -391,6 +313,9 @@ Use at least:
 - Dashboard Quick Actions: Open Engineering Review.
 - Plant Signals: Review blocker and Open material issue.
 - Traveler Detail: Report issue on this order.
+- Traveler Detail: Record ready for handoff.
+- Operator Next Best Action: Review needed with no review target.
+- Operator Next Best Action: Next handoff with no handoff target.
 
 Guardrails:
 
