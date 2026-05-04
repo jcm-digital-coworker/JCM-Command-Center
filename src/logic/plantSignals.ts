@@ -1,6 +1,5 @@
 import type { AppTab } from '../types/app';
 import type { ProductionOrder } from '../types/productionOrder';
-import type { QuickActionRuntimeIntent } from './quickActionRuntimeExecutor';
 import type { DashboardTone } from '../components/dashboard/dashboardStyles';
 
 export type PlantSignal = {
@@ -8,7 +7,6 @@ export type PlantSignal = {
   detail: string;
   actionLabel: string;
   priority: number;
-  intent?: QuickActionRuntimeIntent;
   routeTarget: AppTab;
   tone: DashboardTone;
 };
@@ -32,11 +30,10 @@ export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
     if (isBlockedOrder(order)) {
       signals.push({
         title: `Blocked order ${order.orderNumber}`,
-        detail: `Priority ${formatOrderPriority(order)} blocked flow. Resolve the first blocker before labor is assigned.`,
-        actionLabel: 'Resolve first blocker',
-        intent: 'RESOLVE_FIRST_BLOCKER',
+        detail: `Priority ${formatOrderPriority(order)} blocked flow. Open workflow blocker context before labor is assigned.`,
+        actionLabel: 'Review blocker',
         priority: 80 + getOrderPriorityScore(order),
-        routeTarget: 'orders',
+        routeTarget: 'workflow',
         tone: 'red',
       });
     }
@@ -44,9 +41,8 @@ export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
     if (isMaterialIssue(order)) {
       signals.push({
         title: `Material issue ${order.orderNumber}`,
-        detail: `Priority ${formatOrderPriority(order)} material gap. Stage or receive material before pushing work forward.`,
-        actionLabel: 'Stage material issue',
-        intent: 'STAGE_FIRST_MATERIAL_ISSUE',
+        detail: `Priority ${formatOrderPriority(order)} material gap. Open Receiving/material context before pushing work forward.`,
+        actionLabel: 'Open material issue',
         priority: 60 + getOrderPriorityScore(order),
         routeTarget: 'receiving',
         tone: 'orange',
