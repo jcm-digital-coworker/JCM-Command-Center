@@ -5,21 +5,25 @@ export type BlockerAgeTone = 'fresh' | 'aging' | 'stale';
 export function getOrderLastTouchedHours(orderNumber: string): number | null {
   const override = getWorkflowRuntimeState()[orderNumber];
   if (!override?.lastActionAt) return null;
-  const ms = Date.now() - new Date(override.lastActionAt).getTime();
-  return ms / (1000 * 60 * 60);
+  const touchedAt = new Date(override.lastActionAt).getTime();
+  if (Number.isNaN(touchedAt)) return null;
+  const ms = Date.now() - touchedAt;
+  return Math.max(0, ms / (1000 * 60 * 60));
 }
 
 export function getBlockerAgeLabel(hours: number): string {
-  if (hours < 0.02) return 'just now';
-  if (hours < 1) return `${Math.round(hours * 60)}m ago`;
-  if (hours < 2) return '~1h ago';
-  if (hours < 24) return `${Math.floor(hours)}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  const safeHours = Math.max(0, hours);
+  if (safeHours < 0.02) return 'just now';
+  if (safeHours < 1) return `${Math.round(safeHours * 60)}m ago`;
+  if (safeHours < 2) return '~1h ago';
+  if (safeHours < 24) return `${Math.floor(safeHours)}h ago`;
+  return `${Math.floor(safeHours / 24)}d ago`;
 }
 
 export function getBlockerAgeTone(hours: number): BlockerAgeTone {
-  if (hours < 1) return 'fresh';
-  if (hours < 6) return 'aging';
+  const safeHours = Math.max(0, hours);
+  if (safeHours < 1) return 'fresh';
+  if (safeHours < 6) return 'aging';
   return 'stale';
 }
 

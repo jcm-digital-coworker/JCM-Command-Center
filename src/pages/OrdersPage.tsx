@@ -49,7 +49,7 @@ export default function OrdersPage({ theme = 'dark', onGoToTab }: OrdersPageProp
 
   const liveOrders = getRuntimeProductionOrders();
   const blockedCount = liveOrders.filter((order) => getOrderBlockReason(order)).length;
-  const readyCount = liveOrders.filter((order) => String(order.status).toLowerCase() === 'ready').length;
+  const readyCount = liveOrders.filter(isReadyForOrdersPage).length;
   const engineeredCount = liveOrders.filter((order) => order.orderType === 'ENGINEERED' || order.productFamily === 'ENGINEERED_FITTING').length;
 
   const sortedOrders = useMemo(() => sortOrders(liveOrders, sortMode), [liveOrders, sortMode]);
@@ -177,7 +177,7 @@ function OrderCard({ order, theme, onOpen, onGoToTab }: { order: ProductionOrder
             style={deptLinkStyle(theme)}
             onClick={(e) => { e.stopPropagation(); onGoToTab(deptTab); }}
           >
-            {order.currentDepartment} →
+            {order.currentDepartment} {'->'}
           </button>
         )}
       </div>
@@ -261,18 +261,22 @@ function sortOrders(orders: ProductionOrder[], sortMode: OrderSortMode): Product
   return [...orders].sort((a, b) => {
     if (sortMode === 'priority') return getPriorityScore(b) - getPriorityScore(a) || compareShipDate(a, b);
     if (sortMode === 'shipDate') return compareShipDate(a, b);
-    if (sortMode === 'status') return String(a.status).localeCompare(String(b.status));
+    if (sortMode === 'status') return getOrderStatusLabel(a).localeCompare(getOrderStatusLabel(b));
     return a.orderNumber.localeCompare(b.orderNumber);
   });
 }
 
 function getPriorityScore(order: ProductionOrder): number {
   let score = 0;
+  const qaStatus = normalizeToken(order.qaStatus);
+  const materialStatus = normalizeToken(order.materialStatus);
+  const priority = normalizeToken(order.priority);
+
   if (getOrderBlockReason(order)) score += 100;
-  if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED') score += 80;
-  if (order.materialStatus !== 'RECEIVED' && order.materialStatus !== 'STAGED') score += 40;
-  if (order.priority === 'critical' || order.priority === 'CRITICAL') score += 30;
-  if (order.priority === 'hot' || order.priority === 'HOT') score += 20;
+  if (qaStatus === 'HOLD' || qaStatus === 'FAILED') score += 80;
+  if (materialStatus !== '' && materialStatus !== 'RECEIVED' && materialStatus !== 'STAGED' && materialStatus !== 'UNKNOWN') score += 40;
+  if (priority === 'CRITICAL') score += 30;
+  if (priority === 'HOT') score += 20;
   return score;
 }
 
@@ -281,9 +285,21 @@ function compareShipDate(a: ProductionOrder, b: ProductionOrder): number {
 }
 
 function formatPriority(order: ProductionOrder): string {
-  if (order.priority === 'critical' || order.priority === 'CRITICAL') return 'Critical';
-  if (order.priority === 'hot' || order.priority === 'HOT') return 'Hot';
+  const priority = normalizeToken(order.priority);
+  if (priority === 'CRITICAL') return 'Critical';
+  if (priority === 'HOT') return 'Hot';
   return 'Normal';
+}
+
+function isReadyForOrdersPage(order: ProductionOrder): boolean {
+  if (getOrderBlockReason(order)) return false;
+  const status = normalizeToken(order.status);
+  const flowStatus = normalizeToken(order.flowStatus);
+  return status === 'READY' || status === 'IN_PROGRESS' || status === 'RUNNING' || flowStatus === 'RUNNABLE';
+}
+
+function normalizeToken(value: unknown): string {
+  return String(value ?? '').trim().toUpperCase();
 }
 
 const pageStyle: CSSProperties = { display: 'grid', gap: 16 };
@@ -316,7 +332,7 @@ function smallLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { font
 function routeStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 800, lineHeight: 1.5 }; }
 function noteStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 10, borderRadius: 6, background: theme === 'dark' ? 'rgba(15,23,42,0.8)' : '#f8fafc', color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', marginTop: 8 }; }
 function chipStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: '4px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800, color: theme === 'dark' ? '#fdba74' : '#9a3412', background: theme === 'dark' ? 'rgba(249,115,22,0.12)' : '#ffedd5', border: theme === 'dark' ? '1px solid rgba(249,115,22,0.3)' : '1px solid #fed7aa' }; }
-function statusBadgeStyle(status: string, blocked: boolean): CSSProperties { return { padding: '6px 9px', borderRadius: 999, fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: blocked ? '#fecaca' : status === 'READY' ? '#bbf7d0' : '#bfdbfe', background: blocked ? '#7f1d1d' : status === 'READY' ? '#064e3b' : '#1e3a8a', whiteSpace: 'nowrap' }; }
+function statusBadgeStyle(status: string, blocked: boolean): CSSProperties { const normalizedStatus = normalizeToken(status); return { padding: '6px 9px', borderRadius: 999, fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: blocked ? '#fecaca' : normalizedStatus === 'READY' ? '#bbf7d0' : '#bfdbfe', background: blocked ? '#7f1d1d' : normalizedStatus === 'READY' ? '#064e3b' : '#1e3a8a', whiteSpace: 'nowrap' }; }
 function sortLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { display: 'grid', gap: 4, color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 10, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' }; }
 function sortSelectStyle(theme: 'dark' | 'light'): CSSProperties { return { minHeight: 38, borderRadius: 6, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: theme === 'dark' ? '#1e293b' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', padding: '8px 10px', fontWeight: 800 }; }
 function modalCardStyle(theme: 'dark' | 'light'): CSSProperties { return { width: 'min(720px, 100%)', maxHeight: '88vh', overflow: 'auto', padding: 16, borderRadius: 10, background: theme === 'dark' ? '#0f172a' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 20px 60px rgba(0,0,0,0.45)' }; }

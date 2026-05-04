@@ -76,8 +76,8 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
   if (roleView === 'Production') {
     return sortQuickActions([
       { label: 'View Work Queue', detail: 'Open assigned work and current station priorities', intent: 'OPEN_WORKFLOW', tone: 'orange', priority: 3 },
-      { ...blockerAction, label: state.blockedOrderCount > 0 ? 'Report Blocked Work' : 'Review Blocker Status', intent: 'OPEN_WORKFLOW' },
-      { ...materialAction, label: state.materialIssueCount > 0 ? 'Request Material' : 'Check Material Status' },
+      { ...blockerAction, label: state.blockedOrderCount > 0 ? 'Review Blocked Work' : 'Review Blocker Status', intent: 'OPEN_WORKFLOW' },
+      { ...materialAction, label: state.materialIssueCount > 0 ? 'Open Material Request' : 'Check Material Status' },
       { ...maintenanceAction, label: state.activeTaskCount > 0 ? 'Call Maintenance' : 'Maintenance Status' },
       qaAction,
       { label: 'Open Documents', detail: 'Access procedures, standards, and references', intent: 'OPEN_DOCUMENTS', tone: 'slate', priority: 1 },

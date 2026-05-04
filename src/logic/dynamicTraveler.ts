@@ -11,6 +11,13 @@ import type {
   TravelerResource,
   TravelerStepStatus,
 } from '../types/dynamicTraveler';
+import {
+  isClosedProductionStatus,
+  isCriticalPriority,
+  isHotPriority,
+  isMaterialActionNeeded,
+  normalizeOrderToken,
+} from './orderStatusTruth';
 
 const DEFAULT_PLANT_ROUTE: Department[] = ['Receiving', 'Machine Shop', 'Assembly', 'QA', 'Shipping'];
 
@@ -162,7 +169,7 @@ function normalizePlantStepForRoute(step: DynamicTraveler, index: number, active
 }
 
 function getPlantTravelerStatus(order: ProductionOrder, steps: DynamicTraveler[]): PlantTravelerStatus {
-  if (order.status === 'DONE' || order.status === 'COMPLETE' || order.status === 'complete') return 'COMPLETE';
+  if (isClosedProductionStatus(order.status)) return 'COMPLETE';
   const activeStep = steps.find((step) => step.stepStatus !== 'DONE' && step.stepStatus !== 'NOT_READY');
   if (activeStep?.stepStatus === 'HOLD') return 'HOLD';
   if (activeStep?.stepStatus === 'BLOCKED') return 'BLOCKED';
@@ -188,8 +195,8 @@ function getPlantTravelerSortScore(traveler: PlantTraveler): number {
   let score = 0;
   if (traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD') score += 100;
   if (traveler.overallStatus === 'READY' || traveler.overallStatus === 'ACTIVE') score += 80;
-  if (traveler.order.priority === 'critical' || traveler.order.priority === 'CRITICAL') score += 30;
-  if (traveler.order.priority === 'hot' || traveler.order.priority === 'HOT') score += 20;
+  if (isCriticalPriority(traveler.order.priority)) score += 30;
+  if (isHotPriority(traveler.order.priority)) score += 20;
   if (traveler.qaRequired) score += 5;
   if (traveler.classificationReviewReasons.length > 0) score += 5;
   score += Math.max(0, 100 - traveler.completionPercent) / 10;
@@ -229,12 +236,15 @@ function getTravelerStepStatus(
   department: Department,
   capableResources: TravelerResource[],
 ): TravelerStepStatus {
-  if (order.status === 'DONE' || order.status === 'COMPLETE' || order.status === 'complete') return 'DONE';
-  if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED' || order.status === 'HOLD' || order.status === 'hold') return 'HOLD';
-  if ((order.blockers ?? []).length > 0 || order.status === 'BLOCKED' || order.status === 'blocked') return 'BLOCKED';
+  const status = normalizeOrderToken(order.status);
+  const qaStatus = normalizeOrderToken(order.qaStatus);
+
+  if (isClosedProductionStatus(status)) return 'DONE';
+  if (qaStatus === 'HOLD' || qaStatus === 'FAILED' || status === 'HOLD') return 'HOLD';
+  if ((order.blockers ?? []).length > 0 || status === 'BLOCKED' || normalizeOrderToken(order.flowStatus) === 'BLOCKED') return 'BLOCKED';
   if (capableResources.length === 0) return 'BLOCKED';
   if (order.currentDepartment !== department && !order.requiredDepartments?.includes(department)) return 'NOT_READY';
-  if (order.status === 'IN_PROGRESS' || order.status === 'running') return 'ACTIVE';
+  if (status === 'IN_PROGRESS' || status === 'RUNNING') return 'ACTIVE';
   return 'READY';
 }
 
@@ -265,7 +275,7 @@ function getCurrentInstruction(
   }
 
   const resourceLabel = bestResource ? ` on ${bestResource.label}` : '';
-  const handoffLabel = nextHandoff ? ` After this step, send it to ${nextHandoff}.` : '';
+  const handoffLabel = nextHandoff ? ` After this step, advance it to ${nextHandoff}.` : '';
 
   if (department === 'Receiving') return `Receive and stage order #${order.orderNumber}.${handoffLabel}`;
   if (department === 'Material Handling') return `Stage material for order #${order.orderNumber}.${handoffLabel}`;
@@ -282,7 +292,7 @@ function getTravelerActions(
   bestResource: TravelerResource | undefined,
   nextHandoff: Department | 'Complete' | undefined,
 ): TravelerAction[] {
-  const materialNeedsAction = order.materialStatus === 'MISSING' || order.materialStatus === 'NOT_RECEIVED' || order.materialStatus === 'ORDER_REQUIRED';
+  const materialNeedsAction = isMaterialActionNeeded(order.materialStatus);
 
   return [
     { type: 'OPEN_DETAIL', label: 'Open traveler detail', enabled: true },
@@ -293,12 +303,10 @@ function getTravelerActions(
       enabled: materialNeedsAction,
       reason: materialNeedsAction ? undefined : 'Material is not currently flagged as missing.',
     },
-    { type: 'REPORT_ISSUE', label: 'Report issue on this order', enabled: true },
     {
-      type: 'REPORT_RESOURCE_MISMATCH',
-      label: 'Report resource cannot run this order',
-      enabled: Boolean(bestResource),
-      reason: bestResource ? undefined : 'No resource is mapped to report against.',
+      type: 'REPORT_ISSUE',
+      label: bestResource ? `Report issue or resource mismatch on ${bestResource.label}` : 'Report issue on this order',
+      enabled: true,
     },
     {
       type: 'MARK_READY_FOR_HANDOFF',
@@ -308,13 +316,13 @@ function getTravelerActions(
     },
     {
       type: 'SEND_TO_NEXT_DEPARTMENT',
-      label: nextHandoff && nextHandoff !== 'Complete' ? `Send to ${nextHandoff}` : 'Send to next department',
+      label: nextHandoff && nextHandoff !== 'Complete' ? `Advance order to ${nextHandoff} now` : 'Advance to next department now',
       enabled: Boolean(nextHandoff) && nextHandoff !== 'Complete' && (stepStatus === 'READY' || stepStatus === 'ACTIVE'),
-      reason: !nextHandoff ? 'No next handoff is available.' : nextHandoff === 'Complete' ? 'This is the final department — use Complete Order instead.' : undefined,
+      reason: !nextHandoff ? 'No next handoff is available.' : nextHandoff === 'Complete' ? 'This is the final department - use Complete Order instead.' : undefined,
     },
     {
       type: 'COMPLETE_ORDER',
-      label: 'Mark order complete',
+      label: 'Complete order now',
       enabled: nextHandoff === 'Complete' && (stepStatus === 'READY' || stepStatus === 'ACTIVE' || stepStatus === 'DONE'),
       reason: nextHandoff !== 'Complete' ? 'Order has remaining departments before completion.' : undefined,
     },
@@ -331,10 +339,11 @@ function getTravelerPriorityScore(
   if (stepStatus === 'READY' || stepStatus === 'ACTIVE') score += 120;
   if (stepStatus === 'BLOCKED' || stepStatus === 'HOLD') score += 40;
   if (!bestResource) score += 35;
-  if (order.priority === 'critical' || order.priority === 'CRITICAL') score += 30;
-  if (order.priority === 'hot' || order.priority === 'HOT') score += 20;
-  if (order.materialStatus === 'MISSING' || order.materialStatus === 'NOT_RECEIVED' || order.materialStatus === 'ORDER_REQUIRED') score += 15;
-  if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED') score += 15;
+  if (isCriticalPriority(order.priority)) score += 30;
+  if (isHotPriority(order.priority)) score += 20;
+  if (isMaterialActionNeeded(order.materialStatus)) score += 15;
+  const qaStatus = normalizeOrderToken(order.qaStatus);
+  if (qaStatus === 'HOLD' || qaStatus === 'FAILED') score += 15;
   return score;
 }
 

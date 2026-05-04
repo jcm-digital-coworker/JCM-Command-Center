@@ -4,6 +4,11 @@ function normalizeText(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
 }
 
+function isClosedStatus(status: unknown): boolean {
+  const normalizedStatus = normalizeText(status);
+  return normalizedStatus === 'done' || normalizedStatus === 'complete' || normalizedStatus === 'completed';
+}
+
 function getDependencyName(dependency: OrderDependency): string {
   return dependency.label ?? dependency.id ?? '';
 }
@@ -12,11 +17,23 @@ function getOrderDependencies(order: ProductionOrder): OrderDependency[] {
   return Array.isArray(order.dependencies) ? order.dependencies : [];
 }
 
+function hasListedBlocker(order: ProductionOrder): boolean {
+  return Array.isArray(order.blockers) && order.blockers.length > 0;
+}
+
 export function getAutomaticBlockReason(order: ProductionOrder): BlockedReason | null {
-  const status = normalizeText(order.status);
+  const flowStatus = normalizeText(order.flowStatus);
   const materialStatus = normalizeText(order.materialStatus);
 
-  if (status !== 'done' && status !== 'complete') {
+  if (hasListedBlocker(order)) {
+    return order.blockers[0]?.type === 'material' ? 'WAITING_ON_MATERIAL' : 'UNKNOWN';
+  }
+
+  if (flowStatus === 'blocked') {
+    return 'UNKNOWN';
+  }
+
+  if (!isClosedStatus(order.status)) {
     if (materialStatus === 'not_received' || materialStatus === 'partial' || materialStatus === 'missing') {
       return 'WAITING_ON_MATERIAL';
     }
@@ -43,7 +60,7 @@ export function getOrderBlockReason(order: ProductionOrder): BlockedReason | nul
 }
 
 export function isOrderBlocked(order: ProductionOrder): boolean {
-  return normalizeText(order.status) === 'blocked' || Boolean(getAutomaticBlockReason(order));
+  return normalizeText(order.status) === 'blocked' || normalizeText(order.flowStatus) === 'blocked' || hasListedBlocker(order) || Boolean(getAutomaticBlockReason(order));
 }
 
 export function getOrderStatusLabel(order: ProductionOrder): string {

@@ -129,7 +129,7 @@ export const plantDocuments: PlantDocument[] = [
       "Step-by-step assembly instructions for JCM Universal Couplings and Clamps. Covers middle ring placement, gasket seating, T-bolt alignment, and final torque sequence. Applies to single-band (101) and multi-band (102) variants across all pipe sizes.",
   },
 
-  // ── MACHINE SHOP ─────────────────────────────────────────────────────────────
+  // ── SADDLES DEPT / LV4500 CELL ────────────────────────────────────────────────
   {
     id: "doc-lv4500-macro",
     title: "LV4500 JCM Macro Suite Reference",
@@ -163,6 +163,8 @@ export const plantDocuments: PlantDocument[] = [
     description:
       "Reference for casting validation, small boss restrictions, tap code routing, and simulator audit checks. Small boss castings only permit approved lower tap codes — validate before machining.",
   },
+
+  // ── MACHINE SHOP ─────────────────────────────────────────────────────────────
   {
     id: "doc-kh80-setup",
     title: "KH80 Heavy Roughing Setup Notes",
