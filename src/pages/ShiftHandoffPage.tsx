@@ -1,9 +1,38 @@
-import { useState, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { getRuntimeProductionOrders } from '../logic/workflowRuntimeState';
 import { maintenanceRequests } from '../data/maintenanceRequests';
 import { seedCoverage } from '../data/coverage';
 import { COVERAGE_STORAGE_KEY } from '../logic/coverage';
 import type { CoveragePerson } from '../types/coverage';
+import type { ProductionOrder } from '../types/productionOrder';
+
+const SHIFT_SNAPSHOT_KEY = 'jcm_shift_start_snapshot';
+const SHIFT_SNAPSHOT_MAX_AGE_MS = 18 * 60 * 60 * 1000;
+
+type ShiftSnapshot = { ts: number; orderNums: string[]; blockedNums: string[]; maintCount: number };
+
+function loadShiftSnapshot(): ShiftSnapshot | null {
+  try {
+    const raw = localStorage.getItem(SHIFT_SNAPSHOT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ShiftSnapshot;
+    if (Date.now() - parsed.ts > SHIFT_SNAPSHOT_MAX_AGE_MS) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+function saveShiftSnapshot(orders: ProductionOrder[], maintCount: number): ShiftSnapshot {
+  const snapshot: ShiftSnapshot = {
+    ts: Date.now(),
+    orderNums: orders.map((o) => o.orderNumber),
+    blockedNums: orders
+      .filter((o) => String(o.flowStatus).toLowerCase() === 'blocked' || (o.blockers ?? []).length > 0)
+      .map((o) => o.orderNumber),
+    maintCount,
+  };
+  try { localStorage.setItem(SHIFT_SNAPSHOT_KEY, JSON.stringify(snapshot)); } catch { /* noop */ }
+  return snapshot;
+}
 
 interface ShiftHandoffPageProps {
   theme?: 'dark' | 'light';
@@ -27,6 +56,7 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
   const [included, setIncluded] = useState<Record<SectionKey, boolean>>({
     crew: true, ready: true, blocked: true, hold: true, maintenance: true,
   });
+  const [snapshot, setSnapshot] = useState<ShiftSnapshot | null>(() => loadShiftSnapshot());
   const coverage = loadCoverage().filter((p) => p.status !== 'OFFLINE');
   const liveOrders = getRuntimeProductionOrders();
 
@@ -47,6 +77,29 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
   const openMaint = maintenanceRequests.filter((r) =>
     ['NEW', 'CLAIMED', 'IN_PROGRESS'].includes(r.status),
   );
+
+  function handleMarkShiftStart() {
+    const snap = saveShiftSnapshot(liveOrders, openMaint.length);
+    setSnapshot(snap);
+  }
+
+  const shiftDiff = useMemo(() => {
+    if (!snapshot) return null;
+    const currentBlockedNums = new Set(
+      liveOrders
+        .filter((o) => String(o.flowStatus).toLowerCase() === 'blocked' || (o.blockers ?? []).length > 0)
+        .map((o) => o.orderNumber),
+    );
+    const completed = snapshot.orderNums.filter((num) => {
+      const order = liveOrders.find((o) => o.orderNumber === num);
+      return !order || String(order.status).toLowerCase() === 'done';
+    });
+    const prevBlocked = new Set(snapshot.blockedNums);
+    const newlyBlocked = [...currentBlockedNums].filter((num) => !prevBlocked.has(num));
+    const resolved = snapshot.blockedNums.filter((num) => !currentBlockedNums.has(num));
+    const maintDelta = openMaint.length - snapshot.maintCount;
+    return { completed, newlyBlocked, resolved, maintDelta };
+  }, [snapshot, liveOrders, openMaint.length]);
 
   function buildTextReport(): string {
     const now = new Date().toLocaleString('en-US', {
@@ -105,6 +158,24 @@ export default function ShiftHandoffPage({ theme = 'dark' }: ShiftHandoffPagePro
         <div style={eyebrowStyle}>Shift Tool</div>
         <h2 style={titleStyle(theme)}>SHIFT HANDOFF REPORT</h2>
         <p style={subtitleStyle(theme)}>Live snapshot of crew, orders, and open maintenance items. Share with the incoming shift lead.</p>
+        {!snapshot ? (
+          <button type="button" onClick={handleMarkShiftStart} style={markShiftStartStyle(theme)}>
+            MARK SHIFT START
+          </button>
+        ) : shiftDiff && (
+          <div style={shiftDiffBarStyle(theme)}>
+            <span style={diffLabelStyle}>SINCE SHIFT START</span>
+            {shiftDiff.completed.length > 0 && <span style={diffChipStyle('#10b981')}>✓ {shiftDiff.completed.length} completed</span>}
+            {shiftDiff.newlyBlocked.length > 0 && <span style={diffChipStyle('#ef4444')}>⚠ {shiftDiff.newlyBlocked.length} newly blocked</span>}
+            {shiftDiff.resolved.length > 0 && <span style={diffChipStyle('#38bdf8')}>↑ {shiftDiff.resolved.length} blocker{shiftDiff.resolved.length !== 1 ? 's' : ''} resolved</span>}
+            {shiftDiff.maintDelta > 0 && <span style={diffChipStyle('#f59e0b')}>+ {shiftDiff.maintDelta} maint request{shiftDiff.maintDelta !== 1 ? 's' : ''}</span>}
+            {shiftDiff.completed.length === 0 && shiftDiff.newlyBlocked.length === 0 && shiftDiff.resolved.length === 0 && shiftDiff.maintDelta <= 0 && (
+              <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>No changes yet this shift.</span>
+            )}
+            <button type="button" onClick={handleMarkShiftStart} style={resetShiftStyle}>RESET</button>
+          </div>
+        )}
+
         <div style={toggleRowStyle}>
           {(['crew', 'ready', 'blocked', 'hold', 'maintenance'] as SectionKey[]).map((key) => (
             <button
@@ -299,3 +370,37 @@ function toggleButtonStyle(active: boolean, theme: 'dark' | 'light'): CSSPropert
     letterSpacing: '0.3px',
   };
 }
+
+function markShiftStartStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    marginBottom: 12, padding: '7px 14px', borderRadius: 5, cursor: 'pointer',
+    border: theme === 'dark' ? '1px dashed #475569' : '1px dashed #cbd5e1',
+    background: 'transparent', color: '#64748b', fontSize: 11, fontWeight: 900, letterSpacing: '0.5px',
+  };
+}
+
+function shiftDiffBarStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
+    marginBottom: 12, padding: '8px 12px', borderRadius: 6,
+    background: theme === 'dark' ? 'rgba(15,23,42,0.6)' : '#f1f5f9',
+    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+  };
+}
+
+const diffLabelStyle: CSSProperties = {
+  fontSize: 9, fontWeight: 900, letterSpacing: '1px', color: '#64748b', textTransform: 'uppercase', marginRight: 2,
+};
+
+function diffChipStyle(color: string): CSSProperties {
+  return {
+    padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800,
+    background: `${color}18`, border: `1px solid ${color}50`, color,
+  };
+}
+
+const resetShiftStyle: CSSProperties = {
+  marginLeft: 'auto', padding: '2px 8px', borderRadius: 4, border: '1px solid #334155',
+  background: 'transparent', color: '#475569', fontSize: 10, fontWeight: 900, cursor: 'pointer',
+  letterSpacing: '0.3px',
+};

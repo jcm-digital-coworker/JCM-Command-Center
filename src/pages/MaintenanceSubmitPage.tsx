@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { MaintenanceRequestPriority } from '../types/maintenanceRequest';
 import { machines } from '../data/machine';
 import { plantAssets } from '../data/plantAssets';
+import { workCenters } from '../data/workCenters';
 import { addMaintenanceRequest } from '../data/maintenanceRequests';
+import { getWorkCenterWorkflowGroups } from '../logic/workflowPanelSelectors';
 
 interface MaintenanceSubmitPageProps {
   onBack: () => void;
@@ -27,6 +29,18 @@ export default function MaintenanceSubmitPage({
     ...machines.map((machine) => ({ id: machine.id, name: machine.name, department: machine.department, group: 'Machine' })),
     ...plantAssets.map((asset) => ({ id: asset.id, name: asset.name, department: asset.ownerDepartment, group: asset.kind.replaceAll('_', ' ') })),
   ];
+
+  const impactedOrderCount = useMemo(() => {
+    if (!machineId || !['LINE_DOWN', 'MACHINE_DOWN'].includes(priority)) return 0;
+    const target = serviceTargets.find((t) => t.id === machineId);
+    if (!target?.department) return 0;
+    const affectedWCs = workCenters.filter((wc) => wc.department === target.department);
+    return affectedWCs.reduce((sum, wc) => {
+      const groups = getWorkCenterWorkflowGroups(wc);
+      const doNow = groups.find((g) => g.key === 'DO_NOW');
+      return sum + (doNow?.cards.length ?? 0);
+    }, 0);
+  }, [machineId, priority, serviceTargets]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,6 +198,15 @@ export default function MaintenanceSubmitPage({
             required
           />
         </div>
+
+        {impactedOrderCount > 0 && (
+          <div style={getImpactWarningStyle()}>
+            <span style={{ fontWeight: 900, letterSpacing: '0.5px' }}>⚠ ORDER IMPACT</span>
+            <span style={{ marginLeft: 8 }}>
+              Submitting this will stall <strong>{impactedOrderCount}</strong> active order{impactedOrderCount !== 1 ? 's' : ''} currently in DO NOW at this department.
+            </span>
+          </div>
+        )}
 
         <button type="submit" style={getSubmitButtonStyle(theme)}>
           SUBMIT REQUEST
@@ -346,6 +369,14 @@ function getSubmitButtonStyle(theme: 'dark' | 'light'): CSSProperties {
 const fieldStyle: CSSProperties = {
   marginBottom: 20,
 };
+
+function getImpactWarningStyle(): CSSProperties {
+  return {
+    marginBottom: 12, padding: '10px 14px', borderRadius: 6,
+    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.4)',
+    borderLeft: '4px solid #ef4444', color: '#fca5a5', fontSize: 13,
+  };
+}
 
 function getFileInputStyle(theme: 'dark' | 'light'): CSSProperties {
   return {

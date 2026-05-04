@@ -386,6 +386,8 @@ accent: '#f97316' (safety orange)
 - `jcm-classification-review-confirmations-v1` — ClassificationReviewConfirmation[]
 - `jcm_role_view` — RoleView (persisted role selection from dev tools switcher)
 - `jcm-classification-review-target-v1` — orderNumber string (order queued for classification review; written by WorkCenterWorkflowPanelV2, read by ClassificationReviewQueue)
+- `jcm_pressure_history` — PressureSnapshot[] (ring buffer, max 48, throttled 30 min) for Dashboard sparkline
+- `jcm_shift_start_snapshot` — ShiftSnapshot (ts + orderNums + blockedNums + maintCount) for ShiftHandoffPage diff
 
 ---
 
@@ -441,6 +443,11 @@ accent: '#f97316' (safety orange)
 - `navigationAccess.ts` — role-based navigation item visibility
 - `AccordionSection.tsx`, `SmartEmptyState.tsx`, `OrderDetailModal.tsx` — shared UI components
 - DashboardPage live timestamp — green "Updated HH:MM:SS" on WORKFLOW_RUNTIME_UPDATED_EVENT
+- Pressure score history sparkline — `pressureHistory.ts` ring buffer (48 entries, 30-min throttle); SVG sparkline renders alongside score on Dashboard
+- Machine-down order impact preview — MaintenanceSubmitPage shows "⚠ ORDER IMPACT: N active orders will stall" when LINE_DOWN/MACHINE_DOWN + asset selected
+- Stale blocker auto-escalation — `plantSignals.ts` upgrades blocked-order signal to ESCALATE when untouched >2h (CRITICAL), >4h (HOT), >8h (normal)
+- Shift diff — ShiftHandoffPage records shift-start snapshot to localStorage; shows completed/newly-blocked/resolved/maintenance delta bar
+- PlantMapPage bottleneck heat overlay — per-dept CLEAR/BLOCKED badge (green/amber/red) on section headers, live via WORKFLOW_RUNTIME_UPDATED_EVENT
 
 **Queued for Phase 3:**
 - Supabase backend (replace localStorage)
@@ -499,5 +506,5 @@ git push -u origin <your-branch>
 ---
 
 **Last Updated:** May 4, 2026
-**Version:** v1.5 (Phase 2 complete — dashboard fully wired, blocker age, dept health tiles, plant pressure score, navigation contracts, operator next-best-actions, classification review, fluidity done)
+**Version:** v1.6 (5 innovations: pressure sparkline, machine-down order impact, stale blocker escalation, shift diff, PlantMap heat overlay)
 **Developer:** Manufacturing Engineering Technician, JCM Industries, Nash, Texas

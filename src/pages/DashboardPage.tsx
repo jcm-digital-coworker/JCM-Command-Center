@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { Machine } from '../types/machine';
 import type { MaintenanceTask } from '../types/maintenance';
@@ -12,6 +12,7 @@ import { getQuickActionsForRole, formatRoleLabel, type QuickAction } from '../lo
 import { getNavigationTab } from '../logic/navigationContracts';
 import { getCommandRecommendation } from '../logic/commandRecommendations';
 import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import { recordPressureSnapshot, getPressureHistory, type PressureSnapshot } from '../logic/pressureHistory';
 import AccordionSection from '../components/common/AccordionSection';
 import SmartEmptyState from '../components/common/SmartEmptyState';
 import PlantSignalsPanel from '../components/dashboard/PlantSignalsPanel';
@@ -264,9 +265,18 @@ function PlantPressureScore({
   blockedCount, alertCount, overdueCount, materialIssueCount, theme,
 }: { blockedCount: number; alertCount: number; overdueCount: number; materialIssueCount: number; theme: DashboardTheme }) {
   const score = Math.min(100, blockedCount * 15 + alertCount * 8 + overdueCount * 10 + materialIssueCount * 5);
+  const [history, setHistory] = useState<PressureSnapshot[]>(() => getPressureHistory());
+
+  useEffect(() => {
+    recordPressureSnapshot(score);
+    setHistory(getPressureHistory());
+  }, [score]);
+
   const band = score >= 70 ? { color: '#ef4444', label: 'HIGH STRESS', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.35)' }
     : score >= 35 ? { color: '#f59e0b', label: 'ELEVATED', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.35)' }
     : { color: '#10b981', label: 'NOMINAL', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.3)' };
+
+  const sparkPoints = history.slice(-12);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 16px', borderRadius: 8, marginBottom: 16, background: band.bg, border: `1px solid ${band.border}`, borderLeft: `4px solid ${band.color}` }}>
@@ -274,6 +284,7 @@ function PlantPressureScore({
         <div style={{ fontSize: 34, fontWeight: 900, lineHeight: 1, color: band.color }}>{score}</div>
         <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.8px', color: band.color, textTransform: 'uppercase' }}>/ 100</div>
       </div>
+      {sparkPoints.length >= 2 && <PressureSparkline points={sparkPoints} color={band.color} />}
       <div>
         <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '1px', color: band.color }}>{band.label}</div>
         <div style={{ fontSize: 11, color: theme === 'dark' ? '#94a3b8' : '#64748b', marginTop: 2 }}>
@@ -281,6 +292,28 @@ function PlantPressureScore({
         </div>
       </div>
     </div>
+  );
+}
+
+function PressureSparkline({ points, color }: { points: PressureSnapshot[]; color: string }) {
+  const W = 72, H = 28;
+  const coords = useMemo(() => {
+    return points.map((p, i) => {
+      const x = ((i / (points.length - 1)) * W).toFixed(1);
+      const y = (H - (Math.min(p.score, 100) / 100) * H).toFixed(1);
+      return `${x},${y}`;
+    }).join(' ');
+  }, [points]);
+
+  const lastParts = coords.split(' ').pop()!.split(',');
+  const dotX = parseFloat(lastParts[0]);
+  const dotY = parseFloat(lastParts[1]);
+
+  return (
+    <svg width={W} height={H} style={{ display: 'block', flexShrink: 0, opacity: 0.85 }}>
+      <polyline points={coords} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={dotX} cy={dotY} r="2.5" fill={color} />
+    </svg>
   );
 }
 

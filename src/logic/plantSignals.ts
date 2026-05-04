@@ -1,6 +1,7 @@
 import type { AppTab } from '../types/app';
 import type { ProductionOrder } from '../types/productionOrder';
 import type { DashboardTone } from '../components/dashboard/dashboardStyles';
+import { getOrderLastTouchedHours } from './blockerAge';
 
 export type PlantSignal = {
   title: string;
@@ -28,14 +29,29 @@ export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
     }
 
     if (isBlockedOrder(order)) {
-      signals.push({
-        title: `Blocked order ${order.orderNumber}`,
-        detail: `Priority ${formatOrderPriority(order)} blocked flow. Open workflow blocker context before labor is assigned.`,
-        actionLabel: 'Review blocker',
-        priority: 80 + getOrderPriorityScore(order),
-        routeTarget: 'workflow',
-        tone: 'red',
-      });
+      const ageHours = getOrderLastTouchedHours(order.orderNumber);
+      const staleThresholdHours = getOrderPriorityScore(order) >= 30 ? 2 : getOrderPriorityScore(order) >= 20 ? 4 : 8;
+      const isStale = ageHours !== null && ageHours >= staleThresholdHours;
+
+      if (isStale) {
+        signals.push({
+          title: `ESCALATE — ${order.orderNumber} stalled ${Math.round(ageHours)}h`,
+          detail: `${formatOrderPriority(order)} priority order has been blocked and untouched for ${Math.round(ageHours)}h. Assign an owner or escalate now.`,
+          actionLabel: 'Open orders',
+          priority: 130 + getOrderPriorityScore(order),
+          routeTarget: 'orders',
+          tone: 'red',
+        });
+      } else {
+        signals.push({
+          title: `Blocked order ${order.orderNumber}`,
+          detail: `Priority ${formatOrderPriority(order)} blocked flow. Open workflow blocker context before labor is assigned.`,
+          actionLabel: 'Review blocker',
+          priority: 80 + getOrderPriorityScore(order),
+          routeTarget: 'workflow',
+          tone: 'red',
+        });
+      }
     }
 
     if (isMaterialIssue(order)) {

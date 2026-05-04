@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { plantAssets } from '../data/plantAssets';
 import { plantDepartmentOrder } from '../data/workCenters';
 import { getDepartmentOperatingProfile } from '../data/departmentOperatingProfiles';
+import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import type { PlantAsset } from '../types/plantAsset';
 import type { Department } from '../types/machine';
 
@@ -23,6 +24,18 @@ export default function PlantMapPage({ theme = 'dark' }: PlantMapPageProps) {
       }))
       .filter((group) => group.assets.length > 0 && (filter === 'All' || group.department === filter));
   }, [filter]);
+
+  const [blockedByDept, setBlockedByDept] = useState<Record<string, number>>(() => computeBlockedByDept());
+
+  useEffect(() => {
+    const refresh = () => setBlockedByDept(computeBlockedByDept());
+    window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
 
   const downCount = plantAssets.filter((asset) => asset.status === 'DOWN').length;
   const watchCount = plantAssets.filter((asset) => asset.status === 'WATCH').length;
@@ -58,14 +71,21 @@ export default function PlantMapPage({ theme = 'dark' }: PlantMapPageProps) {
         <div style={tapHintStyle(theme)}>Tap an asset card to open mapped detail.</div>
       </div>
 
-      {groupedAssets.map((group) => (
+      {groupedAssets.map((group) => {
+        const deptBlocked = blockedByDept[group.department] ?? 0;
+        const heatColor = deptBlocked >= 3 ? '#ef4444' : deptBlocked >= 1 ? '#f59e0b' : '#10b981';
+        const heatLabel = deptBlocked >= 1 ? `${deptBlocked} BLOCKED` : 'CLEAR';
+        return (
         <section key={group.department} style={sectionStyle(theme)}>
           <div style={sectionHeaderStyle(theme)}>
             <div>
               <div>{group.department}</div>
               <div style={sectionSubLabelStyle(theme)}>{group.profile.resourceLabel}</div>
             </div>
-            <span style={countPillStyle(theme)}>{group.assets.length} mapped</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={heatBadgeStyle(heatColor)}>{heatLabel}</span>
+              <span style={countPillStyle(theme)}>{group.assets.length} mapped</span>
+            </div>
           </div>
           <div style={assetGridStyle}>
             {group.assets.map((asset) => (
@@ -73,7 +93,8 @@ export default function PlantMapPage({ theme = 'dark' }: PlantMapPageProps) {
             ))}
           </div>
         </section>
-      ))}
+        );
+      })}
 
       {selectedAsset ? (
         <AssetDetailModal asset={selectedAsset} theme={theme} onClose={() => setSelectedAsset(null)} />
@@ -173,6 +194,25 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
       <div style={{ fontSize: 12, fontWeight: 800, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }}>{value}</div>
     </div>
   );
+}
+
+function computeBlockedByDept(): Record<string, number> {
+  const orders = getRuntimeProductionOrders();
+  const counts: Record<string, number> = {};
+  orders.forEach((o) => {
+    if (String(o.flowStatus).toLowerCase() === 'blocked' || (o.blockers ?? []).length > 0) {
+      const dept = o.currentDepartment;
+      if (dept) counts[dept] = (counts[dept] ?? 0) + 1;
+    }
+  });
+  return counts;
+}
+
+function heatBadgeStyle(color: string): CSSProperties {
+  return {
+    padding: '3px 8px', borderRadius: 999, fontSize: 10, fontWeight: 900,
+    letterSpacing: '0.5px', background: `${color}18`, border: `1px solid ${color}50`, color,
+  };
 }
 
 const pageStyle: CSSProperties = { display: 'grid', gap: 16 };
