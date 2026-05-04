@@ -2,8 +2,10 @@ import type { CSSProperties } from 'react';
 import type { Machine } from '../types/machine';
 import type { MaintenanceTask } from '../types/maintenance';
 import MaintenanceTaskCard from '../components/cards/MaintenanceTaskCard';
+import MaintenanceCommandPanel from '../components/maintenance/MaintenanceCommandPanel';
 import { maintenanceRequests } from '../data/maintenanceRequests';
 import { getRepeatOffenders } from '../logic/maintenanceRepeatOffenders';
+import { getMaintenanceCommandModel } from '../logic/maintenanceCommand';
 
 interface MaintenancePageProps {
   machines: Machine[];
@@ -17,6 +19,7 @@ export default function MaintenancePage({
   theme = 'dark',
 }: MaintenancePageProps) {
   const repeatOffenders = getRepeatOffenders(maintenanceRequests);
+  const commandModel = getMaintenanceCommandModel({ machines, tasks, requests: maintenanceRequests });
   const overdueCount = tasks.filter((task) => task.status === 'OVERDUE').length;
   const dueSoonCount = tasks.filter((task) => task.status === 'DUE_SOON').length;
   const watchCount = tasks.filter((task) => task.status === 'WATCH').length;
@@ -26,15 +29,17 @@ export default function MaintenancePage({
     <div>
       <div style={headerStyle}>
         <div>
-          <h2 style={getTitleStyle(theme)}>SCHEDULED MAINTENANCE</h2>
+          <h2 style={getTitleStyle(theme)}>MAINTENANCE COMMAND CENTER</h2>
           <p style={subtitleStyle}>
-            {tasks.length} TASKS • {overdueCount} OVERDUE • {dueSoonCount} DUE SOON
+            {commandModel.openRequests.length} OPEN REQUESTS • {tasks.length} PM TASKS • {overdueCount} OVERDUE • {dueSoonCount} DUE SOON
           </p>
         </div>
       </div>
 
+      <MaintenanceCommandPanel model={commandModel} theme={theme} />
+
       <div style={summaryGridStyle}>
-        <SummaryTile label="Overdue" value={overdueCount} color="#dc2626" theme={theme} />
+        <SummaryTile label="Overdue PM" value={overdueCount} color="#dc2626" theme={theme} />
         <SummaryTile label="Due Soon" value={dueSoonCount} color="#f59e0b" theme={theme} />
         <SummaryTile label="Watch" value={watchCount} color="#8b5cf6" theme={theme} />
         <SummaryTile label="OK" value={okCount} color="#10b981" theme={theme} />
@@ -65,23 +70,32 @@ export default function MaintenancePage({
         </div>
       )}
 
-      {tasks.length === 0 ? (
-        <div style={getEmptyStateStyle(theme)}>NO SCHEDULED MAINTENANCE TASKS</div>
-      ) : (
-        <div style={taskGridStyle}>
-          {tasks.map((task) => {
-            const machine = machines.find((m) => m.id === task.machineId);
-            return (
-              <MaintenanceTaskCard
-                key={task.id}
-                task={task}
-                machine={machine}
-                theme={theme}
-              />
-            );
-          })}
+      <section style={getScheduledSectionStyle(theme)}>
+        <div style={scheduledHeaderStyle}>
+          <div>
+            <h3 style={getScheduledTitleStyle(theme)}>Scheduled PM tasks</h3>
+            <p style={scheduledSubtitleStyle}>Preventive maintenance stays visible beside the live request board.</p>
+          </div>
         </div>
-      )}
+
+        {tasks.length === 0 ? (
+          <div style={getEmptyStateStyle(theme)}>NO SCHEDULED MAINTENANCE TASKS</div>
+        ) : (
+          <div style={taskGridStyle}>
+            {tasks.map((task) => {
+              const machine = machines.find((m) => m.id === task.machineId);
+              return (
+                <MaintenanceTaskCard
+                  key={task.id}
+                  task={task}
+                  machine={machine}
+                  theme={theme}
+                />
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -186,6 +200,40 @@ function getRepeatOffenderCardStyle(theme: 'dark' | 'light'): CSSProperties {
     border: theme === 'dark' ? '1px solid #334155' : '1px solid #fecaca',
   };
 }
+
+function getScheduledSectionStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    padding: 16,
+    borderRadius: 10,
+    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    background: theme === 'dark' ? '#0f172a' : '#ffffff',
+  };
+}
+
+const scheduledHeaderStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 12,
+  alignItems: 'flex-start',
+  marginBottom: 12,
+};
+
+function getScheduledTitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    margin: 0,
+    color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+    fontSize: 14,
+    fontWeight: 900,
+    letterSpacing: '0.8px',
+    textTransform: 'uppercase',
+  };
+}
+
+const scheduledSubtitleStyle: CSSProperties = {
+  margin: '4px 0 0',
+  color: '#64748b',
+  fontSize: 12,
+};
 
 function getEmptyStateStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
