@@ -162,7 +162,7 @@ function normalizePlantStepForRoute(step: DynamicTraveler, index: number, active
 }
 
 function getPlantTravelerStatus(order: ProductionOrder, steps: DynamicTraveler[]): PlantTravelerStatus {
-  if (order.status === 'DONE' || order.status === 'COMPLETE' || order.status === 'complete') return 'COMPLETE';
+  if (isClosedStatus(order.status)) return 'COMPLETE';
   const activeStep = steps.find((step) => step.stepStatus !== 'DONE' && step.stepStatus !== 'NOT_READY');
   if (activeStep?.stepStatus === 'HOLD') return 'HOLD';
   if (activeStep?.stepStatus === 'BLOCKED') return 'BLOCKED';
@@ -188,8 +188,8 @@ function getPlantTravelerSortScore(traveler: PlantTraveler): number {
   let score = 0;
   if (traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD') score += 100;
   if (traveler.overallStatus === 'READY' || traveler.overallStatus === 'ACTIVE') score += 80;
-  if (traveler.order.priority === 'critical' || traveler.order.priority === 'CRITICAL') score += 30;
-  if (traveler.order.priority === 'hot' || traveler.order.priority === 'HOT') score += 20;
+  if (isCriticalPriority(traveler.order.priority)) score += 30;
+  if (isHotPriority(traveler.order.priority)) score += 20;
   if (traveler.qaRequired) score += 5;
   if (traveler.classificationReviewReasons.length > 0) score += 5;
   score += Math.max(0, 100 - traveler.completionPercent) / 10;
@@ -229,12 +229,15 @@ function getTravelerStepStatus(
   department: Department,
   capableResources: TravelerResource[],
 ): TravelerStepStatus {
-  if (order.status === 'DONE' || order.status === 'COMPLETE' || order.status === 'complete') return 'DONE';
-  if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED' || order.status === 'HOLD' || order.status === 'hold') return 'HOLD';
-  if ((order.blockers ?? []).length > 0 || order.status === 'BLOCKED' || order.status === 'blocked') return 'BLOCKED';
+  const status = normalizeToken(order.status);
+  const qaStatus = normalizeToken(order.qaStatus);
+
+  if (isClosedStatus(status)) return 'DONE';
+  if (qaStatus === 'HOLD' || qaStatus === 'FAILED' || status === 'HOLD') return 'HOLD';
+  if ((order.blockers ?? []).length > 0 || status === 'BLOCKED' || normalizeToken(order.flowStatus) === 'BLOCKED') return 'BLOCKED';
   if (capableResources.length === 0) return 'BLOCKED';
   if (order.currentDepartment !== department && !order.requiredDepartments?.includes(department)) return 'NOT_READY';
-  if (order.status === 'IN_PROGRESS' || order.status === 'running') return 'ACTIVE';
+  if (status === 'IN_PROGRESS' || status === 'RUNNING') return 'ACTIVE';
   return 'READY';
 }
 
@@ -282,7 +285,8 @@ function getTravelerActions(
   bestResource: TravelerResource | undefined,
   nextHandoff: Department | 'Complete' | undefined,
 ): TravelerAction[] {
-  const materialNeedsAction = order.materialStatus === 'MISSING' || order.materialStatus === 'NOT_RECEIVED' || order.materialStatus === 'ORDER_REQUIRED';
+  const materialStatus = normalizeToken(order.materialStatus);
+  const materialNeedsAction = materialStatus === 'MISSING' || materialStatus === 'NOT_RECEIVED' || materialStatus === 'ORDER_REQUIRED';
 
   return [
     { type: 'OPEN_DETAIL', label: 'Open traveler detail', enabled: true },
@@ -333,10 +337,12 @@ function getTravelerPriorityScore(
   if (stepStatus === 'READY' || stepStatus === 'ACTIVE') score += 120;
   if (stepStatus === 'BLOCKED' || stepStatus === 'HOLD') score += 40;
   if (!bestResource) score += 35;
-  if (order.priority === 'critical' || order.priority === 'CRITICAL') score += 30;
-  if (order.priority === 'hot' || order.priority === 'HOT') score += 20;
-  if (order.materialStatus === 'MISSING' || order.materialStatus === 'NOT_RECEIVED' || order.materialStatus === 'ORDER_REQUIRED') score += 15;
-  if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED') score += 15;
+  if (isCriticalPriority(order.priority)) score += 30;
+  if (isHotPriority(order.priority)) score += 20;
+  const materialStatus = normalizeToken(order.materialStatus);
+  const qaStatus = normalizeToken(order.qaStatus);
+  if (materialStatus === 'MISSING' || materialStatus === 'NOT_RECEIVED' || materialStatus === 'ORDER_REQUIRED') score += 15;
+  if (qaStatus === 'HOLD' || qaStatus === 'FAILED') score += 15;
   return score;
 }
 
@@ -346,4 +352,21 @@ function getVisualSignal(stepStatus: TravelerStepStatus): DynamicTraveler['visua
   if (stepStatus === 'DONE') return 'DONE';
   if (stepStatus === 'READY' || stepStatus === 'ACTIVE') return 'READY';
   return 'WATCH';
+}
+
+function isClosedStatus(value: unknown): boolean {
+  const status = normalizeToken(value);
+  return status === 'DONE' || status === 'COMPLETE' || status === 'COMPLETED';
+}
+
+function isCriticalPriority(value: unknown): boolean {
+  return normalizeToken(value) === 'CRITICAL';
+}
+
+function isHotPriority(value: unknown): boolean {
+  return normalizeToken(value) === 'HOT';
+}
+
+function normalizeToken(value: unknown): string {
+  return String(value ?? '').trim().toUpperCase();
 }
