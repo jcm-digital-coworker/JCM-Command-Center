@@ -13,7 +13,7 @@ export type PlantSignal = {
 };
 
 export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
-  const openOrders = orders.filter((order) => order.status !== 'DONE' && order.status !== 'COMPLETE' && order.status !== 'complete');
+  const openOrders = orders.filter((order) => !isClosedOrder(order));
   const signals: PlantSignal[] = [];
 
   openOrders.forEach((order) => {
@@ -35,7 +35,7 @@ export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
 
       if (isStale) {
         signals.push({
-          title: `ESCALATE — ${order.orderNumber} stalled ${Math.round(ageHours)}h`,
+          title: `ESCALATE - ${order.orderNumber} stalled ${Math.round(ageHours)}h`,
           detail: `${formatOrderPriority(order)} priority order has been blocked and untouched for ${Math.round(ageHours)}h. Assign an owner or escalate now.`,
           actionLabel: 'Open orders',
           priority: 130 + getOrderPriorityScore(order),
@@ -82,22 +82,34 @@ export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
     .slice(0, 3);
 }
 
+function isClosedOrder(order: ProductionOrder): boolean {
+  const status = normalizeToken(order.status);
+  return status === 'DONE' || status === 'COMPLETE' || status === 'COMPLETED';
+}
+
 function isBlockedOrder(order: ProductionOrder): boolean {
-  return order.status === 'BLOCKED' || order.status === 'blocked' || order.flowStatus === 'blocked' || order.flowStatus === 'BLOCKED' || (order.blockers?.length ?? 0) > 0;
+  return normalizeToken(order.status) === 'BLOCKED' || normalizeToken(order.flowStatus) === 'BLOCKED' || (order.blockers?.length ?? 0) > 0;
 }
 
 function isMaterialIssue(order: ProductionOrder): boolean {
-  return order.materialStatus !== undefined && order.materialStatus !== 'RECEIVED' && order.materialStatus !== 'STAGED';
+  const materialStatus = normalizeToken(order.materialStatus);
+  return materialStatus !== '' && materialStatus !== 'RECEIVED' && materialStatus !== 'STAGED';
 }
 
 function getOrderPriorityScore(order: ProductionOrder): number {
-  if (order.priority === 'critical' || order.priority === 'CRITICAL') return 30;
-  if (order.priority === 'hot' || order.priority === 'HOT') return 20;
+  const priority = normalizeToken(order.priority);
+  if (priority === 'CRITICAL') return 30;
+  if (priority === 'HOT') return 20;
   return 10;
 }
 
 function formatOrderPriority(order: ProductionOrder): string {
-  if (order.priority === 'critical' || order.priority === 'CRITICAL') return 'critical';
-  if (order.priority === 'hot' || order.priority === 'HOT') return 'hot';
+  const priority = normalizeToken(order.priority);
+  if (priority === 'CRITICAL') return 'critical';
+  if (priority === 'HOT') return 'hot';
   return 'normal';
+}
+
+function normalizeToken(value: unknown): string {
+  return String(value ?? '').trim().toUpperCase();
 }
