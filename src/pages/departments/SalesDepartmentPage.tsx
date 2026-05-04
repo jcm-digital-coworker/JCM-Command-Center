@@ -1,4 +1,5 @@
 import { productionOrders } from '../../data/productionOrders';
+import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { CardGrid, CrewGuidancePanel, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
@@ -19,7 +20,7 @@ export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: Depar
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Sales" orders={productionOrders} theme={theme} />
+        <CrewGuidancePanel department="Sales" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
       </Section>
 
       <Section title="Released to production" theme={theme}>

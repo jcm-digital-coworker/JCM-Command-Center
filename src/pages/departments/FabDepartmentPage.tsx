@@ -1,11 +1,12 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
+import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function FabDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const cells = getDepartmentAssets(plantAssets, 'Fab');
-  const orders = getDepartmentOrders(productionOrders, 'Fab');
+  const orders = getDepartmentOrders(getRuntimeProductionOrders(productionOrders), 'Fab');
   const engineered = orders.filter((order) => order.orderType === 'ENGINEERED' || order.productFamily === 'ENGINEERED_FITTING');
 
   return (
@@ -19,7 +20,7 @@ export default function FabDepartmentPage({ theme = 'dark', onGoToTab }: Departm
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Fab" orders={productionOrders} theme={theme} />
+        <CrewGuidancePanel department="Fab" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
       </Section>
 
       <Section title="Fab Work Cells" theme={theme}>

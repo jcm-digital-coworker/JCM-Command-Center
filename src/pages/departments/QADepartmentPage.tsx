@@ -1,5 +1,6 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
+import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
@@ -20,7 +21,7 @@ export default function QADepartmentPage({ theme = 'dark', onGoToTab }: Departme
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="QA" orders={productionOrders} theme={theme} />
+        <CrewGuidancePanel department="QA" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
       </Section>
 
       <Section title="QA Layer" theme={theme}>

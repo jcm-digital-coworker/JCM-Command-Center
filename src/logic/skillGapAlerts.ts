@@ -26,6 +26,7 @@ function personHasSkill(person: CoveragePerson, skill: WorkerSkill): boolean {
 export interface SkillGapAlert {
   skill: WorkerSkill;
   orderNumbers: string[];
+  suggestions: string[];
 }
 
 export function getSkillGapAlerts(
@@ -54,7 +55,13 @@ export function getSkillGapAlerts(
   const gaps: SkillGapAlert[] = [];
   for (const [skill, orderNumbers] of requiredSkillsMap.entries()) {
     const covered = availableCrew.some((p) => personHasSkill(p, skill));
-    if (!covered) gaps.push({ skill, orderNumbers });
+    if (!covered) {
+      const suggestions = coverage
+        .filter((p) => p.status === 'AVAILABLE' && p.department !== department && personHasSkill(p, skill))
+        .map((p) => p.name)
+        .slice(0, 3);
+      gaps.push({ skill, orderNumbers, suggestions });
+    }
   }
   return gaps;
 }

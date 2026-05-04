@@ -1,4 +1,5 @@
 import { productionOrders } from '../../data/productionOrders';
+import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
@@ -11,7 +12,7 @@ const assemblyCells = [
 ];
 
 export default function AssemblyDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
-  const orders = getDepartmentOrders(productionOrders, 'Assembly');
+  const orders = getDepartmentOrders(getRuntimeProductionOrders(productionOrders), 'Assembly');
   const ready = orders.filter((order) => ['ready', 'in_progress', 'running'].includes(String(order.status).toLowerCase()));
 
   return (
@@ -25,7 +26,7 @@ export default function AssemblyDepartmentPage({ theme = 'dark', onGoToTab }: De
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Assembly" orders={productionOrders} theme={theme} />
+        <CrewGuidancePanel department="Assembly" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
       </Section>
 
       <Section title="Assembly Cells" theme={theme}>

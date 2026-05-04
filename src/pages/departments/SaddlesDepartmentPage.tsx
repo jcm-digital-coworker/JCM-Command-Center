@@ -1,11 +1,12 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
+import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function SaddlesDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const assets = getDepartmentAssets(plantAssets, 'Saddles Dept');
-  const orders = getDepartmentOrders(productionOrders, 'Saddles Dept');
+  const orders = getDepartmentOrders(getRuntimeProductionOrders(productionOrders), 'Saddles Dept');
   const blocked = orders.filter((o) =>
     String(o.flowStatus).toLowerCase() === 'blocked' || (o.blockers ?? []).length > 0,
   );
@@ -21,7 +22,7 @@ export default function SaddlesDepartmentPage({ theme = 'dark', onGoToTab }: Dep
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Saddles Dept" orders={productionOrders} theme={theme} />
+        <CrewGuidancePanel department="Saddles Dept" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
       </Section>
 
       <Section title="Saddles Equipment" theme={theme}>

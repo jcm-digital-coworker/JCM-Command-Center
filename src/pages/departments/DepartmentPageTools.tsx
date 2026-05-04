@@ -5,6 +5,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { COVERAGE_STORAGE_KEY } from '../../logic/coverage';
 import { getCrewGuidanceForDepartment } from '../../logic/crewGuidance';
 import { getSkillGapAlerts } from '../../logic/skillGapAlerts';
+import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { departmentOperatingProfiles } from '../../data/departmentOperatingProfiles';
 import type { Department } from '../../types/machine';
 import type { CoveragePerson } from '../../types/coverage';
@@ -34,7 +35,11 @@ export function getDepartmentOrders(orders: ProductionOrder[], department: Depar
 }
 
 export function getBlockedOrders(orders: ProductionOrder[]) {
-  return orders.filter((order) => String(order.status).toLowerCase() === 'blocked');
+  return orders.filter((order) =>
+    String(order.status).toLowerCase() === 'blocked' ||
+    String(order.flowStatus).toLowerCase() === 'blocked' ||
+    (order.blockers ?? []).length > 0,
+  );
 }
 
 export function kindLabel(kind: PlantAssetKind) {
@@ -137,10 +142,14 @@ export function OrderCard({
 }: DepartmentPageProps & { order: ProductionOrder }) {
   const isBlocked = (order.blockers ?? []).length > 0 || String(order.flowStatus).toLowerCase() === 'blocked';
   const isRunnable = String(order.flowStatus).toLowerCase() === 'runnable';
+  const isDone = String(order.status).toLowerCase() === 'done';
   const priority = String(order.priority ?? 'normal').toLowerCase();
   const priorityColor = priority === 'critical' ? '#dc2626' : priority === 'hot' ? '#f59e0b' : '#64748b';
   const flowColor = isBlocked ? '#dc2626' : isRunnable ? '#10b981' : '#64748b';
   const borderColor = isBlocked ? '#dc2626' : isRunnable ? '#10b981' : '#334155';
+  const isOverdue = !isDone && order.projectedShipDate
+    ? new Date(order.projectedShipDate) < new Date(new Date().toDateString())
+    : false;
 
   return (
     <div style={{ ...cardStyle(theme), borderLeft: `4px solid ${borderColor}` }}>
@@ -159,7 +168,9 @@ export function OrderCard({
           <span style={chipStyle(theme)}>MAT: {statusLabel(order.materialStatus)}</span>
         )}
         {order.projectedShipDate && (
-          <span style={chipStyle(theme)}>SHIP {order.projectedShipDate}</span>
+          <span style={isOverdue ? overdueChipStyle : chipStyle(theme)}>
+            {isOverdue ? '⚠ OVERDUE' : 'SHIP'} {order.projectedShipDate}
+          </span>
         )}
       </div>
       {(order.blockers ?? []).map((blocker, i) => (
@@ -262,12 +273,27 @@ export function LiveCrewSection({
   const assigned = crew.filter((p) => p.status === 'ASSIGNED');
   const available = crew.filter((p) => p.status === 'AVAILABLE');
   const onBreak = crew.filter((p) => p.status === 'BREAK');
-  const skillGaps = getSkillGapAlerts(department, productionOrders, people);
+
+  const runtimeOrders = getRuntimeProductionOrders(productionOrders);
+  const skillGaps = getSkillGapAlerts(department, runtimeOrders, people);
+  const incomingOrders = getIncomingOrders(department, runtimeOrders);
 
   if (crew.length === 0) return <div style={emptyStyle(theme)}>No crew signed in for this department.</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {incomingOrders.length > 0 && (
+        <div style={incomingBannerStyle(theme)}>
+          <strong style={{ color: '#38bdf8', fontSize: 11, letterSpacing: '0.8px' }}>
+            INCOMING — {incomingOrders.length} order{incomingOrders.length !== 1 ? 's' : ''} advanced to this dept
+          </strong>
+          {incomingOrders.map((o) => (
+            <div key={o.orderNumber} style={{ fontSize: 12, color: theme === 'dark' ? '#7dd3fc' : '#0369a1', marginTop: 3 }}>
+              #{o.orderNumber} {o.productFamily} — from {o.lastAction?.replace('ADVANCE_DEPARTMENT', '').trim() || 'upstream'} · {formatRelativeTime(o.lastActionAt)}
+            </div>
+          ))}
+        </div>
+      )}
       {skillGaps.length > 0 && (
         <div style={skillGapBannerStyle(theme)}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
@@ -285,6 +311,11 @@ export function LiveCrewSection({
           {skillGaps.map((gap) => (
             <div key={gap.skill} style={{ fontSize: 12, color: theme === 'dark' ? '#fcd34d' : '#92400e', marginTop: 2 }}>
               No available crew for <strong>{gap.skill.replace(/_/g, ' ')}</strong> — needed by order{gap.orderNumbers.length > 1 ? 's' : ''} {gap.orderNumbers.join(', ')}
+              {gap.suggestions.length > 0 && (
+                <span style={{ color: theme === 'dark' ? '#86efac' : '#166534', marginLeft: 6 }}>
+                  · Available elsewhere: {gap.suggestions.join(', ')}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -622,3 +653,39 @@ const crewGapActionButtonStyle: CSSProperties = {
   cursor: 'pointer',
   whiteSpace: 'nowrap',
 };
+
+const overdueChipStyle: CSSProperties = {
+  border: '1px solid #ef4444', color: '#ef4444', background: 'rgba(239,68,68,0.12)',
+  padding: '4px 8px', borderRadius: 4, fontSize: 11, fontWeight: 900,
+};
+
+function incomingBannerStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    padding: '10px 14px', borderRadius: 6,
+    border: '1px solid rgba(56,189,248,0.4)', borderLeft: '4px solid #38bdf8',
+    background: theme === 'dark' ? 'rgba(56,189,248,0.07)' : '#f0f9ff',
+    display: 'flex', flexDirection: 'column', gap: 2,
+  };
+}
+
+function getIncomingOrders(department: Department, runtimeOrders: ProductionOrder[]): ProductionOrder[] {
+  const fourHoursMs = 4 * 60 * 60 * 1000;
+  const now = Date.now();
+  return runtimeOrders.filter((o) => {
+    if (o.currentDepartment !== department) return false;
+    if (!o.lastActionAt) return false;
+    if (now - new Date(o.lastActionAt).getTime() > fourHoursMs) return false;
+    const action = String(o.lastAction ?? '').toUpperCase();
+    return action.includes('ADVANCE') || action === 'ADVANCE_DEPARTMENT';
+  });
+}
+
+function formatRelativeTime(isoString?: string): string {
+  if (!isoString) return '';
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 2) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  return `${Math.floor(mins / 60)}h ago`;
+}
+

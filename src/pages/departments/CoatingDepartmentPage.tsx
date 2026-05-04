@@ -1,11 +1,12 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
+import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function CoatingDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const zones = getDepartmentAssets(plantAssets, 'Coating');
-  const orders = getDepartmentOrders(productionOrders, 'Coating');
+  const orders = getDepartmentOrders(getRuntimeProductionOrders(productionOrders), 'Coating');
   const holds = orders.filter((order) => order.blockedReason === 'WAITING_ON_COATING' || order.qaStatus === 'HOLD');
 
   return (
@@ -19,7 +20,7 @@ export default function CoatingDepartmentPage({ theme = 'dark', onGoToTab }: Dep
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Coating" orders={productionOrders} theme={theme} />
+        <CrewGuidancePanel department="Coating" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
       </Section>
 
       <Section title="Process Zones" theme={theme}>

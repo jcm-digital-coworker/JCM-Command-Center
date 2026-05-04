@@ -1,11 +1,12 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
+import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const lanes = getDepartmentAssets(plantAssets, 'Shipping');
-  const orders = getDepartmentOrders(productionOrders, 'Shipping');
+  const orders = getDepartmentOrders(getRuntimeProductionOrders(productionOrders), 'Shipping');
   const readyToShip = orders.filter((order) => order.status === 'DONE' && order.qaStatus === 'PASSED');
   const waiting = orders.filter((order) => order.status !== 'DONE' || order.qaStatus !== 'PASSED');
 
@@ -20,7 +21,7 @@ export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: De
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Shipping" orders={productionOrders} theme={theme} />
+        <CrewGuidancePanel department="Shipping" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
       </Section>
 
       <Section title="Shipping Lanes / Gates" theme={theme}>

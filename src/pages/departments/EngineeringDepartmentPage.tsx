@@ -1,4 +1,5 @@
 import { productionOrders } from '../../data/productionOrders';
+import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import EngineeringBacklogPanel from '../../components/EngineeringBacklogPanel';
 import { CardGrid, CrewGuidancePanel, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
@@ -22,7 +23,7 @@ export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }:
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Engineering" orders={productionOrders} theme={theme} />
+        <CrewGuidancePanel department="Engineering" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
       </Section>
 
       <Section title="Blueprint backlog" theme={theme}>
