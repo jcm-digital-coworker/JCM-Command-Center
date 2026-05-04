@@ -112,5 +112,12 @@ export function getReceivingStatusLabel(status: ReceivingOrderStatus): string {
 }
 
 export function isToday(dateString: string): boolean {
-  return dateString === new Date().toISOString().slice(0, 10);
+  return dateString === getLocalDateString();
+}
+
+function getLocalDateString(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
