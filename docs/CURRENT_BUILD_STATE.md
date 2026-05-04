@@ -17,6 +17,7 @@ Current emphasis:
 - Department descriptions flow through a shared operating profile layer.
 - Workflow buttons must not imply resolution unless the app actually resolves something.
 - View/no-op workflow buttons must not mutate runtime state.
+- Dashboard recommendation copy should say review/open unless the app really resolves the issue.
 - Blocker navigation must land on visible blocker context.
 - Engineering escalation, Engineering quick selection, and dashboard Quick Actions must land on Engineering when the operator asks for Engineering.
 - Dashboard Quick Actions and Plant Signals are review/navigation surfaces, not hidden runtime mutation surfaces.
@@ -26,8 +27,8 @@ Current emphasis:
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25295784139
-Commit: dad526f06dcf4b1d07b08952a138224dd27ebf12
+Run ID: 25318196890
+Commit: bd0ed7a7e5f8f3dd5f2be7e9f79326982b6ad506
 Status: GREEN
 ```
 
@@ -42,6 +43,62 @@ Passed:
 
 ## Most Recent Completed App Work
 
+### Line-by-Line Audit Batch: Dashboard Recommendation Copy Cleanup
+
+Files:
+
+```text
+src/logic/commandRecommendations.ts
+```
+
+PR:
+
+```text
+#21 Clarify command recommendation review copy
+```
+
+Problem fixed:
+
+- Dashboard command recommendations still used `Resolve` / `Clear` wording even when the button only opened a review or support surface.
+- `Resolve material readiness first` overstated the dashboard action.
+- `Resolve blocked flow before assigning labor` overstated the dashboard action.
+- `Clear QA holds before downstream work moves` overstated the support action.
+
+Current behavior:
+
+- Support QA recommendation says `Review QA holds before downstream work moves`.
+- Support material recommendation says `Review material readiness first`.
+- General blocked-flow recommendation says `Review blocked flow before assigning labor`.
+- Buttons still open the appropriate review/support destination rather than implying automatic resolution.
+
+Guardrail:
+
+- Dashboard recommendations are guidance and navigation, not automatic issue resolution.
+
+### Open Green PR Pending Merge
+
+PR:
+
+```text
+#20 Clarify workflow evaluation blocker copy
+```
+
+Status:
+
+- Build green on run `25295950215`.
+- Mergeable according to `get_pr_info`.
+- Two connector merge attempts were blocked by the tool safety layer, so this PR remains open unless merged externally.
+
+Files:
+
+```text
+src/logic/workflowEvaluation.ts
+```
+
+Purpose:
+
+- Replaces remaining generated workflow signal wording such as `Resolve machine blocker` and `Resolve station/process blocker` with review/clear language.
+
 ### Line-by-Line Audit Batch: Workflow View/No-Op Action Cleanup
 
 Files:
@@ -55,12 +112,6 @@ PR:
 ```text
 #19 Prevent workflow view actions from mutating state
 ```
-
-Problem fixed:
-
-- Workflow card labels such as `View Packet` flowed into the fallback `act()` handler in `WorkCenterWorkflowPanelV2.tsx`.
-- The fallback handler treated unknown labels as `WORK_STARTED` and called `START_WORK`.
-- This meant visibility-only actions could accidentally mutate runtime order state.
 
 Current behavior:
 
@@ -263,7 +314,8 @@ Guardrail:
 
 ## Active Risks / Next Audit Targets
 
-- Continue line-by-line audit with dashboard panels, `orderWorkflow.ts`, `orderBlueprints.ts`, and page-level action handlers.
+- PR #20 is open/green and should be merged manually or retried later if the connector allows it.
+- Continue line-by-line audit with dashboard panels, `dashboardRuntimeSelectors.ts`, `orderReadiness.ts`, and page-level action handlers.
 - Replace text-inferred workflow action dispatch with typed action IDs when feasible.
 - Verify if Production role should have direct drawer access to Engineering or only escalation access.
 - Review `SEND_TO_NEXT_DEPARTMENT` and `COMPLETE_ORDER` semantics. They still intentionally mutate flow state, but should be live-tested and may need stronger confirmation/copy.
@@ -316,7 +368,7 @@ Avoid:
 Recommended next move:
 
 ```text
-Continue line-by-line audit with dashboard panels, orderWorkflow.ts, and orderBlueprints.ts.
+Continue line-by-line audit with dashboard panels, dashboardRuntimeSelectors.ts, and orderReadiness.ts.
 ```
 
 Use at least:
@@ -330,6 +382,7 @@ Use at least:
 - Operator Next Best Action: Review needed with no review target.
 - Operator Next Best Action: Next handoff with no handoff target.
 - Workflow card no-op/visibility actions.
+- Dashboard command recommendation buttons.
 
 Guardrails:
 
