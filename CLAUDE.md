@@ -133,16 +133,26 @@ src/
 │       ├── DynamicTravelerCard.tsx   ← order traveler card (route, status, actions)
 │       └── TravelerDetailModal.tsx   ← action buttons; MARK_READY_FOR_HANDOFF + REPORT_ISSUE are notify-only
 ├── data/
+│   ├── classificationReviewChecklist.ts ← checklist items for order classification review
+│   ├── coWorkers.ts         ← CoWorker type + getAvailableCoWorkersForDepartment()
 │   ├── coverage.ts          ← 28+ named workers, full shift coverage
+│   ├── departmentOperatingProfiles.ts ← DepartmentOperatingProfile (STRONG/PARTIAL/PLACEHOLDER)
+│   ├── departmentResources.ts ← TravelerResource seed data (docks, cells, stations)
 │   ├── documents.ts         ← NSF 61, AWWA, WPS, Powercron SOP, torque specs
+│   ├── lv4500JcmSuite.ts   ← LV4500 fixture limits, boss/casting/tap code data
 │   ├── machine.ts
 │   ├── maintenanceRequests.ts
 │   ├── maintenance.ts
 │   ├── materialCatalog.ts
 │   ├── partBlueprints.ts    ← simulated part blueprint data
+│   ├── plantAssets.ts       ← PlantAsset[] (physical plant assets with IDs)
+│   ├── productClassificationRules.ts ← model-signal rules for classifyProductionOrder
 │   ├── productFamilies.ts
+│   ├── productFlows.ts      ← ProductFlow[] per product lane (SERVICE_SADDLE, etc.)
 │   ├── productionOrders.ts  ← 24 orders: 8 SALES origin + 16 LEGACY_SHOP_FLOOR
+│   ├── receivingOrders.ts   ← seedReceivingOrders: ReceivingOrder[]
 │   ├── risk.ts              ← 14 real JCM manufacturing risks
+│   ├── structuredSelections.ts ← form selection helpers (assets, orders, roles, co-workers)
 │   ├── workCenterAssets.ts
 │   ├── workCenterResources.ts
 │   ├── workCenters.ts       ← includes Sales and Engineering work centers
@@ -181,11 +191,12 @@ src/
 ├── modules/
 │   └── crewGuidance.ts          ← (legacy location; logic/ version is canonical)
 ├── pages/
-│   ├── WorkflowPage.tsx         ← role-based: Operator / Lead / Manager views
+│   ├── WorkflowMobilePage.tsx   ← role-based: Operator / Lead / Manager views (imported as WorkflowPage in App.tsx)
 │   ├── DashboardPage.tsx        ← Plant Pressure Score + DeptHealthTiles + live timestamp
 │   ├── MachinesPage.tsx
 │   ├── MaintenancePage.tsx
-│   ├── MaintenanceRequestsPage.tsx
+│   ├── MaintenanceRequestsPage.tsx ← embeds MaintenanceSubmitPage
+│   ├── MaintenanceSubmitPage.tsx   ← submission form (embedded, not a route)
 │   ├── MaintenanceAnalyticsPage.tsx
 │   ├── DocumentsPage.tsx
 │   ├── RiskPage.tsx
@@ -194,6 +205,7 @@ src/
 │   ├── PlantMapPage.tsx
 │   ├── ReceivingPage.tsx
 │   ├── ShiftHandoffPage.tsx     ← end-of-shift snapshot; 5 section toggles; text report copy
+│   ├── SimulationPage.tsx       ← machine simulation (LV4500 tap codes)
 │   ├── WorkCenterDetailPage.tsx ← station tablet, WorkCenterWorkflowPanelV2, QR deep-link
 │   ├── WarRoomContextPage.tsx   ← dev/internal only
 │   └── departments/
@@ -389,7 +401,7 @@ accent: '#f97316' (safety orange)
 - Skill gap alerts — `getSkillGapAlerts()` compares required WorkerSkill vs coverage skillTags; shown as amber banner in LiveCrewSection
 - Shift Handoff page — uses `getRuntimeProductionOrders()` for live order state; text report copy button; 5 section toggles
 - QR deep-link — `?wc=<id>` URL param jumps directly to station tablet; "Copy Station Link" button on WorkCenterDetailPage
-- Deleted orphaned pages: FlowPage.tsx, old WorkflowPage.tsx
+- Deleted orphaned pages: FlowPage.tsx (old flow visualizer — replaced by flowLogic.ts + dept pages)
 - Blocker age tracking — `blockerAge.ts` surfaced on OrdersPage (fresh/aging/stale color coding)
 - Department Health Tiles — `DeptHealthTilesPanel.tsx` on Dashboard: 8 dept live tiles, click-to-navigate
 - Plant Pressure Score — 0–100 metric on Dashboard (blocked × 15, alerts × 8, overdue × 10, material × 5)
