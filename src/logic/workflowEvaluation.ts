@@ -161,7 +161,7 @@ export function evaluateStationExecution(order: ProductionOrder): WorkflowCheckp
   const processBlocker = order.blockers.find((blocker) => blocker.type === 'process' || blocker.type === 'upstream');
 
   if (machineBlocker) {
-    return result('STATION_EXECUTION', 'SOFT_ACTION', 'Maintenance', getOrderUrgency(order), machineBlocker.message, 'Resolve machine blocker or reassign work.');
+    return result('STATION_EXECUTION', 'SOFT_ACTION', 'Maintenance', getOrderUrgency(order), machineBlocker.message, 'Review machine blocker or reassign work.');
   }
 
   if (laborBlocker) {
@@ -169,7 +169,7 @@ export function evaluateStationExecution(order: ProductionOrder): WorkflowCheckp
   }
 
   if (processBlocker) {
-    return result('STATION_EXECUTION', 'SOFT_ACTION', order.currentDepartment, getOrderUrgency(order), processBlocker.message, 'Resolve station/process blocker before proceeding.');
+    return result('STATION_EXECUTION', 'SOFT_ACTION', order.currentDepartment, getOrderUrgency(order), processBlocker.message, 'Review station/process blocker before proceeding.');
   }
 
   return result('STATION_EXECUTION', 'PASS', order.currentDepartment, getOrderUrgency(order), `Order is ready for ${order.currentDepartment}.`, `Work in ${order.currentDepartment}.`);
@@ -180,7 +180,7 @@ export function evaluateQaRelease(order: ProductionOrder): WorkflowCheckpointRes
   const qaStatus = String(order.qaStatus ?? 'UNKNOWN').toUpperCase();
 
   if (qaStatus === 'HOLD' || qaStatus === 'FAILED' || qualityBlocker) {
-    return result('QA_RELEASE', 'HARD_STOP', 'QA', getOrderUrgency(order), qualityBlocker?.message ?? 'QA release is holding this order.', 'Complete QA release or resolve quality hold.');
+    return result('QA_RELEASE', 'HARD_STOP', 'QA', getOrderUrgency(order), qualityBlocker?.message ?? 'QA release is holding this order.', 'Complete QA release or clear quality hold.');
   }
 
   if (order.currentDepartment === 'QA') {
