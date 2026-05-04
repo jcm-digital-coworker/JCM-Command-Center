@@ -16,6 +16,7 @@ Current emphasis:
 - Copy Station Link supports QR/deep-link station tablet behavior.
 - Department descriptions flow through a shared operating profile layer.
 - Workflow buttons must not imply resolution unless the app actually resolves something.
+- View/no-op workflow buttons must not mutate runtime state.
 - Blocker navigation must land on visible blocker context.
 - Engineering escalation, Engineering quick selection, and dashboard Quick Actions must land on Engineering when the operator asks for Engineering.
 - Dashboard Quick Actions and Plant Signals are review/navigation surfaces, not hidden runtime mutation surfaces.
@@ -25,17 +26,12 @@ Current emphasis:
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25295400249
-Commit: a9681adcaf6deb686d090ad6247177f7373e9281
+Run ID: 25295784139
+Commit: dad526f06dcf4b1d07b08952a138224dd27ebf12
 Status: GREEN
 ```
 
-Note:
-
-- PR #18 build was green before merge.
-- Post-merge run for #18 had not yet appeared when this memory update was written.
-
-Passed on latest confirmed main run:
+Passed:
 
 - Checkout
 - Setup Node
@@ -45,6 +41,40 @@ Passed on latest confirmed main run:
 - Record latest action run
 
 ## Most Recent Completed App Work
+
+### Line-by-Line Audit Batch: Workflow View/No-Op Action Cleanup
+
+Files:
+
+```text
+src/logic/workflowPanelSelectors.ts
+```
+
+PR:
+
+```text
+#19 Prevent workflow view actions from mutating state
+```
+
+Problem fixed:
+
+- Workflow card labels such as `View Packet` flowed into the fallback `act()` handler in `WorkCenterWorkflowPanelV2.tsx`.
+- The fallback handler treated unknown labels as `WORK_STARTED` and called `START_WORK`.
+- This meant visibility-only actions could accidentally mutate runtime order state.
+
+Current behavior:
+
+- Watch-only and incoming workflow cards emit `No Action` for no-op buttons.
+- Default secondary workflow buttons emit `No Action` instead of `View Packet`.
+- Maintenance cards say `Open Maintenance`, not `Resolve Blocker`.
+- Blocked cards say `Review blocker`.
+- Material cards keep the real `Request Material` action and avoid vague secondary routing.
+
+Guardrail:
+
+- Visibility-only actions must remain visibility-only.
+- Unknown display labels should not become runtime state mutation.
+- Long-term fix should replace text-inferred workflow actions with typed workflow action IDs.
 
 ### Line-by-Line Audit Batch: Traveler Runtime and Operator Lane Cleanup
 
@@ -66,15 +96,6 @@ PRs:
 #18 Clarify empty operator lane actions
 ```
 
-Problems fixed:
-
-- `REPORT_ISSUE` in `TravelerDetailModal.tsx` called `RESOLVE_BLOCKER`, which could imply or trigger blocker clearing.
-- `MARK_READY_FOR_HANDOFF` in `TravelerDetailModal.tsx` called `START_WORK`, which changed order state toward in-progress behavior instead of simply recording readiness.
-- Traveler copy said `Resolve blocker before work begins` even though the app is a guidance/review system.
-- The traveler action label `Mark ready for next department` overstated what should be a recorded readiness signal.
-- `workflowRuntimeState.ts` emitted mixed-case runtime statuses such as `ready`, `runnable`, `BLOCKED`, and `RUNNABLE`.
-- Operator Next Best Action empty lanes said `Go to review` / `Go to handoff` even when there was no review or handoff target.
-
 Current behavior:
 
 - `Report issue on this order` records a workflow notification only.
@@ -82,16 +103,7 @@ Current behavior:
 - `Record ready for handoff` records a workflow notification only and preserves order state.
 - Blocked traveler instructions say `Review blocker`, not `Resolve blocker`.
 - Runtime reducer outputs are normalized to uppercase `READY`, `BLOCKED`, and `RUNNABLE` where it writes new status values.
-- Empty Review and Handoff lanes now say `Check workflow` and route to workflow instead of sending operators to ghost anchors.
-
-Guardrail:
-
-- No automatic blocker clearing.
-- No hidden dashboard mutation.
-- No route approval.
-- No dispatch behavior.
-- No classifier mutation.
-- No confidence increase.
+- Empty Review and Handoff lanes say `Check workflow` and route to workflow instead of sending operators to ghost anchors.
 
 ### Line-by-Line Audit Batch: Runtime and Plant Signals Cleanup
 
@@ -251,7 +263,8 @@ Guardrail:
 
 ## Active Risks / Next Audit Targets
 
-- Continue line-by-line audit with `WorkCenterWorkflowPanelV2.tsx`, `ClassificationReviewCapture.tsx`, and dashboard panels.
+- Continue line-by-line audit with dashboard panels, `orderWorkflow.ts`, `orderBlueprints.ts`, and page-level action handlers.
+- Replace text-inferred workflow action dispatch with typed action IDs when feasible.
 - Verify if Production role should have direct drawer access to Engineering or only escalation access.
 - Review `SEND_TO_NEXT_DEPARTMENT` and `COMPLETE_ORDER` semantics. They still intentionally mutate flow state, but should be live-tested and may need stronger confirmation/copy.
 - Coating is still partly uncertain.
@@ -303,7 +316,7 @@ Avoid:
 Recommended next move:
 
 ```text
-Continue line-by-line audit with WorkCenterWorkflowPanelV2.tsx and classification review capture.
+Continue line-by-line audit with dashboard panels, orderWorkflow.ts, and orderBlueprints.ts.
 ```
 
 Use at least:
@@ -316,6 +329,7 @@ Use at least:
 - Traveler Detail: Record ready for handoff.
 - Operator Next Best Action: Review needed with no review target.
 - Operator Next Best Action: Next handoff with no handoff target.
+- Workflow card no-op/visibility actions.
 
 Guardrails:
 
