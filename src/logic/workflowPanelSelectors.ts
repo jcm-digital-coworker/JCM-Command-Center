@@ -7,6 +7,22 @@ import { getWorkflowSignal } from './orderWorkflow';
 import { getRuntimeProductionOrders, getRuntimeOrder } from './workflowRuntimeState';
 
 export type WorkflowCardGroupKey = 'DO_NOW' | 'BLOCKED_HERE' | 'UPSTREAM_ACTION' | 'INCOMING' | 'WATCH_ONLY';
+export type WorkflowButtonAction =
+  | 'NO_ACTION'
+  | 'START_WORK'
+  | 'ESCALATE_ENGINEERING'
+  | 'HOLD_STATION'
+  | 'REQUEST_MATERIAL'
+  | 'OPEN_MAINTENANCE'
+  | 'REVIEW_BLOCKER'
+  | 'NOTIFY_LEAD';
+
+export type WorkflowButtonContract = {
+  primary: string;
+  secondary: string;
+  primaryAction: WorkflowButtonAction;
+  secondaryAction: WorkflowButtonAction;
+};
 
 export type WorkflowCardGroup = {
   key: WorkflowCardGroupKey;
@@ -25,7 +41,7 @@ export type WorkflowTabletCard = {
   operatorConstraint: string;
   urgency: { label: string; color: string };
   due: { label: string; color: string; score: number };
-  buttons: { primary: string; secondary: string };
+  buttons: WorkflowButtonContract;
 };
 
 const GROUP_META: Record<WorkflowCardGroupKey, Omit<WorkflowCardGroup, 'cards'>> = {
@@ -141,11 +157,15 @@ function getDueLabel(date?: string) {
   return { label: `DUE IN ${days} DAYS`, color: '#10b981', score: 0 };
 }
 
-function getButtons(owner: string, checkpoint: string, status: string, groupKey: WorkflowCardGroupKey) {
-  if (groupKey === 'WATCH_ONLY' || groupKey === 'INCOMING') return { primary: 'No Action', secondary: 'No Action' };
-  if (owner === 'Engineering' || checkpoint === 'ENGINEERING_REVIEW') return { primary: 'Escalate Engineering', secondary: 'Hold Station' };
-  if (owner === 'Receiving' || owner === 'Purchasing' || checkpoint === 'MATERIAL_READINESS') return { primary: 'Request Material', secondary: 'No Action' };
-  if (owner === 'Maintenance') return { primary: 'Open Maintenance', secondary: 'Notify Lead' };
-  if (status === 'BLOCKED') return { primary: 'Review blocker', secondary: 'Notify Lead' };
-  return { primary: 'Start Work', secondary: 'No Action' };
+function getButtons(owner: string, checkpoint: string, status: string, groupKey: WorkflowCardGroupKey): WorkflowButtonContract {
+  if (groupKey === 'WATCH_ONLY' || groupKey === 'INCOMING') return buttonContract('No Action', 'No Action', 'NO_ACTION', 'NO_ACTION');
+  if (owner === 'Engineering' || checkpoint === 'ENGINEERING_REVIEW') return buttonContract('Escalate Engineering', 'Hold Station', 'ESCALATE_ENGINEERING', 'HOLD_STATION');
+  if (owner === 'Receiving' || owner === 'Purchasing' || checkpoint === 'MATERIAL_READINESS') return buttonContract('Request Material', 'No Action', 'REQUEST_MATERIAL', 'NO_ACTION');
+  if (owner === 'Maintenance') return buttonContract('Open Maintenance', 'Notify Lead', 'OPEN_MAINTENANCE', 'NOTIFY_LEAD');
+  if (status === 'BLOCKED') return buttonContract('Review blocker', 'Notify Lead', 'REVIEW_BLOCKER', 'NOTIFY_LEAD');
+  return buttonContract('Start Work', 'No Action', 'START_WORK', 'NO_ACTION');
+}
+
+function buttonContract(primary: string, secondary: string, primaryAction: WorkflowButtonAction, secondaryAction: WorkflowButtonAction): WorkflowButtonContract {
+  return { primary, secondary, primaryAction, secondaryAction };
 }
