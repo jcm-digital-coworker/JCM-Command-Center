@@ -23,8 +23,8 @@ export function selectDashboardRuntimeTruth(
 ): DashboardRuntimeTruth {
   const openOrders = orders.filter((order) => !isClosedOrder(order));
   const blockedOrders = openOrders.filter(isDashboardBlockedOrder);
-  const materialIssues = openOrders.filter((order) => order.materialStatus !== 'RECEIVED');
-  const qaHolds = openOrders.filter((order) => order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED');
+  const materialIssues = openOrders.filter(isDashboardMaterialIssue);
+  const qaHolds = openOrders.filter((order) => normalizeStatus(order.qaStatus) === 'HOLD' || normalizeStatus(order.qaStatus) === 'FAILED');
   const runnableOrders = openOrders.filter(isDashboardRunnableOrder);
   const dueSoonOrders = [...openOrders]
     .sort((a, b) => (a.projectedShipDate ?? '').localeCompare(b.projectedShipDate ?? ''))
@@ -52,11 +52,16 @@ export function isDashboardRunnableOrder(order: ProductionOrder): boolean {
   return status === 'READY' || status === 'IN_PROGRESS' || flowStatus === 'RUNNABLE';
 }
 
+export function isDashboardMaterialIssue(order: ProductionOrder): boolean {
+  const materialStatus = normalizeStatus(order.materialStatus);
+  return materialStatus !== '' && materialStatus !== 'RECEIVED' && materialStatus !== 'STAGED';
+}
+
 function isClosedOrder(order: ProductionOrder): boolean {
   const status = normalizeStatus(order.status);
-  return status === 'DONE' || status === 'COMPLETE';
+  return status === 'DONE' || status === 'COMPLETE' || status === 'COMPLETED';
 }
 
 function normalizeStatus(value: string | undefined): string {
-  return String(value ?? '').toUpperCase();
+  return String(value ?? '').trim().toUpperCase();
 }
