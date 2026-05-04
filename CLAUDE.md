@@ -17,13 +17,14 @@ npm run build   # verify clean before starting
 Main moves fast. It may already contain the component, logic file, or data field you are about to build. Do not duplicate work. Do not build on stale code. Check main first — every time, no exceptions.
 
 **What to look for after fetching:**
-- New files in `src/logic/` — workflow engine, selectors, evaluators
-- New files in `src/components/` — panels, cards, coverage widgets, traveler modals
-- New files in `src/logic/` — skill gap alerts, repeat offender detection
-- New fields on `ProductionOrder` — `workflowOrigin`, `engineeringRequired`, `salesReleasedAt`, `blueprintId`
+- New files in `src/logic/` — workflow engine, selectors, evaluators, navigation contracts, plant signals
+- New files in `src/components/dashboard/` — command cards, dept health tiles, plant signals panel
+- New files in `src/components/common/` — accordion, smart empty state
+- New fields on `ProductionOrder` — `workflowOrigin`, `engineeringRequired`, `salesReleasedAt`, `blueprintId`, `productLane`, `dependencies`, `qaStatus`
 - New `Department` values — `Sales`, `Engineering` are live
 - New work centers in `workCenters.ts`
 - Changes to `AppDrawer.tsx` — new tabs may already be wired
+- `CURRENT_BUILD_STATE.md` and `LATEST_ACTION_RUN.md` — GPT maintains these; read them for context on recent automated changes
 
 **After checking main:**
 1. Review the Phase 2 status section below to see what is done vs. queued
@@ -39,7 +40,7 @@ Main moves fast. It may already contain the component, logic file, or data field
 **Address:** 200 Old Boston Road, Nash TX 75569 | 903-832-2581
 **Founded:** 1976 by James C. Morriss Jr.
 **Purpose:** Plant-wide manufacturing operations dashboard and maintenance tracking system
-**Status:** Phase 2 in progress — workflow engine live, fluidity improvements queued
+**Status:** Phase 2 complete — workflow engine live, dashboard fully wired, fluidity done
 
 ---
 
@@ -102,6 +103,19 @@ src/
 │   │   ├── MaintenanceTaskCard.tsx
 │   │   ├── RiskCard.tsx
 │   │   └── SimulationCard.tsx
+│   ├── common/
+│   │   ├── AccordionSection.tsx     ← collapsible section with count badge + color
+│   │   └── SmartEmptyState.tsx      ← contextual empty state component
+│   ├── dashboard/
+│   │   ├── ClassificationReviewQueue.tsx ← order classification review UI
+│   │   ├── CommandRecommendationCard.tsx  ← plant status severity card
+│   │   ├── DashboardOverviewPanels.tsx    ← overview panel row on Dashboard
+│   │   ├── DashboardWorkCenterCard.tsx    ← work center card on Dashboard
+│   │   ├── DeptHealthTilesPanel.tsx       ← 8-dept live health tiles (orders, crew, blocked)
+│   │   ├── PlantSignalsPanel.tsx          ← live plant signals (QA holds, material issues, etc.)
+│   │   └── dashboardStyles.ts             ← shared DashboardTheme + color helpers
+│   ├── orders/
+│   │   └── OrderDetailModal.tsx     ← order detail modal (close + go-to-orders)
 │   ├── shell/
 │   │   ├── AppHeader.tsx            ← back button + menu button
 │   │   └── AppDrawer.tsx            ← nav drawer + Dev Tools section
@@ -117,7 +131,7 @@ src/
 │   ├── Lv4500JcmSimulator.tsx
 │   └── travelers/
 │       ├── DynamicTravelerCard.tsx   ← order traveler card (route, status, actions)
-│       └── TravelerDetailModal.tsx   ← action buttons wired to runtime state mutations
+│       └── TravelerDetailModal.tsx   ← action buttons; MARK_READY_FOR_HANDOFF + REPORT_ISSUE are notify-only
 ├── data/
 │   ├── coverage.ts          ← 28+ named workers, full shift coverage
 │   ├── documents.ts         ← NSF 61, AWWA, WPS, Powercron SOP, torque specs
@@ -136,37 +150,54 @@ src/
 │   ├── workRoles.ts
 │   └── warRoomContext.ts    ← includes JCM company profile block
 ├── logic/
+│   ├── blockerAge.ts            ← getOrderLastTouchedHours, getBlockerAgeLabel, getBlockerAgeTone
+│   ├── classificationReviewConfirmations.ts ← classification review confirmation storage
+│   ├── classifyProductionOrder.ts           ← product classification via rules engine
+│   ├── commandRecommendations.ts            ← PlantStatusSeverity + CommandRecommendation array
 │   ├── coverage.ts
+│   ├── crewGuidance.ts          ← (moved from modules/) crew guidance logic
+│   ├── dashboardQuickActions.ts ← quick action items keyed by role + NavigationIntent
+│   ├── dashboardRuntimeSelectors.ts ← DashboardRuntimeTruth (blocked, material, QA, runnable)
+│   ├── dynamicTraveler.ts       ← generateDynamicTravelers()
+│   ├── flowLogic.ts             ← getOrderLane(), getProductFlow() resolution
+│   ├── lv4500JcmCycleTime.ts   ← LV4500 cycle time estimates (totalMinutes, confidence)
+│   ├── lv4500JcmSimulator.ts   ← LV4500 tap code simulation
 │   ├── machineSimulators.ts
-│   ├── orderBlueprints.ts       ← blueprint resolution + missing-blueprint kickback
-│   ├── orderWorkflow.ts         ← workflow signal generation
-│   ├── warnings.ts
 │   ├── maintenanceRepeatOffenders.ts ← flags assets with 3+ requests in 30 days
+│   ├── navigationAccess.ts      ← NavigationGroupId + role-based NavigationItem visibility
+│   ├── navigationContracts.ts   ← NavigationIntent union + getNavigationTab() resolver
+│   ├── operatorNextBestActions.ts ← OperatorNextBestActionModel for station tablets
+│   ├── orderBlueprints.ts       ← blueprint resolution + missing-blueprint kickback
+│   ├── orderReadiness.ts        ← getAutomaticBlockReason() for automatic blocker detection
+│   ├── orderWorkflow.ts         ← workflow signal generation
+│   ├── plantSignals.ts          ← getPlantSignals() → PlantSignal[] (QA holds, material, etc.)
+│   ├── receivingWorkflow.ts     ← receiving order CRUD + RECEIVING_STORAGE_KEY
 │   ├── skillGapAlerts.ts        ← maps WorkerSkill→skillTags, surfaces coverage gaps
+│   ├── warnings.ts
 │   ├── workflowActions.ts       ← action logging helpers
 │   ├── workflowEvaluation.ts    ← checkpoint-based workflow evaluator
 │   ├── workflowPanelSelectors.ts ← groups orders by operator responsibility
 │   └── workflowRuntimeState.ts  ← runtime reducer + custom event bus
 ├── modules/
-│   └── crewGuidance.ts
+│   └── crewGuidance.ts          ← (legacy location; logic/ version is canonical)
 ├── pages/
 │   ├── WorkflowPage.tsx         ← role-based: Operator / Lead / Manager views
-│   ├── DashboardPage.tsx
+│   ├── DashboardPage.tsx        ← Plant Pressure Score + DeptHealthTiles + live timestamp
 │   ├── MachinesPage.tsx
 │   ├── MaintenancePage.tsx
 │   ├── MaintenanceRequestsPage.tsx
 │   ├── MaintenanceAnalyticsPage.tsx
 │   ├── DocumentsPage.tsx
 │   ├── RiskPage.tsx
-│   ├── OrdersPage.tsx
+│   ├── OrdersPage.tsx           ← live orders, blocker age, urgency score, dept link buttons
 │   ├── CoveragePage.tsx
 │   ├── PlantMapPage.tsx
 │   ├── ReceivingPage.tsx
-│   ├── ShiftHandoffPage.tsx      ← end-of-shift snapshot using live runtime orders
-│   ├── WorkCenterDetailPage.tsx  ← station tablet, wires WorkCenterWorkflowPanelV2, QR deep-link, copy link button
-│   ├── WarRoomContextPage.tsx    ← dev/internal only
+│   ├── ShiftHandoffPage.tsx     ← end-of-shift snapshot; 5 section toggles; text report copy
+│   ├── WorkCenterDetailPage.tsx ← station tablet, WorkCenterWorkflowPanelV2, QR deep-link
+│   ├── WarRoomContextPage.tsx   ← dev/internal only
 │   └── departments/
-│       ├── DepartmentPageTools.tsx      ← PageShell, Section, OrderCard, LiveCrewSection (+ skill gap alerts), CardGrid, helpers
+│       ├── DepartmentPageTools.tsx      ← PageShell, Section, OrderCard, LiveCrewSection (+ skill gap alerts + onGoToTab), CardGrid, helpers
 │       ├── SalesDepartmentPage.tsx
 │       ├── EngineeringDepartmentPage.tsx
 │       ├── MaterialHandlingDepartmentPage.tsx
@@ -241,12 +272,14 @@ The workflow engine drives what operators see on station tablets. Key files:
 - Shows crew on shift for this work center
 - Routes action buttons to Receiving, Engineering, or Maintenance
 
-**TravelerDetailModal** wires action buttons to live runtime mutations:
+**TravelerDetailModal** action buttons — "Guidance > Control" enforced:
 - `REQUEST_MATERIAL` → `applyWorkflowRuntimeAction(order, 'REQUEST_MATERIAL')`
-- `MARK_READY_FOR_HANDOFF` → `applyWorkflowRuntimeAction(order, 'START_WORK')`
+- `MARK_READY_FOR_HANDOFF` → `addWorkflowAction()` only (notify/log — does NOT mutate order state)
 - `SEND_TO_NEXT_DEPARTMENT` → `applyWorkflowRuntimeAction(order, 'ADVANCE_DEPARTMENT', note, { currentDepartment: next })`
 - `COMPLETE_ORDER` → `applyWorkflowRuntimeAction(order, 'COMPLETE_ORDER')` then closes modal
-- `REPORT_ISSUE` → `applyWorkflowRuntimeAction(order, 'RESOLVE_BLOCKER')`
+- `REPORT_ISSUE` → `addWorkflowAction()` only (notify/log — does NOT clear blockers)
+
+**Station tablets (WorkCenterWorkflowPanelV2)** are a direct action surface and may call `applyWorkflowRuntimeAction` for `START_WORK`, `ESCALATE_ENGINEERING`, `REQUEST_MATERIAL`.
 
 **WorkflowRuntimeState** action kinds:
 `REQUEST_MATERIAL | MARK_MATERIAL_STAGED | ESCALATE_ENGINEERING | ACKNOWLEDGE_ORDER | START_WORK | RESOLVE_BLOCKER | ADVANCE_DEPARTMENT | COMPLETE_ORDER`
@@ -316,9 +349,11 @@ accent: '#f97316' (safety orange)
 
 - `jcm_theme` — 'dark' | 'light'
 - `jcm_maintenance_requests` — MaintenanceRequest[]
-- `jcm_live_coverage_v1` — CoveragePerson[] (falls back to seedCoverage; now includes Sales + Engineering crew)
+- `jcm_live_coverage_v1` — CoveragePerson[] (falls back to seedCoverage; includes Sales + Engineering crew)
 - `jcm_workflow_actions` — WorkflowAction[] (action log)
 - `jcm_workflow_runtime_state` — WorkflowRuntimeState (order overrides keyed by orderNumber)
+- `jcm_receiving_orders_v1` — ReceivingOrder[]
+- `jcm-classification-review-confirmations-v1` — ClassificationReviewConfirmation[]
 
 ---
 
@@ -330,7 +365,7 @@ accent: '#f97316' (safety orange)
 - CSV export for management review
 - Mobile-friendly interface
 
-### Phase 2 — In Progress
+### Phase 2 — Complete
 
 **Done:**
 - Role-based WorkflowPage (Operator / Lead / Manager)
@@ -348,20 +383,38 @@ accent: '#f97316' (safety orange)
 - OrderCard rewritten to show real data (priority, flowStatus, blockers, route)
 - Photo attachments on maintenance requests (base64, max 3, 2MB each)
 - All 5 maintenance priorities surfaced in submit form (NORMAL / URGENT / LINE_DOWN / MACHINE_DOWN / SAFETY)
-- Live order mutations: TravelerDetailModal action buttons fire real runtime state changes (ADVANCE_DEPARTMENT, COMPLETE_ORDER, REQUEST_MATERIAL, START_WORK, RESOLVE_BLOCKER)
+- Live order mutations: TravelerDetailModal ADVANCE_DEPARTMENT, COMPLETE_ORDER, REQUEST_MATERIAL wired to applyWorkflowRuntimeAction
 - Saddles department page (SaddlesDepartmentPage) — crew, assets, active/blocked orders
 - Maintenance repeat offender detection — `getRepeatOffenders()` flags 3+ requests in 30 days, surfaced on MaintenancePage
 - Skill gap alerts — `getSkillGapAlerts()` compares required WorkerSkill vs coverage skillTags; shown as amber banner in LiveCrewSection
-- Shift Handoff page — uses `getRuntimeProductionOrders()` for live order state; text report copy button
+- Shift Handoff page — uses `getRuntimeProductionOrders()` for live order state; text report copy button; 5 section toggles
 - QR deep-link — `?wc=<id>` URL param jumps directly to station tablet; "Copy Station Link" button on WorkCenterDetailPage
-- ShiftHandoffPage correct status filters — 'ready' / 'blocked' / 'hold' (matches seed data values)
 - Deleted orphaned pages: FlowPage.tsx, old WorkflowPage.tsx
+- Blocker age tracking — `blockerAge.ts` surfaced on OrdersPage (fresh/aging/stale color coding)
+- Department Health Tiles — `DeptHealthTilesPanel.tsx` on Dashboard: 8 dept live tiles, click-to-navigate
+- Plant Pressure Score — 0–100 metric on Dashboard (blocked × 15, alerts × 8, overdue × 10, material × 5)
+- Order activity timeline — `OrderActivitySection` in TravelerDetailModal merges action log + runtime lastAction
+- `onGoToTab` prop threading — all 9 dept pages + OrdersPage accept `onGoToTab?: (tab: AppTab) => void`
+- Crew gap action bridge — "→ OPEN COVERAGE" button in LiveCrewSection skill gap alert banner
+- PlantMapPage cleanup — theme-aware closeButtonStyle, no more void theme
+- `navigationContracts.ts` — NavigationIntent union (14 intents) + `getNavigationTab()` resolver
+- `operatorNextBestActions.ts` — OperatorNextBestActionModel for station tablet next-best-action lanes
+- `plantSignals.ts` + `PlantSignalsPanel.tsx` — live plant signals (QA holds, material issues, blockers)
+- `dashboardRuntimeSelectors.ts` — `getDashboardRuntimeTruth()` unified selector for Dashboard
+- `commandRecommendations.ts` + `CommandRecommendationCard.tsx` — plant severity → action recommendation
+- `classifyProductionOrder.ts` + `ClassificationReviewQueue.tsx` — product classification review flow
+- `receivingWorkflow.ts` — receiving order CRUD with `jcm_receiving_orders_v1` storage
+- `flowLogic.ts` — `getOrderLane()` + `getProductFlow()` product lane resolution
+- `orderReadiness.ts` — `getAutomaticBlockReason()` automatic blocker detection
+- `navigationAccess.ts` — role-based navigation item visibility
+- `AccordionSection.tsx`, `SmartEmptyState.tsx`, `OrderDetailModal.tsx` — shared UI components
+- DashboardPage live timestamp — green "Updated HH:MM:SS" on WORKFLOW_RUNTIME_UPDATED_EVENT
 
-**Queued:**
-- App fluidity audit — remaining rough spots in OrdersPage, DashboardPage, PlantMapPage, WorkflowMobilePage views
-- Supabase backend (replace localStorage) — Phase 3, after app is solid
-- Multi-user real-time sync — Phase 3
-- Email / push notifications — requires backend service, Phase 3
+**Queued for Phase 3:**
+- Supabase backend (replace localStorage)
+- Multi-user real-time sync
+- Email / push notifications
+- Login / authenticated role assignment
 
 **Dead code / known gaps:**
 - `DepartmentCards.tsx` is not imported anywhere in the app. Do not build on it. Safe to delete if it causes confusion.
@@ -375,7 +428,8 @@ Runtime overrides may write uppercase (e.g., `'DONE'`). Always normalize when fi
 ### Phase 3 (Future)
 - ERP/MES integration
 - Historical trend analysis
-- Login / authenticated role assignment
+- Login / authenticated role assignment (see Queued above)
+- Supabase backend + multi-user real-time sync
 
 ---
 
@@ -412,6 +466,6 @@ git push -u origin <your-branch>
 
 ---
 
-**Last Updated:** May 3, 2026
-**Version:** v1.4 (Phase 2 — live mutations, Saddles page, repeat offender detection, skill gaps, shift handoff, QR deep-links)
+**Last Updated:** May 4, 2026
+**Version:** v1.5 (Phase 2 complete — dashboard fully wired, blocker age, dept health tiles, plant pressure score, navigation contracts, operator next-best-actions, classification review, fluidity done)
 **Developer:** Manufacturing Engineering Technician, JCM Industries, Nash, Texas
