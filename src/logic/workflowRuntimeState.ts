@@ -58,14 +58,15 @@ export function applyWorkflowRuntimeAction(
   const currentState = getWorkflowRuntimeState();
   const baseOrder = productionOrders.find((order) => order.orderNumber === orderNumber);
   const currentOrder = baseOrder ? getRuntimeOrder(baseOrder) : undefined;
-  const nextOverride = reduceRuntimeAction(currentOrder, actionKind, note);
+  const safeNote = getSafeRuntimeNote(actionKind, note);
+  const nextOverride = reduceRuntimeAction(currentOrder, actionKind, safeNote);
   const updatedState = {
     ...currentState,
     [orderNumber]: {
       ...(currentState[orderNumber] ?? {}),
       ...nextOverride,
       ...(extraOverrides ?? {}),
-      lastAction: note ?? actionKind,
+      lastAction: safeNote ?? actionKind,
       lastActionAt: new Date().toISOString(),
     },
   };
@@ -119,9 +120,9 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
 
   if (actionKind === 'RESOLVE_BLOCKER') {
     return {
-      blockers: [],
-      flowStatus: 'runnable',
-      status: 'READY',
+      blockers: order?.blockers ?? [],
+      flowStatus: order?.blockers?.length ? 'blocked' : order?.flowStatus,
+      status: order?.blockers?.length ? 'BLOCKED' : order?.status,
     };
   }
 
@@ -144,6 +145,14 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
   return {
     lastAction: note ?? actionKind,
   };
+}
+
+function getSafeRuntimeNote(actionKind: WorkflowRuntimeActionKind, note?: string): string | undefined {
+  if (actionKind === 'RESOLVE_BLOCKER' && note?.toLowerCase().includes('issue reported')) {
+    return 'Issue reported - blocker preserved for review';
+  }
+
+  return note;
 }
 
 function removeBlockers(blockers: FlowBlocker[], type: FlowBlocker['type']): FlowBlocker[] {

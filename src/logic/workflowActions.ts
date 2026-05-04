@@ -15,7 +15,6 @@ export type WorkflowActionRecord = {
 };
 
 const STORAGE_KEY = 'jcm_workflow_action_log';
-const JCM_NAVIGATE_EVENT = 'jcm:navigate';
 
 export function getWorkflowActionLog(): WorkflowActionRecord[] {
   try {
@@ -38,22 +37,10 @@ export function addWorkflowAction(record: Omit<WorkflowActionRecord, 'id' | 'cre
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   window.dispatchEvent(new Event('jcm-workflow-action-log-updated'));
 
-  if (record.actionType === 'ENGINEERING_ESCALATION') {
-    routeToEngineeringAfterEscalation();
-  }
-
   return next;
 }
 
 export function clearWorkflowActionLog() {
   localStorage.removeItem(STORAGE_KEY);
   window.dispatchEvent(new Event('jcm-workflow-action-log-updated'));
-}
-
-function routeToEngineeringAfterEscalation() {
-  [0, 50, 150].forEach((delayMs) => {
-    window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent(JCM_NAVIGATE_EVENT, { detail: { tab: 'engineering' } }));
-    }, delayMs);
-  });
 }
