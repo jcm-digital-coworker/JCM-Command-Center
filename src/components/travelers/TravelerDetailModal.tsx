@@ -25,7 +25,12 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
     if (type === 'REQUEST_MATERIAL') {
       applyWorkflowRuntimeAction(orderNumber, 'REQUEST_MATERIAL', 'Material requested from traveler');
     } else if (type === 'MARK_READY_FOR_HANDOFF') {
-      applyWorkflowRuntimeAction(orderNumber, 'START_WORK', 'Marked ready for handoff');
+      addWorkflowAction({
+        orderNumber,
+        actionType: 'NOTIFICATION',
+        department: traveler.department,
+        note: 'Ready for handoff recorded from traveler; order state preserved',
+      });
     } else if (type === 'SEND_TO_NEXT_DEPARTMENT' && traveler.nextHandoff && traveler.nextHandoff !== 'Complete') {
       const next = traveler.nextHandoff as Department;
       applyWorkflowRuntimeAction(orderNumber, 'ADVANCE_DEPARTMENT', `Sent to ${next}`, {
