@@ -144,8 +144,8 @@ function getDueLabel(date?: string) {
 function getButtons(owner: string, checkpoint: string, status: string, groupKey: WorkflowCardGroupKey) {
   if (groupKey === 'WATCH_ONLY' || groupKey === 'INCOMING') return { primary: 'View Packet', secondary: 'No Action' };
   if (owner === 'Engineering' || checkpoint === 'ENGINEERING_REVIEW') return { primary: 'Escalate Engineering', secondary: 'Hold Station' };
-  if (owner === 'Receiving' || owner === 'Purchasing' || checkpoint === 'MATERIAL_READINESS') return { primary: 'Request Material', secondary: 'Notify Areas' };
-  if (owner === 'Maintenance') return { primary: 'Resolve Blocker', secondary: 'Notify Lead' };
-  if (status === 'BLOCKED') return { primary: 'Resolve Blocker', secondary: 'Notify Lead' };
+  if (owner === 'Receiving' || owner === 'Purchasing' || checkpoint === 'MATERIAL_READINESS') return { primary: 'Request Material', secondary: 'Notify Receiving' };
+  if (owner === 'Maintenance') return { primary: 'Open Maintenance', secondary: 'Notify Lead' };
+  if (status === 'BLOCKED') return { primary: 'Review blocker', secondary: 'Notify Lead' };
   return { primary: 'Start Work', secondary: 'View Packet' };
 }
