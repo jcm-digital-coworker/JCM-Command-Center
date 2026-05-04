@@ -139,6 +139,7 @@ export function AssetCard({
 export function OrderCard({
   order,
   theme = 'dark',
+  onGoToTab,
 }: DepartmentPageProps & { order: ProductionOrder }) {
   const isBlocked = (order.blockers ?? []).length > 0 || String(order.flowStatus).toLowerCase() === 'blocked';
   const isRunnable = String(order.flowStatus).toLowerCase() === 'runnable';
@@ -150,6 +151,9 @@ export function OrderCard({
   const isOverdue = !isDone && order.projectedShipDate
     ? new Date(order.projectedShipDate) < new Date(new Date().toDateString())
     : false;
+  const hasMaterialIssue =
+    (order.blockers ?? []).some((b) => b.type === 'material') ||
+    ['MISSING', 'NOT_RECEIVED', 'ORDER_REQUIRED', 'PARTIAL'].includes(String(order.materialStatus ?? '').toUpperCase());
 
   return (
     <div style={{ ...cardStyle(theme), borderLeft: `4px solid ${borderColor}` }}>
@@ -178,6 +182,15 @@ export function OrderCard({
           ⚠ {blocker.type.toUpperCase()}: {blocker.message}
         </div>
       ))}
+      {hasMaterialIssue && onGoToTab && (
+        <button
+          type="button"
+          style={requestMaterialButtonStyle}
+          onClick={() => onGoToTab('receiving')}
+        >
+          → RECEIVING
+        </button>
+      )}
     </div>
   );
 }
@@ -640,6 +653,19 @@ function skillGapBannerStyle(theme: 'dark' | 'light'): CSSProperties {
     gap: 2,
   };
 }
+
+const requestMaterialButtonStyle: CSSProperties = {
+  marginTop: 8,
+  padding: '6px 10px',
+  borderRadius: 4,
+  border: '1px solid #38bdf8',
+  background: 'rgba(56,189,248,0.12)',
+  color: '#38bdf8',
+  fontSize: 11,
+  fontWeight: 900,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+};
 
 const crewGapActionButtonStyle: CSSProperties = {
   padding: '4px 10px',

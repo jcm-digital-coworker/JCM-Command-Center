@@ -163,7 +163,7 @@ export default function WorkCenterDetailPage({
 
       <div id="operator-target-review" style={anchorStyle} />
 
-      {isReceiving ? <ReceivingClosurePanel theme={theme} /> : null}
+      {isReceiving ? <ReceivingClosurePanel theme={theme} onGoToTab={(tab) => { if (tab === 'receiving') onOpenReceiving?.('arriving'); }} /> : null}
       {showEngineeringLoop ? <EngineeringBacklogPanel theme={theme} /> : null}
       {isSupervisorView ? <LiveCoveragePanel theme={theme} department={workCenter.department} onOpenStatus={onOpenCoverage} /> : null}
       {isReceiving ? <ReceivingWorkflowPanel theme={theme} onOpenQueue={onOpenReceiving} /> : null}

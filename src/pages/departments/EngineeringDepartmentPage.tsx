@@ -33,13 +33,13 @@ export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }:
       <Section title="Engineering holds — pending release" theme={theme}>
         {engineeringHolds.length === 0
           ? <EmptyState text="No orders are currently held pending Engineering release." theme={theme} />
-          : <CardGrid>{engineeringHolds.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} />)}</CardGrid>}
+          : <CardGrid>{engineeringHolds.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
       </Section>
 
       <Section title="Engineering released" theme={theme}>
         {released.length === 0
           ? <EmptyState text="No engineered orders have been released yet." theme={theme} />
-          : <CardGrid>{released.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} />)}</CardGrid>}
+          : <CardGrid>{released.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
       </Section>
     </PageShell>
   );

@@ -34,13 +34,13 @@ export default function SaddlesDepartmentPage({ theme = 'dark', onGoToTab }: Dep
       <Section title="Active Saddles Orders" theme={theme}>
         {orders.length === 0
           ? <EmptyState text="No orders currently routed through the Saddles cell." theme={theme} />
-          : <CardGrid>{orders.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} />)}</CardGrid>}
+          : <CardGrid>{orders.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
       </Section>
 
       <Section title="Blocked" theme={theme}>
         {blocked.length === 0
           ? <EmptyState text="No blocked orders in the Saddles cell." theme={theme} />
-          : <CardGrid>{blocked.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} />)}</CardGrid>}
+          : <CardGrid>{blocked.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
       </Section>
     </PageShell>
   );

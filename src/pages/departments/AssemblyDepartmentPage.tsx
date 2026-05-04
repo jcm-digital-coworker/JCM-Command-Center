@@ -35,13 +35,13 @@ export default function AssemblyDepartmentPage({ theme = 'dark', onGoToTab }: De
 
       <Section title="Orders touching Assembly" theme={theme}>
         {orders.length === 0 ? <EmptyState text="No current sample orders routed through Assembly." theme={theme} /> : (
-          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
 
       <Section title="Ready / active build candidates" theme={theme}>
         {ready.length === 0 ? <EmptyState text="No ready assembly candidates currently shown." theme={theme} /> : (
-          <CardGrid>{ready.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{ready.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
     </PageShell>

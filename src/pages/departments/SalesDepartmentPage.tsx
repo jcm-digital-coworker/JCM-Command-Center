@@ -26,19 +26,19 @@ export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: Depar
       <Section title="Released to production" theme={theme}>
         {released.length === 0
           ? <EmptyState text="No Sales orders have been released to production yet." theme={theme} />
-          : <CardGrid>{released.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} />)}</CardGrid>}
+          : <CardGrid>{released.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
       </Section>
 
       <Section title="Pending engineering review" theme={theme}>
         {pendingEngineering.length === 0
           ? <EmptyState text="No Sales orders are currently waiting on Engineering." theme={theme} />
-          : <CardGrid>{pendingEngineering.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} />)}</CardGrid>}
+          : <CardGrid>{pendingEngineering.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
       </Section>
 
       <Section title="Awaiting Sales release" theme={theme}>
         {awaitingRelease.length === 0
           ? <EmptyState text="No Sales orders are waiting to be released." theme={theme} />
-          : <CardGrid>{awaitingRelease.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} />)}</CardGrid>}
+          : <CardGrid>{awaitingRelease.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
       </Section>
     </PageShell>
   );

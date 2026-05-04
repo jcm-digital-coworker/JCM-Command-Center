@@ -29,13 +29,13 @@ export default function CoatingDepartmentPage({ theme = 'dark', onGoToTab }: Dep
 
       <Section title="Orders touching Coating" theme={theme}>
         {orders.length === 0 ? <EmptyState text="No current sample orders routed through Coating." theme={theme} /> : (
-          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
 
       <Section title="Coating / finish holds" theme={theme}>
         {holds.length === 0 ? <EmptyState text="No coating-related holds currently shown." theme={theme} /> : (
-          <CardGrid>{holds.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{holds.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
     </PageShell>

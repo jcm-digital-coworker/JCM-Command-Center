@@ -30,13 +30,13 @@ export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: De
 
       <Section title="Ready to ship" theme={theme}>
         {readyToShip.length === 0 ? <EmptyState text="No sample orders are fully ship-ready yet." theme={theme} /> : (
-          <CardGrid>{readyToShip.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{readyToShip.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
 
       <Section title="Not ship-ready yet" theme={theme}>
         {waiting.length === 0 ? <EmptyState text="No waiting sample orders." theme={theme} /> : (
-          <CardGrid>{waiting.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{waiting.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
     </PageShell>

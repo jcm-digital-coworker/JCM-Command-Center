@@ -30,13 +30,13 @@ export default function QADepartmentPage({ theme = 'dark', onGoToTab }: Departme
 
       <Section title="QA holds / failures" theme={theme}>
         {holds.length === 0 ? <EmptyState text="No QA holds or failures in sample orders." theme={theme} /> : (
-          <CardGrid>{holds.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{holds.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
 
       <Section title="Pending QA checks" theme={theme}>
         {pending.length === 0 ? <EmptyState text="No pending sample QA checks." theme={theme} /> : (
-          <CardGrid>{pending.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{pending.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
     </PageShell>

@@ -29,13 +29,13 @@ export default function FabDepartmentPage({ theme = 'dark', onGoToTab }: Departm
 
       <Section title="Fab Orders / Work Touches" theme={theme}>
         {orders.length === 0 ? <EmptyState text="No current sample orders routed through Fab." theme={theme} /> : (
-          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
 
       <Section title="Engineered / Higher-variability work" theme={theme}>
         {engineered.length === 0 ? <EmptyState text="No engineered sample orders currently shown for Fab." theme={theme} /> : (
-          <CardGrid>{engineered.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{engineered.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
     </PageShell>
