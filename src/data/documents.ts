@@ -116,7 +116,7 @@ export const plantDocuments: PlantDocument[] = [
     status: "Available",
     ownerRole: "Operator",
     description:
-      "Torque values (ft-lbs) for T-bolts and hex bolts by coupling size and material (DI, CS, SS). Required reference for all assembly bench technicians. Under-torque causes leaks; over-torque cracks flanges. Must be verified with calibrated torque wrench before QA handoff.",
+      "Torque values (ft-lbs) for T-bolts and hex bolts by coupling size and material (DI, CS, SS). ASTM A242 5/8\" T-bolt: 100 ft-lbs minimum, 150 ft-lbs maximum. ASTM A242 3/4\" T-bolt: 150 ft-lbs minimum, 200 ft-lbs maximum. Tighten in star/cross pattern — never sequential. UCC 101/102: two-pass torque (snug then final). Tapping sleeve flanges: use calibrated torque wrench, do not impact-gun final pass. Under-torque causes field leaks; over-torque cracks cast flanges. Must be verified before QA handoff.",
   },
   {
     id: "doc-coupling-assembly",
@@ -337,6 +337,6 @@ export const plantDocuments: PlantDocument[] = [
     status: "Available",
     ownerRole: "Shared",
     description:
-      "JCM product specifications library covering dimensional data, pressure ratings, pipe size ranges (1/2\" through 144\"+ for engineered products), and material specifications for all model families. Reference for QA dimensional verification, engineering review, and customer submittal packages.",
+      "JCM product specifications library. Key ratings: Model 412 CS Tapping Sleeve — 175 PSI working / 300 PSI hydrostatic test; Model 432 SS Tapping Sleeve — 175 PSI working / 300 PSI hydrostatic; Model 502 DI Full-Body Sleeve — 200 PSI working; Model 101/102 UCC — 200 PSI working (varies by pipe OD tolerance); Model 401/402 DI Service Saddle — 200 PSI working. Material specs: bodies ASTM A285 Gr.C or A516 Gr.70 (CS), A-36 (structural), ASTM A242 (hardware). Pipe size range: 3/4\" through 144\"+ for engineered. Reference for QA dimensional verification, engineering review, and customer submittal packages.",
   },
 ];

@@ -121,6 +121,8 @@ src/
 │   │   ├── AppDrawer.tsx            ← nav drawer + Dev Tools section
 │   │   ├── CommandNavigationBar.tsx ← command navigation bar (role-aware)
 │   │   └── DepartmentCards.tsx      ← (dead — not imported; safe to delete)
+│   ├── maintenance/
+│   │   └── MaintenanceCommandPanel.tsx ← daily control board (pressure score, lanes, asset health, Epicor readiness)
 │   ├── EngineeringBacklogPanel.tsx  ← engineering order backlog
 │   ├── LiveCoveragePanel.tsx        ← crew sign-in shortcuts (supervisor only)
 │   ├── MachineDetail.tsx
@@ -165,7 +167,9 @@ src/
 │   ├── workRoles.ts
 │   └── warRoomContext.ts    ← includes JCM company profile block
 ├── logic/
-│   ├── blockerAge.ts            ← getOrderLastTouchedHours, getBlockerAgeLabel, getBlockerAgeTone
+│   ├── blockerAge.ts            ← getOrderLastTouchedHours, getBlockerAgeLabel, getBlockerAgeTone (guards invalid timestamps)
+│   ├── maintenanceCommand.ts    ← getMaintenanceCommandModel() — pressure score, lanes, asset health, Epicor count
+│   ├── orderStatusTruth.ts      ← shared status normalization helpers (isBlocked, isDone, normalizeStatus)
 │   ├── classificationReviewConfirmations.ts ← classification review confirmation storage
 │   ├── classifyProductionOrder.ts           ← product classification via rules engine
 │   ├── commandRecommendations.ts            ← PlantStatusSeverity + CommandRecommendation array
@@ -448,6 +452,14 @@ accent: '#f97316' (safety orange)
 - Stale blocker auto-escalation — `plantSignals.ts` upgrades blocked-order signal to ESCALATE when untouched >2h (CRITICAL), >4h (HOT), >8h (normal)
 - Shift diff — ShiftHandoffPage records shift-start snapshot to localStorage; shows completed/newly-blocked/resolved/maintenance delta bar
 - PlantMapPage bottleneck heat overlay — per-dept CLEAR/BLOCKED badge (green/amber/red) on section headers, live via WORKFLOW_RUNTIME_UPDATED_EVENT
+- WorkflowMobilePage runtime-aware — tick state + WORKFLOW_RUNTIME_UPDATED_EVENT subscription; getLiveCoverage() reads jcm_live_coverage_v1; no more stale seed data on default landing
+- OrdersPage empty state — "No orders match current filter" shown when sortedOrders.length === 0
+- JCM website data integration — customers, model numbers (25+ rules), certifications, product families (complete exampleSeries), documents (10 new entries incl. JCM Engineering Manual, HDPE Manual, catalog, price book, AIS/Buy American), productFlows OTHER lane, DocumentCategory "Reference" added
+- Receiving dept overhaul — ReceivingClosurePanel runtime-aware + MARK STAGED wired to applyWorkflowRuntimeAction('MARK_MATERIAL_STAGED'); ReceivingWorkflowPanel subscribes to storage events; ReceivingPage adds ORDERED queue view + priority sorting + supplier field; receivingOrders seed replaced with 9 real JCM production material orders (all statuses); OrderCard in all 9 dept pages shows '→ RECEIVING' button on material-blocked orders; ReceivingClosurePanel onGoToTab threaded from WorkCenterDetailPage
+- Maintenance command center — `maintenanceCommand.ts` model with pressure score, lanes (CRITICAL/WAITING/ASSIGNED/PM/WATCH), asset health, Epicor readiness count; `MaintenanceCommandPanel.tsx` displays daily control board; integrated into MaintenancePage + MaintenanceRequestsPage; MaintenanceRequest type extended with ERP-readiness fields
+- Typed workflow button actions — `WorkflowButtonAction` IDs replace text-inferred dispatch in WorkCenterWorkflowPanelV2; action handler switches on typed IDs, not label strings; view/no-op actions emit NO_ACTION without state mutation
+- `orderStatusTruth.ts` — shared status normalization helpers; regression script (`scripts/orderStatusTruth.regression.mjs`) runs on every build
+- Status normalization sweep — dashboard selectors, workflow panel, plant signals, order readiness all normalize status casing and honor runtime flowStatus + explicit blockers
 
 **Queued for Phase 3:**
 - Supabase backend (replace localStorage)
@@ -459,6 +471,7 @@ accent: '#f97316' (safety orange)
 - `DepartmentCards.tsx` in `components/shell/` is not imported anywhere. Safe to delete.
 - Skill systems are split: `workers.ts` has typed `skills: WorkerSkill[]`, but `skillGapAlerts.ts` reads `coverage.ts` free-text `skillTags`. Not unified — fuzzy keyword matching bridges them for now.
 - No Office department page — 1 order with `currentDepartment: 'Office'` exists but it's admin-only, no dept page needed.
+- Workflow button copy should always come from typed `WorkflowButtonAction` IDs — never infer behavior from display labels.
 
 **Important: production order status values in seed data**
 Orders use lowercase/mixed values: `'ready'`, `'blocked'`, `'hold'` — NOT `'IN_PROGRESS'`, `'DONE'`, `'COMPLETE'`.
@@ -506,5 +519,5 @@ git push -u origin <your-branch>
 ---
 
 **Last Updated:** May 4, 2026
-**Version:** v1.6 (5 innovations: pressure sparkline, machine-down order impact, stale blocker escalation, shift diff, PlantMap heat overlay)
+**Version:** v1.7 (Receiving overhaul, maintenance command center, typed workflow actions, status normalization, JCM product data integration)
 **Developer:** Manufacturing Engineering Technician, JCM Industries, Nash, Texas
