@@ -91,9 +91,12 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
   }
 
   if (actionKind === 'MARK_MATERIAL_STAGED') {
+    const blockers = removeBlockers(order?.blockers ?? [], 'material');
     return {
       materialStatus: 'STAGED',
-      blockers: removeBlockers(order?.blockers ?? [], 'material'),
+      blockers,
+      flowStatus: blockers.length > 0 ? 'BLOCKED' : 'RUNNABLE',
+      status: blockers.length > 0 ? 'BLOCKED' : normalizeClosedStatus(order?.status) ?? 'READY',
     };
   }
 
@@ -157,4 +160,9 @@ function getSafeRuntimeNote(actionKind: WorkflowRuntimeActionKind, note?: string
 
 function removeBlockers(blockers: FlowBlocker[], type: FlowBlocker['type']): FlowBlocker[] {
   return blockers.filter((blocker) => blocker.type !== type);
+}
+
+function normalizeClosedStatus(status: ProductionOrder['status'] | undefined): ProductionOrder['status'] | undefined {
+  const normalizedStatus = String(status ?? '').trim().toUpperCase();
+  return normalizedStatus === 'DONE' || normalizedStatus === 'COMPLETE' || normalizedStatus === 'COMPLETED' ? 'DONE' : undefined;
 }
