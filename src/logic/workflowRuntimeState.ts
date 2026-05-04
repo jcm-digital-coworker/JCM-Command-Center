@@ -119,9 +119,9 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
 
   if (actionKind === 'RESOLVE_BLOCKER') {
     return {
-      blockers: [],
-      flowStatus: 'runnable',
-      status: 'READY',
+      blockers: order?.blockers ?? [],
+      flowStatus: order?.blockers?.length ? 'blocked' : order?.flowStatus,
+      status: order?.blockers?.length ? 'BLOCKED' : order?.status,
     };
   }
 
