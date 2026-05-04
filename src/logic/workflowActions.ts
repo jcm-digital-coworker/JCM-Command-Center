@@ -26,8 +26,9 @@ export function getWorkflowActionLog(): WorkflowActionRecord[] {
 }
 
 export function addWorkflowAction(record: Omit<WorkflowActionRecord, 'id' | 'createdAt'>) {
+  const normalizedRecord = normalizeWorkflowActionRecord(record);
   const next: WorkflowActionRecord = {
-    ...record,
+    ...normalizedRecord,
     id: `workflow-action-${Date.now()}`,
     createdAt: new Date().toISOString(),
   };
@@ -43,4 +44,25 @@ export function addWorkflowAction(record: Omit<WorkflowActionRecord, 'id' | 'cre
 export function clearWorkflowActionLog() {
   localStorage.removeItem(STORAGE_KEY);
   window.dispatchEvent(new Event('jcm-workflow-action-log-updated'));
+}
+
+function normalizeWorkflowActionRecord(
+  record: Omit<WorkflowActionRecord, 'id' | 'createdAt'>,
+): Omit<WorkflowActionRecord, 'id' | 'createdAt'> {
+  if (record.actionType !== 'BLOCKER_RESOLUTION') return record;
+
+  const note = record.note.toLowerCase();
+  const claimsActualResolution =
+    note.includes('resolved')
+    || note.includes('cleared')
+    || note.includes('fixed')
+    || note.includes('completed');
+
+  if (claimsActualResolution) return record;
+
+  return {
+    ...record,
+    actionType: 'NOTIFICATION',
+    note: `${record.note} — blocker not cleared`,
+  };
 }
