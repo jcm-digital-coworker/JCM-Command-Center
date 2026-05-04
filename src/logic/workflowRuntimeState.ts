@@ -86,7 +86,7 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
     return {
       materialStatus: 'ORDER_REQUIRED',
       status: 'BLOCKED',
-      flowStatus: 'blocked',
+      flowStatus: 'BLOCKED',
     };
   }
 
@@ -101,7 +101,7 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
     return {
       engineeringStatus: 'PENDING',
       status: 'HOLD',
-      flowStatus: 'blocked',
+      flowStatus: 'BLOCKED',
     };
   }
 
@@ -114,22 +114,22 @@ function reduceRuntimeAction(order: ProductionOrder | undefined, actionKind: Wor
   if (actionKind === 'START_WORK') {
     return {
       status: 'IN_PROGRESS',
-      flowStatus: order?.blockers?.length ? 'blocked' : 'runnable',
+      flowStatus: order?.blockers?.length ? 'BLOCKED' : 'RUNNABLE',
     };
   }
 
   if (actionKind === 'RESOLVE_BLOCKER') {
     return {
       blockers: order?.blockers ?? [],
-      flowStatus: order?.blockers?.length ? 'blocked' : order?.flowStatus,
+      flowStatus: order?.blockers?.length ? 'BLOCKED' : order?.flowStatus,
       status: order?.blockers?.length ? 'BLOCKED' : order?.status,
     };
   }
 
   if (actionKind === 'ADVANCE_DEPARTMENT') {
     return {
-      status: 'ready',
-      flowStatus: 'runnable',
+      status: 'READY',
+      flowStatus: 'RUNNABLE',
       blockers: [],
     };
   }
