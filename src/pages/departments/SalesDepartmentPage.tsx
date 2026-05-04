@@ -4,7 +4,7 @@ import { CardGrid, CrewGuidancePanel, EmptyState, LiveCrewSection, OrderCard, Pa
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
-  const salesOrders = productionOrders.filter((o) => o.workflowOrigin === 'SALES');
+  const salesOrders = getRuntimeProductionOrders(productionOrders).filter((o) => o.workflowOrigin === 'SALES');
   const released = salesOrders.filter((o) => !!o.salesReleasedAt && o.engineeringStatus !== 'PENDING');
   const pendingEngineering = salesOrders.filter((o) => o.engineeringRequired && o.engineeringStatus === 'PENDING');
   const awaitingRelease = salesOrders.filter((o) => !o.salesReleasedAt);

@@ -6,7 +6,8 @@ import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function QADepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const assets = getDepartmentAssets(plantAssets, 'QA');
-  const orders = productionOrders.filter((order) => order.qaStatus !== 'NOT_REQUIRED');
+  const runtimeOrders = getRuntimeProductionOrders(productionOrders);
+  const orders = runtimeOrders.filter((order) => order.qaStatus !== 'NOT_REQUIRED');
   const holds = orders.filter((order) => order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED');
   const pending = orders.filter((order) => order.qaStatus === 'PENDING');
 

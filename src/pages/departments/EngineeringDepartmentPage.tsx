@@ -5,10 +5,11 @@ import { CardGrid, CrewGuidancePanel, EmptyState, LiveCrewSection, OrderCard, Pa
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
-  const engineeringHolds = productionOrders.filter(
+  const runtimeOrders = getRuntimeProductionOrders(productionOrders);
+  const engineeringHolds = runtimeOrders.filter(
     (o) => o.engineeringRequired && o.engineeringStatus === 'PENDING',
   );
-  const released = productionOrders.filter(
+  const released = runtimeOrders.filter(
     (o) => o.engineeringRequired && o.engineeringStatus === 'RELEASED',
   );
 
