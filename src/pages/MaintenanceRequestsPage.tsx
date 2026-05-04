@@ -215,6 +215,12 @@ function RequestCard({
               {new Date(request.submittedAt).toLocaleString()}
             </span>
           </div>
+          {request.partsNeeded && (
+            <div style={detailRowStyle}>
+              <span style={getLabelStyle(theme)}>Parts Needed:</span>
+              <span style={getValueStyle(theme)}>{request.partsNeeded}</span>
+            </div>
+          )}
           {request.claimedBy && (
             <>
               <div style={detailRowStyle}>
@@ -332,6 +338,21 @@ function getStatusBadge(status: MaintenanceRequest['status']) {
       color: '#93c5fd',
       border: '1px solid #1e40af',
     },
+    WAITING_ON_PARTS: {
+      background: '#422006',
+      color: '#fde68a',
+      border: '1px solid #a16207',
+    },
+    WAITING_ON_VENDOR: {
+      background: '#422006',
+      color: '#fde68a',
+      border: '1px solid #a16207',
+    },
+    WAITING_ON_PRODUCTION_WINDOW: {
+      background: '#312e81',
+      color: '#c4b5fd',
+      border: '1px solid #4f46e5',
+    },
     COMPLETED: {
       background: '#064e3b',
       color: '#a7f3d0',
@@ -346,7 +367,7 @@ function getStatusBadge(status: MaintenanceRequest['status']) {
         ...(styles[status] || {}),
       }}
     >
-      {status}
+      {status.replaceAll('_', ' ')}
     </span>
   );
 }
