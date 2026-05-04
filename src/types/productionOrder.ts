@@ -4,15 +4,18 @@ import type { WorkerSkill } from './worker';
 export type ProductionOrderStatus =
   | 'READY'
   | 'IN_PROGRESS'
+  | 'RUNNING'
   | 'BLOCKED'
   | 'HOLD'
   | 'DONE'
   | 'COMPLETE'
+  | 'COMPLETED'
   | 'ready'
   | 'running'
   | 'blocked'
   | 'hold'
-  | 'complete';
+  | 'complete'
+  | 'completed';
 
 export type FlowStatus = 'runnable' | 'blocked' | 'RUNNABLE' | 'BLOCKED';
 
