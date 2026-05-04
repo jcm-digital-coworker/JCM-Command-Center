@@ -10,9 +10,11 @@ import type { Department } from '../../types/machine';
 import type { CoveragePerson } from '../../types/coverage';
 import type { PlantAsset, PlantAssetKind } from '../../types/plantAsset';
 import type { ProductionOrder } from '../../types/productionOrder';
+import type { AppTab } from '../../types/app';
 
 export type DepartmentPageProps = {
   theme?: 'dark' | 'light';
+  onGoToTab?: (tab: AppTab) => void;
 };
 
 export function getDepartmentAssets(assets: PlantAsset[], department: Department) {
@@ -243,6 +245,7 @@ function getCrewTone(level: 'info' | 'warning' | 'critical'): 'GO' | 'WATCH' | '
 export function LiveCrewSection({
   department,
   theme = 'dark',
+  onGoToTab,
 }: DepartmentPageProps & { department: Department }) {
   const [people] = useState<CoveragePerson[]>(() => {
     try {
@@ -267,7 +270,18 @@ export function LiveCrewSection({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {skillGaps.length > 0 && (
         <div style={skillGapBannerStyle(theme)}>
-          <strong style={{ color: '#f59e0b', fontSize: 11, letterSpacing: '0.8px' }}>SKILL GAP ALERT</strong>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+            <strong style={{ color: '#f59e0b', fontSize: 11, letterSpacing: '0.8px' }}>SKILL GAP ALERT</strong>
+            {onGoToTab && (
+              <button
+                type="button"
+                onClick={() => onGoToTab('coverage')}
+                style={crewGapActionButtonStyle}
+              >
+                → OPEN COVERAGE
+              </button>
+            )}
+          </div>
           {skillGaps.map((gap) => (
             <div key={gap.skill} style={{ fontSize: 12, color: theme === 'dark' ? '#fcd34d' : '#92400e', marginTop: 2 }}>
               No available crew for <strong>{gap.skill.replace(/_/g, ' ')}</strong> — needed by order{gap.orderNumbers.length > 1 ? 's' : ''} {gap.orderNumbers.join(', ')}
@@ -595,3 +609,16 @@ function skillGapBannerStyle(theme: 'dark' | 'light'): CSSProperties {
     gap: 2,
   };
 }
+
+const crewGapActionButtonStyle: CSSProperties = {
+  padding: '4px 10px',
+  borderRadius: 4,
+  border: '1px solid #f59e0b',
+  background: 'rgba(245,158,11,0.15)',
+  color: '#f59e0b',
+  fontSize: 10,
+  fontWeight: 900,
+  letterSpacing: '0.5px',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+};

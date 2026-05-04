@@ -3,7 +3,7 @@ import EngineeringBacklogPanel from '../../components/EngineeringBacklogPanel';
 import { CardGrid, CrewGuidancePanel, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
-export default function EngineeringDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
+export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const engineeringHolds = productionOrders.filter(
     (o) => o.engineeringRequired && o.engineeringStatus === 'PENDING',
   );
@@ -18,7 +18,7 @@ export default function EngineeringDepartmentPage({ theme = 'dark' }: Department
       theme={theme}
     >
       <Section title="Crew on Shift" theme={theme}>
-        <LiveCrewSection department="Engineering" theme={theme} />
+        <LiveCrewSection department="Engineering" theme={theme} onGoToTab={onGoToTab} />
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>

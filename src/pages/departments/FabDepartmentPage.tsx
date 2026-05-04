@@ -3,7 +3,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
-export default function FabDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
+export default function FabDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const cells = getDepartmentAssets(plantAssets, 'Fab');
   const orders = getDepartmentOrders(productionOrders, 'Fab');
   const engineered = orders.filter((order) => order.orderType === 'ENGINEERED' || order.productFamily === 'ENGINEERED_FITTING');
@@ -15,7 +15,7 @@ export default function FabDepartmentPage({ theme = 'dark' }: DepartmentPageProp
       theme={theme}
     >
       <Section title="Crew on Shift" theme={theme}>
-        <LiveCrewSection department="Fab" theme={theme} />
+        <LiveCrewSection department="Fab" theme={theme} onGoToTab={onGoToTab} />
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>

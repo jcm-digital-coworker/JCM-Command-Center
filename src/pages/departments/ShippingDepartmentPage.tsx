@@ -3,7 +3,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
-export default function ShippingDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
+export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const lanes = getDepartmentAssets(plantAssets, 'Shipping');
   const orders = getDepartmentOrders(productionOrders, 'Shipping');
   const readyToShip = orders.filter((order) => order.status === 'DONE' && order.qaStatus === 'PASSED');
@@ -16,7 +16,7 @@ export default function ShippingDepartmentPage({ theme = 'dark' }: DepartmentPag
       theme={theme}
     >
       <Section title="Crew on Shift" theme={theme}>
-        <LiveCrewSection department="Shipping" theme={theme} />
+        <LiveCrewSection department="Shipping" theme={theme} onGoToTab={onGoToTab} />
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>

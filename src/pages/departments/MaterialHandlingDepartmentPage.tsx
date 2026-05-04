@@ -3,7 +3,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
-export default function MaterialHandlingDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
+export default function MaterialHandlingDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const assets = getDepartmentAssets(plantAssets, 'Material Handling');
   const orders = getDepartmentOrders(productionOrders, 'Material Handling');
   const blocked = orders.filter((order) => String(order.status).toLowerCase() === 'blocked');
@@ -15,7 +15,7 @@ export default function MaterialHandlingDepartmentPage({ theme = 'dark' }: Depar
       theme={theme}
     >
       <Section title="Crew on Shift" theme={theme}>
-        <LiveCrewSection department="Material Handling" theme={theme} />
+        <LiveCrewSection department="Material Handling" theme={theme} onGoToTab={onGoToTab} />
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>

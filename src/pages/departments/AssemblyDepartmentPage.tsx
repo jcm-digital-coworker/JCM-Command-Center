@@ -10,7 +10,7 @@ const assemblyCells = [
   { id: 'assembly-special', name: 'Special Assembly', ownerDepartment: 'Assembly' as const, physicalArea: 'Assembly', kind: 'WORK_CELL' as const, status: 'ACTIVE' as const, primaryFunction: 'Special / non-standard assembly lane.', feeds: ['QA', 'Shipping'], confidence: 'MEDIUM' as const },
 ];
 
-export default function AssemblyDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
+export default function AssemblyDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const orders = getDepartmentOrders(productionOrders, 'Assembly');
   const ready = orders.filter((order) => ['ready', 'in_progress', 'running'].includes(String(order.status).toLowerCase()));
 
@@ -21,7 +21,7 @@ export default function AssemblyDepartmentPage({ theme = 'dark' }: DepartmentPag
       theme={theme}
     >
       <Section title="Crew on Shift" theme={theme}>
-        <LiveCrewSection department="Assembly" theme={theme} />
+        <LiveCrewSection department="Assembly" theme={theme} onGoToTab={onGoToTab} />
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>

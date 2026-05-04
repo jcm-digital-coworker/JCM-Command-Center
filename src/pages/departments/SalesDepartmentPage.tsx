@@ -2,7 +2,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { CardGrid, CrewGuidancePanel, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
-export default function SalesDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
+export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const salesOrders = productionOrders.filter((o) => o.workflowOrigin === 'SALES');
   const released = salesOrders.filter((o) => !!o.salesReleasedAt && o.engineeringStatus !== 'PENDING');
   const pendingEngineering = salesOrders.filter((o) => o.engineeringRequired && o.engineeringStatus === 'PENDING');
@@ -15,7 +15,7 @@ export default function SalesDepartmentPage({ theme = 'dark' }: DepartmentPagePr
       theme={theme}
     >
       <Section title="Crew on Shift" theme={theme}>
-        <LiveCrewSection department="Sales" theme={theme} />
+        <LiveCrewSection department="Sales" theme={theme} onGoToTab={onGoToTab} />
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>

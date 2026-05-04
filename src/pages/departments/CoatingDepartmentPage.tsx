@@ -3,7 +3,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
-export default function CoatingDepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
+export default function CoatingDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const zones = getDepartmentAssets(plantAssets, 'Coating');
   const orders = getDepartmentOrders(productionOrders, 'Coating');
   const holds = orders.filter((order) => order.blockedReason === 'WAITING_ON_COATING' || order.qaStatus === 'HOLD');
@@ -15,7 +15,7 @@ export default function CoatingDepartmentPage({ theme = 'dark' }: DepartmentPage
       theme={theme}
     >
       <Section title="Crew on Shift" theme={theme}>
-        <LiveCrewSection department="Coating" theme={theme} />
+        <LiveCrewSection department="Coating" theme={theme} onGoToTab={onGoToTab} />
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>

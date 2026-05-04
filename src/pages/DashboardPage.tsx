@@ -135,6 +135,14 @@ export default function DashboardPage({
       <PlantSignalsPanel onNavigate={onGoToTab} />
       <ClassificationReviewQueue theme={theme} workCenters={workCenters} onOpenWorkCenter={onOpenWorkCenter} />
 
+      <PlantPressureScore
+        blockedCount={blockedOrders.length}
+        alertCount={alerts.length}
+        overdueCount={tasks.filter((t) => t.status === 'OVERDUE').length}
+        materialIssueCount={materialIssues.length}
+        theme={theme}
+      />
+
       <DashboardOverviewPanels
         openOrderCount={openOrders.length}
         totalOrderCount={allOrders.length}
@@ -249,6 +257,30 @@ function QuickActionsPanel({ roleView, actions, onGoToTab, theme }: { roleView: 
         )}
       </div>
     </section>
+  );
+}
+
+function PlantPressureScore({
+  blockedCount, alertCount, overdueCount, materialIssueCount, theme,
+}: { blockedCount: number; alertCount: number; overdueCount: number; materialIssueCount: number; theme: DashboardTheme }) {
+  const score = Math.min(100, blockedCount * 15 + alertCount * 8 + overdueCount * 10 + materialIssueCount * 5);
+  const band = score >= 70 ? { color: '#ef4444', label: 'HIGH STRESS', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.35)' }
+    : score >= 35 ? { color: '#f59e0b', label: 'ELEVATED', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.35)' }
+    : { color: '#10b981', label: 'NOMINAL', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.3)' };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 16px', borderRadius: 8, marginBottom: 16, background: band.bg, border: `1px solid ${band.border}`, borderLeft: `4px solid ${band.color}` }}>
+      <div style={{ textAlign: 'center', minWidth: 56 }}>
+        <div style={{ fontSize: 34, fontWeight: 900, lineHeight: 1, color: band.color }}>{score}</div>
+        <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.8px', color: band.color, textTransform: 'uppercase' }}>/ 100</div>
+      </div>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '1px', color: band.color }}>{band.label}</div>
+        <div style={{ fontSize: 11, color: theme === 'dark' ? '#94a3b8' : '#64748b', marginTop: 2 }}>
+          Plant Pressure Score — {blockedCount} blocked · {alertCount} alerts · {overdueCount} overdue tasks · {materialIssueCount} material issues
+        </div>
+      </div>
+    </div>
   );
 }
 

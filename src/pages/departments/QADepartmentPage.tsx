@@ -3,7 +3,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
-export default function QADepartmentPage({ theme = 'dark' }: DepartmentPageProps) {
+export default function QADepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const assets = getDepartmentAssets(plantAssets, 'QA');
   const orders = productionOrders.filter((order) => order.qaStatus !== 'NOT_REQUIRED');
   const holds = orders.filter((order) => order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED');
@@ -16,7 +16,7 @@ export default function QADepartmentPage({ theme = 'dark' }: DepartmentPageProps
       theme={theme}
     >
       <Section title="Crew on Shift" theme={theme}>
-        <LiveCrewSection department="QA" theme={theme} />
+        <LiveCrewSection department="QA" theme={theme} onGoToTab={onGoToTab} />
       </Section>
 
       <Section title="Crew Guidance" theme={theme}>

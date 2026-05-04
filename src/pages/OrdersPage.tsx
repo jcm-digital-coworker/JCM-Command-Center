@@ -8,6 +8,8 @@ import {
   getOrderStatusLabel,
 } from '../logic/orderReadiness';
 import type { ProductionOrder } from '../types/productionOrder';
+import type { AppTab } from '../types/app';
+import type { Department } from '../types/machine';
 import { getOrderLane, getProductFlow } from '../logic/flowLogic';
 import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import {
@@ -17,13 +19,20 @@ import {
   getBlockerAgeToneColor,
 } from '../logic/blockerAge';
 
+const DEPT_TAB_MAP: Partial<Record<Department, AppTab>> = {
+  Fab: 'fab', Coating: 'coating', Assembly: 'assembly', Shipping: 'shipping',
+  QA: 'qa', Sales: 'sales', Engineering: 'engineering',
+  'Material Handling': 'materialHandling', 'Saddles Dept': 'saddles', Receiving: 'receiving',
+};
+
 type OrdersPageProps = {
   theme?: 'dark' | 'light';
+  onGoToTab?: (tab: AppTab) => void;
 };
 
 type OrderSortMode = 'priority' | 'shipDate' | 'status' | 'orderNumber';
 
-export default function OrdersPage({ theme = 'dark' }: OrdersPageProps) {
+export default function OrdersPage({ theme = 'dark', onGoToTab }: OrdersPageProps) {
   const [sortMode, setSortMode] = useState<OrderSortMode>('priority');
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [, setTick] = useState(0);
@@ -82,7 +91,7 @@ export default function OrdersPage({ theme = 'dark' }: OrdersPageProps) {
         </div>
         <div style={{ display: 'grid', gap: 12 }}>
           {sortedOrders.map((order) => (
-            <OrderCard key={order.orderNumber} order={order} theme={theme} onOpen={() => setSelectedOrder(order)} />
+            <OrderCard key={order.orderNumber} order={order} theme={theme} onOpen={() => setSelectedOrder(order)} onGoToTab={onGoToTab} />
           ))}
         </div>
       </section>
@@ -110,11 +119,13 @@ export default function OrdersPage({ theme = 'dark' }: OrdersPageProps) {
   );
 }
 
-function OrderCard({ order, theme, onOpen }: { order: ProductionOrder; theme: 'dark' | 'light'; onOpen: () => void }) {
+function OrderCard({ order, theme, onOpen, onGoToTab }: { order: ProductionOrder; theme: 'dark' | 'light'; onOpen: () => void; onGoToTab?: (tab: AppTab) => void }) {
   const blockReason = getOrderBlockReason(order);
   const flow = getProductFlow(order);
   const isBlocked = Boolean(blockReason);
   const lastTouchedHours = isBlocked ? getOrderLastTouchedHours(order.orderNumber) : null;
+  const urgency = getPriorityScore(order);
+  const deptTab = DEPT_TAB_MAP[order.currentDepartment as Department];
 
   return (
     <button type="button" style={cardStyle(theme, isBlocked)} onClick={onOpen}>
@@ -125,6 +136,9 @@ function OrderCard({ order, theme, onOpen }: { order: ProductionOrder; theme: 'd
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <div style={statusBadgeStyle(order.status, isBlocked)}>{getOrderStatusLabel(order)}</div>
+          {urgency > 0 && (
+            <div style={urgencyBadgeStyle(urgency)}>URGENCY {urgency}</div>
+          )}
           {isBlocked && lastTouchedHours !== null && (() => {
             const tone = getBlockerAgeTone(lastTouchedHours);
             const color = getBlockerAgeToneColor(tone);
@@ -153,7 +167,18 @@ function OrderCard({ order, theme, onOpen }: { order: ProductionOrder; theme: 'd
         </div>
       )}
 
-      <div style={openHintStyle(theme)}>Tap for full traveler</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+        <div style={openHintStyle(theme)}>Tap for full traveler</div>
+        {deptTab && onGoToTab && (
+          <button
+            type="button"
+            style={deptLinkStyle(theme)}
+            onClick={(e) => { e.stopPropagation(); onGoToTab(deptTab); }}
+          >
+            {order.currentDepartment} →
+          </button>
+        )}
+      </div>
     </button>
   );
 }
@@ -278,6 +303,8 @@ function sectionTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { ma
 function summaryTileStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function cardStyle(theme: 'dark' | 'light', blocked: boolean): CSSProperties { return { width: '100%', textAlign: 'left', padding: 14, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: blocked ? '1px solid #ef4444' : theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', borderLeft: blocked ? '4px solid #ef4444' : '4px solid #10b981', cursor: 'pointer' }; }
 function inlineBlockerStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 8, marginBottom: 4, padding: '5px 9px', borderRadius: 4, background: theme === 'dark' ? 'rgba(127,29,29,0.28)' : '#fee2e2', border: '1px solid rgba(239,68,68,0.45)', color: theme === 'dark' ? '#fca5a5' : '#991b1b', fontSize: 11, fontWeight: 800 }; }
+function urgencyBadgeStyle(score: number): CSSProperties { const color = score >= 100 ? '#ef4444' : score >= 40 ? '#f59e0b' : '#64748b'; return { fontSize: 9, fontWeight: 900, color, letterSpacing: '0.5px' }; }
+function deptLinkStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: '3px 8px', borderRadius: 4, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: 'transparent', color: theme === 'dark' ? '#93c5fd' : '#2563eb', fontSize: 10, fontWeight: 900, cursor: 'pointer', letterSpacing: '0.3px' }; }
 function familyCardStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function orderNumberStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 18, fontWeight: 900, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }; }
 function miniTextStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: '6px 0 0', color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12, lineHeight: 1.45 }; }
