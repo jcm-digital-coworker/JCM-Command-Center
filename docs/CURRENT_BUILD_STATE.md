@@ -17,10 +17,10 @@ Current emphasis:
 - Department descriptions flow through a shared operating profile layer.
 - Workflow buttons must not imply resolution unless the app actually resolves something.
 - View/no-op workflow buttons must not mutate runtime state.
+- Workflow button behavior now uses typed `WorkflowButtonAction` IDs instead of parsing display labels.
 - Dashboard recommendation copy should say review/open unless the app really resolves the issue.
 - Generated workflow signal copy should say review/clear, not resolve, unless a real resolution workflow exists.
 - Dashboard/order status selectors should normalize status casing and honor runtime `flowStatus` plus explicit blockers.
-- Workflow button selectors now expose typed action IDs; the remaining larger fix is to switch `WorkCenterWorkflowPanelV2.tsx` from text parsing to those typed actions.
 - Blocker navigation must land on visible blocker context.
 - Engineering escalation, Engineering quick selection, and dashboard Quick Actions must land on Engineering when the operator asks for Engineering.
 - Dashboard Quick Actions and Plant Signals are review/navigation surfaces, not hidden runtime mutation surfaces.
@@ -31,8 +31,8 @@ Current emphasis:
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25322834407
-Commit: 307aa68c4840afa06199e169f219c013401623e1
+Run ID: 25331358584
+Commit: 92176e295c75790d35aa41f596ddfde18dd0cd29
 Status: GREEN
 ```
 
@@ -43,9 +43,78 @@ Passed:
 - Install dependencies
 - Build
 - Upload demo build
-- Record latest action run
 
 ## Most Recent Completed App Work
+
+### Line-by-Line Audit Batch: Typed Workflow Button Action Completion
+
+Files:
+
+```text
+src/components/WorkCenterWorkflowPanelV2.tsx
+src/logic/workflowPanelSelectors.ts
+```
+
+PRs / issues:
+
+```text
+#24 Add typed workflow button action contracts
+#27 Refactor WorkCenterWorkflowPanelV2 to use typed workflow actions (closed, completed)
+#29 Use typed workflow button actions
+```
+
+Problems fixed:
+
+- `workflowPanelSelectors.ts` exposed typed button action IDs, but `WorkCenterWorkflowPanelV2.tsx` still inferred behavior from button display text.
+- The old action handler used string checks such as `label.includes(...)`, which made display copy a behavior authority.
+- Unknown or changed labels could fall through into runtime mutation paths.
+
+Current behavior:
+
+- `WorkCenterWorkflowPanelV2.tsx` imports and consumes `WorkflowButtonAction`.
+- Workflow card primary buttons call `card.buttons.primaryAction`.
+- Workflow card secondary buttons call `card.buttons.secondaryAction`.
+- `runAction()` passes `actionId`, label, and order number through the component.
+- `act()` switches on typed action IDs instead of parsing label text.
+- `NO_ACTION` returns without runtime mutation.
+- `START_WORK` is the only path that calls runtime `START_WORK`.
+- `ESCALATE_ENGINEERING` preserves Engineering escalation behavior.
+- `REQUEST_MATERIAL` preserves Receiving/material behavior.
+- `OPEN_MAINTENANCE` opens Maintenance only.
+- `REVIEW_BLOCKER`, `NOTIFY_LEAD`, and `HOLD_STATION` log review/notification only and do not clear blockers.
+
+Guardrail:
+
+- Button display text is now copy only. Behavior must come from typed action contracts.
+- New workflow actions should be added as explicit `WorkflowButtonAction` values and handled intentionally.
+
+### Line-by-Line Audit Batch: Receiving and Codex Handoff Cleanup
+
+Files:
+
+```text
+src/logic/receivingWorkflow.ts
+docs/codex/WORKSPACE_SETUP.md
+docs/codex/WORKFLOW_ACTION_REFACTOR_TASK.md
+```
+
+PRs:
+
+```text
+#26 Clarify receiving hold review copy
+#28 Add Codex workspace handoff docs
+```
+
+Current behavior:
+
+- Receiving problem-hold next action says the supervisor/requester should review the receiver hold before delivery continues.
+- Receiving copy no longer implies the app automatically resolves the hold.
+- Codex/local workspace handoff docs exist in `docs/codex/` for future large-file or full-workspace work.
+
+Guardrail:
+
+- Review copy must not imply automatic resolution.
+- Full-workspace tasks should use repo-local handoff docs when connector file size limits get in the way.
 
 ### Line-by-Line Audit Batch: Status and Readiness Contract Cleanup
 
@@ -75,7 +144,7 @@ Problems fixed:
 Current behavior:
 
 - `dashboardRuntimeSelectors.ts` normalizes status text before counting open, blocked, and runnable orders.
-- `workflowPanelSelectors.ts` now emits `WorkflowButtonAction` IDs alongside the existing `primary` and `secondary` button labels.
+- `workflowPanelSelectors.ts` emits `WorkflowButtonAction` IDs alongside the existing `primary` and `secondary` button labels.
 - Current typed workflow button actions are `NO_ACTION`, `START_WORK`, `ESCALATE_ENGINEERING`, `HOLD_STATION`, `REQUEST_MATERIAL`, `OPEN_MAINTENANCE`, `REVIEW_BLOCKER`, and `NOTIFY_LEAD`.
 - `orderReadiness.ts` now considers status, flowStatus, and listed blockers when building blocked labels/readiness.
 
@@ -83,7 +152,7 @@ Guardrail:
 
 - Status comparisons should normalize casing at boundaries.
 - Listed blockers and runtime flow status must be honored consistently.
-- Long-term fix remains: switch `WorkCenterWorkflowPanelV2.tsx` to consume typed `WorkflowButtonAction` IDs instead of parsing button label text.
+- Workflow action behavior must remain tied to typed action IDs, not button labels.
 
 ### Line-by-Line Audit Batch: Workflow Evaluation Copy Rescue
 
@@ -349,8 +418,7 @@ Guardrail:
 
 ## Active Risks / Next Audit Targets
 
-- Finish the larger typed-action refactor in `WorkCenterWorkflowPanelV2.tsx`. The selector now emits typed action IDs, but the component still needs to consume them instead of parsing display labels.
-- Replace remaining text-inferred workflow action dispatch with typed action IDs where feasible.
+- Replace any remaining text-inferred action dispatch with typed action IDs where feasible.
 - Verify if Production role should have direct drawer access to Engineering or only escalation access.
 - Review `SEND_TO_NEXT_DEPARTMENT` and `COMPLETE_ORDER` semantics. They still intentionally mutate flow state, but should be live-tested and may need stronger confirmation/copy.
 - Coating is still partly uncertain.
@@ -360,6 +428,7 @@ Guardrail:
 - Classifier should not overrule human review.
 - Current confirmation capture is local-only and does not yet feed route-rule update workflows.
 - Work Center Tablet lane drill-ins are mostly scroll/navigation; make them smarter only if operators need precise panel/item focus.
+- `WorkCenterWorkflowPanelV2.tsx` is still large; consider extracting `WorkflowCard`, `ClassificationReviewSummary`, and action dispatch into smaller modules when the next functional pass is stable.
 
 ## Repo-First Operating Rule
 
@@ -403,7 +472,7 @@ Avoid:
 Recommended next move:
 
 ```text
-Refactor WorkCenterWorkflowPanelV2.tsx to consume typed WorkflowButtonAction IDs instead of parsing button label text.
+Sweep remaining dashboard, traveler, operator-lane, receiving, engineering, and maintenance action handlers for text-inferred behavior, accidental runtime mutation, and route/copy mismatch.
 ```
 
 Use at least:
