@@ -2,7 +2,7 @@
 
 Purpose: preserve the smallest useful operating context for the JCM Command Center build so future work continues from the current clean repository state without dragging full chat history forward.
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Current Mission
 
@@ -18,14 +18,15 @@ Current emphasis:
 - Workflow buttons must not imply resolution unless the app actually resolves something.
 - Blocker navigation must land on visible blocker context.
 - Engineering escalation, Engineering quick selection, and dashboard Quick Actions must land on Engineering when the operator asks for Engineering.
+- Dashboard Quick Actions and Plant Signals are review/navigation surfaces, not hidden runtime mutation surfaces.
 - Navigation contracts should be audited as route contracts, not patched with timing workarounds.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25294432791
-Commit: 401040fa7aac120e3d8f442594bb8c860cfc7d03
+Run ID: 25294894057
+Commit: da1ff121cfd91931c9bac24181092bee600c2bca
 Status: GREEN
 ```
 
@@ -39,6 +40,55 @@ Passed:
 - Record latest action run
 
 ## Most Recent Completed App Work
+
+### Line-by-Line Audit Batch: Runtime and Plant Signals Cleanup
+
+Files:
+
+```text
+src/logic/workflowActions.ts
+src/logic/workflowRuntimeState.ts
+src/logic/plantSignals.ts
+src/components/dashboard/PlantSignalsPanel.tsx
+src/logic/quickActionRuntimeExecutor.ts (deleted)
+src/logic/quickActionRuntimeTargets.ts (deleted)
+```
+
+PRs:
+
+```text
+#13 Remove stale workflow action navigation retry
+#14 Remove stale quick action runtime files
+```
+
+Problems fixed:
+
+- `workflowActions.ts` still contained a stale Engineering navigation retry helper from an earlier temporary mitigation.
+- `workflowActions.ts` mixed action logging with navigation dispatch.
+- `workflowRuntimeState.ts` allowed `RESOLVE_BLOCKER` to wipe all blockers and mark the order READY.
+- `TravelerDetailModal` still had a stale `REPORT_ISSUE` path that called `RESOLVE_BLOCKER`; the runtime reducer now prevents that path from clearing blockers.
+- Plant Signals still used a stale quick-action runtime executor to mutate order state from dashboard prompts.
+- Plant Signals used labels like `Resolve first blocker` and routed blocked signals to Orders.
+- The old quick-action runtime executor and target helper carried hidden `resolve/stage/escalate first order` behavior and are now removed.
+
+Current behavior:
+
+- `workflowActions.ts` is an action-log module only.
+- `RESOLVE_BLOCKER` is non-destructive unless a future explicit resolution workflow is designed.
+- If stale UI reports an issue through `RESOLVE_BLOCKER`, blockers are preserved and the note is sanitized to `Issue reported - blocker preserved for review`.
+- Plant Signals are review/navigation only.
+- Blocked Plant Signals now say `Review blocker` and route to workflow.
+- Material Plant Signals now say `Open material issue` and route to Receiving.
+- Plant Signals no longer call a runtime mutation executor.
+
+Guardrail:
+
+- No hidden dashboard mutation.
+- No automatic blocker clearing.
+- No route approval.
+- No dispatch behavior.
+- No classifier mutation.
+- No confidence increase.
 
 ### Dashboard Quick Action Navigation Contract Sweep
 
@@ -56,19 +106,13 @@ PR:
 #12 Consolidate dashboard quick action routing
 ```
 
-Problem fixed:
-
-- Dashboard Quick Actions were a third navigation path separate from work-station card callbacks and department quick selection.
-- `Escalate Engineering` in Quick Actions still used a raw `target: 'orders'`, so it landed on Orders/Production.
-- Several Quick Action labels implied automatic resolution, such as `Resolve Blockers` and `Resolve Material Issues`.
-
 Current behavior:
 
-- Dashboard Quick Actions now use `NavigationIntent` instead of raw `AppTab` targets.
+- Dashboard Quick Actions use `NavigationIntent` instead of raw `AppTab` targets.
 - Dashboard clicks resolve intents through `getNavigationTab()` in `navigationContracts.ts`.
 - Engineering Quick Actions use `OPEN_ENGINEERING`, which resolves to the Engineering page.
-- Blocker Quick Actions now say `Review Blockers` and resolve to workflow context.
-- Material Quick Actions now say `Open Material Issues` and resolve to Receiving.
+- Blocker Quick Actions say `Review Blockers` and resolve to workflow context.
+- Material Quick Actions say `Open Material Issues` and resolve to Receiving.
 
 Source contract:
 
@@ -87,14 +131,6 @@ OPEN_QA_SAFETY -> risk
 OPEN_QA_DEPARTMENT -> qa
 OPEN_ORDERS -> orders
 ```
-
-Guardrail:
-
-- Navigation contract only.
-- No route approval.
-- No dispatch behavior.
-- No classifier mutation.
-- No confidence increase.
 
 ### Engineering Quick Selection Route Fix
 
@@ -152,30 +188,6 @@ onOpenEngineering={() => {
 
 This is the corrective root fix for the workstation-card path.
 
-Remaining cleanup item:
-
-```text
-src/logic/workflowActions.ts
-```
-
-- A previous mitigation still dispatches Engineering navigation events after `ENGINEERING_ESCALATION` is logged.
-- The App callback, quick selector, and dashboard Quick Actions now handle Engineering routing correctly, so this mitigation is no longer needed.
-- Remove it in a cleanup pass so `workflowActions.ts` is a pure action-log module again.
-
-Recommended durable prevention:
-
-```text
-Create a route contract auditor checklist/skill.
-```
-
-It should check every action button as:
-
-```text
-visible label -> action model/intent -> callback prop -> App tab/page -> expected destination
-```
-
-Use it before changing any action-console, workflow, maintenance, engineering, receiving, quick selector, drawer, dashboard Quick Actions, or review navigation.
-
 ### Blocker Focus Card
 
 Files:
@@ -224,32 +236,6 @@ Current behavior:
 - Maintenance opens only for explicit maintenance/machine/service/repair/alarm/down/downtime actions.
 - Material actions still open Receiving material request.
 - Engineering/hold actions now route through the corrected App Engineering callback.
-
-### Department Truth Alignment Audit
-
-Shared source:
-
-```text
-src/data/departmentOperatingProfiles.ts
-```
-
-Aligned consumers:
-
-```text
-src/components/dashboard/DashboardWorkCenterCard.tsx
-src/components/shell/DepartmentCards.tsx
-src/data/workCenters.ts
-src/pages/PlantMapPage.tsx
-src/data/workCenterResources.ts
-src/pages/departments/DepartmentPageTools.tsx
-```
-
-Current behavior:
-
-- Dashboard cards, shell DepartmentCards, work-center data, Plant Map, resource questions, and department-page shell use shared department operating profiles.
-- Sales and Engineering exist as live department views.
-- Stale/fake-future department wording was removed from the obvious source layer.
-- Unresolved routes remain unresolved, not promoted to certainty.
 
 ## Important Repo Correction From CLAUDE.md
 
@@ -341,7 +327,7 @@ Guardrail:
 
 ## Active Risks
 
-- `workflowActions.ts` still contains the now-unnecessary Engineering navigation mitigation. Remove it in a cleanup pass.
+- `TravelerDetailModal.tsx` still has stale wording/path naming around `REPORT_ISSUE`; runtime now protects blockers, but the UI should be refactored so reporting an issue logs/reviews rather than calling `RESOLVE_BLOCKER` at all.
 - Coating is still partly uncertain.
 - Couplings route relative to Coating is still uncertain.
 - Clamps and Patch Clamps need more detail.
@@ -351,6 +337,7 @@ Guardrail:
 - Work Center Tablet lane drill-ins are mostly scroll/navigation; make them smarter only if operators need precise panel/item focus.
 - HELP FIRST priority may need clearer copy if departments also have ready work.
 - Live validation should confirm all Engineering paths land on the Engineering page: workstation card escalation, department quick selection, and Dashboard Quick Action.
+- Live validation should confirm Plant Signals do not mutate runtime state and only navigate to review surfaces.
 - Live validation should confirm Blocker Focus is obvious enough and `Open traveler detail` is understood as review/visibility only.
 
 ## Repo-First Operating Rule
@@ -394,7 +381,7 @@ Avoid:
 Recommended next move:
 
 ```text
-Live-test all Engineering paths after redeploy/refresh. If they land on Engineering, create the route contract auditor checklist/skill before more navigation work.
+Continue line-by-line audit with TravelerDetailModal.tsx and dynamic traveler action generation.
 ```
 
 Use at least:
@@ -402,8 +389,8 @@ Use at least:
 - Work-station card: Escalate to Engineering.
 - Department quick selector: Engineering.
 - Dashboard Quick Actions: Open Engineering Review.
-- Machine Shop: help/blocker and engineering escalation cases.
-- Fab: blocker, engineering escalation, and handoff cases.
+- Plant Signals: Review blocker and Open material issue.
+- Traveler Detail: Report issue on this order.
 
 Guardrails:
 
