@@ -296,9 +296,11 @@ function getTravelerActions(
     { type: 'REPORT_ISSUE', label: 'Report issue on this order', enabled: true },
     {
       type: 'REPORT_RESOURCE_MISMATCH',
-      label: 'Report resource cannot run this order',
-      enabled: Boolean(bestResource),
-      reason: bestResource ? undefined : 'No resource is mapped to report against.',
+      label: 'Report resource mismatch',
+      enabled: false,
+      reason: bestResource
+        ? 'Resource mismatch logging is not wired yet. Use Report issue on this order so the concern is logged without changing order state.'
+        : 'No resource is mapped to report against.',
     },
     {
       type: 'MARK_READY_FOR_HANDOFF',
@@ -310,7 +312,7 @@ function getTravelerActions(
       type: 'SEND_TO_NEXT_DEPARTMENT',
       label: nextHandoff && nextHandoff !== 'Complete' ? `Advance order to ${nextHandoff} now` : 'Advance to next department now',
       enabled: Boolean(nextHandoff) && nextHandoff !== 'Complete' && (stepStatus === 'READY' || stepStatus === 'ACTIVE'),
-      reason: !nextHandoff ? 'No next handoff is available.' : nextHandoff === 'Complete' ? 'This is the final department — use Complete Order instead.' : undefined,
+      reason: !nextHandoff ? 'No next handoff is available.' : nextHandoff === 'Complete' ? 'This is the final department - use Complete Order instead.' : undefined,
     },
     {
       type: 'COMPLETE_ORDER',
