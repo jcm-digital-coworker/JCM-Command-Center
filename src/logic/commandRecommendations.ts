@@ -51,7 +51,7 @@ export function getCommandRecommendation(
     if (runtime.qaHolds.length > 0) {
       return {
         severity: 'critical',
-        title: 'Clear QA holds before downstream work moves',
+        title: 'Review QA holds before downstream work moves',
         detail: `${runtime.qaHolds.length} order${runtime.qaHolds.length === 1 ? ' has' : 's have'} QA hold or failed status.`,
         reason: 'A QA hold can make otherwise runnable work unsafe to release or ship.',
         targetTab: 'risk',
@@ -62,7 +62,7 @@ export function getCommandRecommendation(
     if (runtime.materialIssues.length > 0) {
       return {
         severity: 'watch',
-        title: 'Resolve material readiness first',
+        title: 'Review material readiness first',
         detail: `${runtime.materialIssues.length} open order${runtime.materialIssues.length === 1 ? ' is' : 's are'} not fully material-ready.`,
         reason: 'Material is the physical start gate. Production cannot move what has not been staged or received.',
         targetTab: 'receiving',
@@ -94,7 +94,7 @@ export function getCommandRecommendation(
   if (runtime.blockedOrders.length > 0) {
     return {
       severity: 'blocked',
-      title: 'Resolve blocked flow before assigning labor',
+      title: 'Review blocked flow before assigning labor',
       detail: `${runtime.blockedOrders.length} blocked order${runtime.blockedOrders.length === 1 ? '' : 's'} need action.`,
       reason: 'Labor assigned to blocked work creates motion without progress.',
       targetTab: 'orders',
