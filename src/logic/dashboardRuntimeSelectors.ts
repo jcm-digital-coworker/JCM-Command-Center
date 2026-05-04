@@ -21,7 +21,7 @@ export function selectDashboardRuntimeTruth(
   orders: ProductionOrder[],
   alertCount = 0,
 ): DashboardRuntimeTruth {
-  const openOrders = orders.filter((order) => order.status !== 'DONE');
+  const openOrders = orders.filter((order) => !isClosedOrder(order));
   const blockedOrders = openOrders.filter(isDashboardBlockedOrder);
   const materialIssues = openOrders.filter((order) => order.materialStatus !== 'RECEIVED');
   const qaHolds = openOrders.filter((order) => order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED');
@@ -43,9 +43,20 @@ export function selectDashboardRuntimeTruth(
 }
 
 export function isDashboardBlockedOrder(order: ProductionOrder): boolean {
-  return order.status === 'BLOCKED' || order.flowStatus === 'blocked' || order.blockers.length > 0;
+  return normalizeStatus(order.status) === 'BLOCKED' || normalizeStatus(order.flowStatus) === 'BLOCKED' || order.blockers.length > 0;
 }
 
 export function isDashboardRunnableOrder(order: ProductionOrder): boolean {
-  return order.status === 'READY' || order.status === 'IN_PROGRESS' || order.flowStatus === 'runnable';
+  const status = normalizeStatus(order.status);
+  const flowStatus = normalizeStatus(order.flowStatus);
+  return status === 'READY' || status === 'IN_PROGRESS' || flowStatus === 'RUNNABLE';
+}
+
+function isClosedOrder(order: ProductionOrder): boolean {
+  const status = normalizeStatus(order.status);
+  return status === 'DONE' || status === 'COMPLETE';
+}
+
+function normalizeStatus(value: string | undefined): string {
+  return String(value ?? '').toUpperCase();
 }
