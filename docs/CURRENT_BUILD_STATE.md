@@ -18,17 +18,21 @@ Current emphasis:
 - Workflow buttons must not imply resolution unless the app actually resolves something.
 - View/no-op workflow buttons must not mutate runtime state.
 - Dashboard recommendation copy should say review/open unless the app really resolves the issue.
+- Generated workflow signal copy should say review/clear, not resolve, unless a real resolution workflow exists.
+- Dashboard/order status selectors should normalize status casing and honor runtime `flowStatus` plus explicit blockers.
+- Workflow button selectors now expose typed action IDs; the remaining larger fix is to switch `WorkCenterWorkflowPanelV2.tsx` from text parsing to those typed actions.
 - Blocker navigation must land on visible blocker context.
 - Engineering escalation, Engineering quick selection, and dashboard Quick Actions must land on Engineering when the operator asks for Engineering.
 - Dashboard Quick Actions and Plant Signals are review/navigation surfaces, not hidden runtime mutation surfaces.
 - Navigation contracts should be audited as route contracts, not patched with timing workarounds.
 - Use current repo state before coding. Do not rely on stale chat context or old SHAs.
+- Claude may also be working in the repo. Pull current `main` before every edit and keep branches narrow.
 
 ## Latest Confirmed Green Build
 
 ```text
-Run ID: 25318196890
-Commit: bd0ed7a7e5f8f3dd5f2be7e9f79326982b6ad506
+Run ID: 25322834407
+Commit: 307aa68c4840afa06199e169f219c013401623e1
 Status: GREEN
 ```
 
@@ -42,6 +46,73 @@ Passed:
 - Record latest action run
 
 ## Most Recent Completed App Work
+
+### Line-by-Line Audit Batch: Status and Readiness Contract Cleanup
+
+Files:
+
+```text
+src/logic/dashboardRuntimeSelectors.ts
+src/logic/workflowPanelSelectors.ts
+src/logic/orderReadiness.ts
+```
+
+PRs:
+
+```text
+#23 Normalize dashboard runtime status checks
+#24 Add typed workflow button action contracts
+#25 Align order readiness status checks
+```
+
+Problems fixed:
+
+- Runtime writes uppercase values such as `BLOCKED`, `RUNNABLE`, `READY`, `DONE`, and `COMPLETE`, while dashboard selectors still checked some lowercase values.
+- Dashboard blocked/runnable/open counts could undercount after runtime state updates.
+- Workflow panel selector only exposed button labels, so behavior still depended on display text downstream.
+- `orderReadiness.ts` did not consistently honor runtime `flowStatus` or explicit `order.blockers` when deciding blocked labels/readiness.
+
+Current behavior:
+
+- `dashboardRuntimeSelectors.ts` normalizes status text before counting open, blocked, and runnable orders.
+- `workflowPanelSelectors.ts` now emits `WorkflowButtonAction` IDs alongside the existing `primary` and `secondary` button labels.
+- Current typed workflow button actions are `NO_ACTION`, `START_WORK`, `ESCALATE_ENGINEERING`, `HOLD_STATION`, `REQUEST_MATERIAL`, `OPEN_MAINTENANCE`, `REVIEW_BLOCKER`, and `NOTIFY_LEAD`.
+- `orderReadiness.ts` now considers status, flowStatus, and listed blockers when building blocked labels/readiness.
+
+Guardrail:
+
+- Status comparisons should normalize casing at boundaries.
+- Listed blockers and runtime flow status must be honored consistently.
+- Long-term fix remains: switch `WorkCenterWorkflowPanelV2.tsx` to consume typed `WorkflowButtonAction` IDs instead of parsing button label text.
+
+### Line-by-Line Audit Batch: Workflow Evaluation Copy Rescue
+
+Files:
+
+```text
+src/logic/workflowEvaluation.ts
+```
+
+PRs:
+
+```text
+#20 Clarify workflow evaluation blocker copy (closed, superseded)
+#22 Clarify workflow evaluation blocker copy v2 (merged)
+```
+
+Problem fixed:
+
+- PR #20 was green but became stale/not mergeable after `main` moved.
+- Its generated workflow signal copy fix was rescued onto a fresh branch from current `main` and merged as PR #22.
+- Stale PR #20 was commented as superseded and closed so the repo does not keep a ghost PR open.
+- Generated workflow signal wording such as `Resolve machine blocker` and `Resolve station/process blocker` overstated app capability.
+
+Current behavior:
+
+- Machine blocker action copy says `Review machine blocker or reassign work.`
+- Station/process blocker action copy says `Review station/process blocker before proceeding.`
+- QA copy says `Complete QA release or clear quality hold.`
+- This keeps workflow signals guidance-first and avoids implying hidden automatic resolution.
 
 ### Line-by-Line Audit Batch: Dashboard Recommendation Copy Cleanup
 
@@ -57,47 +128,12 @@ PR:
 #21 Clarify command recommendation review copy
 ```
 
-Problem fixed:
-
-- Dashboard command recommendations still used `Resolve` / `Clear` wording even when the button only opened a review or support surface.
-- `Resolve material readiness first` overstated the dashboard action.
-- `Resolve blocked flow before assigning labor` overstated the dashboard action.
-- `Clear QA holds before downstream work moves` overstated the support action.
-
 Current behavior:
 
 - Support QA recommendation says `Review QA holds before downstream work moves`.
 - Support material recommendation says `Review material readiness first`.
 - General blocked-flow recommendation says `Review blocked flow before assigning labor`.
-- Buttons still open the appropriate review/support destination rather than implying automatic resolution.
-
-Guardrail:
-
-- Dashboard recommendations are guidance and navigation, not automatic issue resolution.
-
-### Open Green PR Pending Merge
-
-PR:
-
-```text
-#20 Clarify workflow evaluation blocker copy
-```
-
-Status:
-
-- Build green on run `25295950215`.
-- Mergeable according to `get_pr_info`.
-- Two connector merge attempts were blocked by the tool safety layer, so this PR remains open unless merged externally.
-
-Files:
-
-```text
-src/logic/workflowEvaluation.ts
-```
-
-Purpose:
-
-- Replaces remaining generated workflow signal wording such as `Resolve machine blocker` and `Resolve station/process blocker` with review/clear language.
+- Buttons open the appropriate review/support destination rather than implying automatic resolution.
 
 ### Line-by-Line Audit Batch: Workflow View/No-Op Action Cleanup
 
@@ -125,7 +161,6 @@ Guardrail:
 
 - Visibility-only actions must remain visibility-only.
 - Unknown display labels should not become runtime state mutation.
-- Long-term fix should replace text-inferred workflow actions with typed workflow action IDs.
 
 ### Line-by-Line Audit Batch: Traveler Runtime and Operator Lane Cleanup
 
@@ -314,9 +349,8 @@ Guardrail:
 
 ## Active Risks / Next Audit Targets
 
-- PR #20 is open/green and should be merged manually or retried later if the connector allows it.
-- Continue line-by-line audit with dashboard panels, `dashboardRuntimeSelectors.ts`, `orderReadiness.ts`, and page-level action handlers.
-- Replace text-inferred workflow action dispatch with typed action IDs when feasible.
+- Finish the larger typed-action refactor in `WorkCenterWorkflowPanelV2.tsx`. The selector now emits typed action IDs, but the component still needs to consume them instead of parsing display labels.
+- Replace remaining text-inferred workflow action dispatch with typed action IDs where feasible.
 - Verify if Production role should have direct drawer access to Engineering or only escalation access.
 - Review `SEND_TO_NEXT_DEPARTMENT` and `COMPLETE_ORDER` semantics. They still intentionally mutate flow state, but should be live-tested and may need stronger confirmation/copy.
 - Coating is still partly uncertain.
@@ -336,6 +370,7 @@ For this chat/API workflow:
 - Do not reuse stale blob SHAs.
 - If the contents endpoint rejects a stale file SHA, use current commit/tree/blob state instead.
 - Check whether the repo already contains the component, selector, data field, or fix before building it.
+- When Claude is working too, keep edits small and avoid broad rewrites unless absolutely necessary.
 
 ## Protected Rules
 
@@ -368,7 +403,7 @@ Avoid:
 Recommended next move:
 
 ```text
-Continue line-by-line audit with dashboard panels, dashboardRuntimeSelectors.ts, and orderReadiness.ts.
+Refactor WorkCenterWorkflowPanelV2.tsx to consume typed WorkflowButtonAction IDs instead of parsing button label text.
 ```
 
 Use at least:
@@ -383,6 +418,9 @@ Use at least:
 - Operator Next Best Action: Next handoff with no handoff target.
 - Workflow card no-op/visibility actions.
 - Dashboard command recommendation buttons.
+- Generated workflow signal copy.
+- Dashboard blocked/runnable counts after runtime state changes.
+- Order readiness labels when `flowStatus` or listed blockers indicate a block.
 
 Guardrails:
 
