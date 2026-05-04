@@ -179,7 +179,7 @@ function getPlantTravelerInstruction(
 ): string {
   if (status === 'COMPLETE') return `Order #${order.orderNumber} is complete through the plant.`;
   if (status === 'HOLD') return `Order #${order.orderNumber} is on hold at ${activeStep?.department ?? 'the active route step'}. Review that department traveler before moving.`;
-  if (status === 'BLOCKED') return `Order #${order.orderNumber} is blocked at ${activeStep?.department ?? 'the active route step'}. Resolve the active blocker before the route can advance.`;
+  if (status === 'BLOCKED') return `Order #${order.orderNumber} is blocked at ${activeStep?.department ?? 'the active route step'}. Review the active blocker before the route can advance.`;
   if (activeStep) return `Order #${order.orderNumber} is ${completionPercent}% complete. Current plant step: ${activeStep.department}.`;
   return `Order #${order.orderNumber} has no active plant step mapped yet.`;
 }
@@ -261,7 +261,7 @@ function getCurrentInstruction(
     const blocker = order.blockers?.[0]?.message;
     if (blocker) return `Do not start order #${order.orderNumber}. Blocked: ${blocker}`;
     if (!bestResource) return `Do not start order #${order.orderNumber}. No capable ${department} resource is mapped yet.`;
-    return `Do not start order #${order.orderNumber}. Resolve blocker before work begins.`;
+    return `Do not start order #${order.orderNumber}. Review blocker before work begins.`;
   }
 
   const resourceLabel = bestResource ? ` on ${bestResource.label}` : '';
@@ -302,7 +302,7 @@ function getTravelerActions(
     },
     {
       type: 'MARK_READY_FOR_HANDOFF',
-      label: 'Mark ready for next department',
+      label: 'Record ready for handoff',
       enabled: stepStatus === 'READY' || stepStatus === 'ACTIVE',
       reason: stepStatus === 'READY' || stepStatus === 'ACTIVE' ? undefined : 'Traveler is not ready for handoff.',
     },
