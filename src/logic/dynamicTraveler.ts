@@ -265,7 +265,7 @@ function getCurrentInstruction(
   }
 
   const resourceLabel = bestResource ? ` on ${bestResource.label}` : '';
-  const handoffLabel = nextHandoff ? ` After this step, send it to ${nextHandoff}.` : '';
+  const handoffLabel = nextHandoff ? ` After this step, advance it to ${nextHandoff}.` : '';
 
   if (department === 'Receiving') return `Receive and stage order #${order.orderNumber}.${handoffLabel}`;
   if (department === 'Material Handling') return `Stage material for order #${order.orderNumber}.${handoffLabel}`;
@@ -308,13 +308,13 @@ function getTravelerActions(
     },
     {
       type: 'SEND_TO_NEXT_DEPARTMENT',
-      label: nextHandoff && nextHandoff !== 'Complete' ? `Send to ${nextHandoff}` : 'Send to next department',
+      label: nextHandoff && nextHandoff !== 'Complete' ? `Advance order to ${nextHandoff} now` : 'Advance to next department now',
       enabled: Boolean(nextHandoff) && nextHandoff !== 'Complete' && (stepStatus === 'READY' || stepStatus === 'ACTIVE'),
       reason: !nextHandoff ? 'No next handoff is available.' : nextHandoff === 'Complete' ? 'This is the final department — use Complete Order instead.' : undefined,
     },
     {
       type: 'COMPLETE_ORDER',
-      label: 'Mark order complete',
+      label: 'Complete order now',
       enabled: nextHandoff === 'Complete' && (stepStatus === 'READY' || stepStatus === 'ACTIVE' || stepStatus === 'DONE'),
       reason: nextHandoff !== 'Complete' ? 'Order has remaining departments before completion.' : undefined,
     },
