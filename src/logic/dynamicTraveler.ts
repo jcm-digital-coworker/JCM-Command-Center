@@ -11,6 +11,13 @@ import type {
   TravelerResource,
   TravelerStepStatus,
 } from '../types/dynamicTraveler';
+import {
+  isClosedProductionStatus,
+  isCriticalPriority,
+  isHotPriority,
+  isMaterialActionNeeded,
+  normalizeOrderToken,
+} from './orderStatusTruth';
 
 const DEFAULT_PLANT_ROUTE: Department[] = ['Receiving', 'Machine Shop', 'Assembly', 'QA', 'Shipping'];
 
@@ -162,7 +169,7 @@ function normalizePlantStepForRoute(step: DynamicTraveler, index: number, active
 }
 
 function getPlantTravelerStatus(order: ProductionOrder, steps: DynamicTraveler[]): PlantTravelerStatus {
-  if (isClosedStatus(order.status)) return 'COMPLETE';
+  if (isClosedProductionStatus(order.status)) return 'COMPLETE';
   const activeStep = steps.find((step) => step.stepStatus !== 'DONE' && step.stepStatus !== 'NOT_READY');
   if (activeStep?.stepStatus === 'HOLD') return 'HOLD';
   if (activeStep?.stepStatus === 'BLOCKED') return 'BLOCKED';
@@ -229,12 +236,12 @@ function getTravelerStepStatus(
   department: Department,
   capableResources: TravelerResource[],
 ): TravelerStepStatus {
-  const status = normalizeToken(order.status);
-  const qaStatus = normalizeToken(order.qaStatus);
+  const status = normalizeOrderToken(order.status);
+  const qaStatus = normalizeOrderToken(order.qaStatus);
 
-  if (isClosedStatus(status)) return 'DONE';
+  if (isClosedProductionStatus(status)) return 'DONE';
   if (qaStatus === 'HOLD' || qaStatus === 'FAILED' || status === 'HOLD') return 'HOLD';
-  if ((order.blockers ?? []).length > 0 || status === 'BLOCKED' || normalizeToken(order.flowStatus) === 'BLOCKED') return 'BLOCKED';
+  if ((order.blockers ?? []).length > 0 || status === 'BLOCKED' || normalizeOrderToken(order.flowStatus) === 'BLOCKED') return 'BLOCKED';
   if (capableResources.length === 0) return 'BLOCKED';
   if (order.currentDepartment !== department && !order.requiredDepartments?.includes(department)) return 'NOT_READY';
   if (status === 'IN_PROGRESS' || status === 'RUNNING') return 'ACTIVE';
@@ -285,8 +292,7 @@ function getTravelerActions(
   bestResource: TravelerResource | undefined,
   nextHandoff: Department | 'Complete' | undefined,
 ): TravelerAction[] {
-  const materialStatus = normalizeToken(order.materialStatus);
-  const materialNeedsAction = materialStatus === 'MISSING' || materialStatus === 'NOT_RECEIVED' || materialStatus === 'ORDER_REQUIRED';
+  const materialNeedsAction = isMaterialActionNeeded(order.materialStatus);
 
   return [
     { type: 'OPEN_DETAIL', label: 'Open traveler detail', enabled: true },
@@ -297,14 +303,10 @@ function getTravelerActions(
       enabled: materialNeedsAction,
       reason: materialNeedsAction ? undefined : 'Material is not currently flagged as missing.',
     },
-    { type: 'REPORT_ISSUE', label: 'Report issue on this order', enabled: true },
     {
-      type: 'REPORT_RESOURCE_MISMATCH',
-      label: 'Report resource mismatch',
-      enabled: false,
-      reason: bestResource
-        ? 'Resource mismatch logging is not wired yet. Use Report issue on this order so the concern is logged without changing order state.'
-        : 'No resource is mapped to report against.',
+      type: 'REPORT_ISSUE',
+      label: bestResource ? `Report issue or resource mismatch on ${bestResource.label}` : 'Report issue on this order',
+      enabled: true,
     },
     {
       type: 'MARK_READY_FOR_HANDOFF',
@@ -339,9 +341,8 @@ function getTravelerPriorityScore(
   if (!bestResource) score += 35;
   if (isCriticalPriority(order.priority)) score += 30;
   if (isHotPriority(order.priority)) score += 20;
-  const materialStatus = normalizeToken(order.materialStatus);
-  const qaStatus = normalizeToken(order.qaStatus);
-  if (materialStatus === 'MISSING' || materialStatus === 'NOT_RECEIVED' || materialStatus === 'ORDER_REQUIRED') score += 15;
+  if (isMaterialActionNeeded(order.materialStatus)) score += 15;
+  const qaStatus = normalizeOrderToken(order.qaStatus);
   if (qaStatus === 'HOLD' || qaStatus === 'FAILED') score += 15;
   return score;
 }
@@ -352,21 +353,4 @@ function getVisualSignal(stepStatus: TravelerStepStatus): DynamicTraveler['visua
   if (stepStatus === 'DONE') return 'DONE';
   if (stepStatus === 'READY' || stepStatus === 'ACTIVE') return 'READY';
   return 'WATCH';
-}
-
-function isClosedStatus(value: unknown): boolean {
-  const status = normalizeToken(value);
-  return status === 'DONE' || status === 'COMPLETE' || status === 'COMPLETED';
-}
-
-function isCriticalPriority(value: unknown): boolean {
-  return normalizeToken(value) === 'CRITICAL';
-}
-
-function isHotPriority(value: unknown): boolean {
-  return normalizeToken(value) === 'HOT';
-}
-
-function normalizeToken(value: unknown): string {
-  return String(value ?? '').trim().toUpperCase();
 }
