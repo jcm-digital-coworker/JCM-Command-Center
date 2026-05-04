@@ -4,6 +4,11 @@ function normalizeText(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
 }
 
+function isClosedStatus(status: unknown): boolean {
+  const normalizedStatus = normalizeText(status);
+  return normalizedStatus === 'done' || normalizedStatus === 'complete' || normalizedStatus === 'completed';
+}
+
 function getDependencyName(dependency: OrderDependency): string {
   return dependency.label ?? dependency.id ?? '';
 }
@@ -17,7 +22,6 @@ function hasListedBlocker(order: ProductionOrder): boolean {
 }
 
 export function getAutomaticBlockReason(order: ProductionOrder): BlockedReason | null {
-  const status = normalizeText(order.status);
   const flowStatus = normalizeText(order.flowStatus);
   const materialStatus = normalizeText(order.materialStatus);
 
@@ -29,7 +33,7 @@ export function getAutomaticBlockReason(order: ProductionOrder): BlockedReason |
     return 'UNKNOWN';
   }
 
-  if (status !== 'done' && status !== 'complete') {
+  if (!isClosedStatus(order.status)) {
     if (materialStatus === 'not_received' || materialStatus === 'partial' || materialStatus === 'missing') {
       return 'WAITING_ON_MATERIAL';
     }
