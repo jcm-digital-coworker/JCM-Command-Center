@@ -81,4 +81,15 @@ export const productFlows: ProductFlow[] = [
     bypassCapability: false,
     commandNote: 'Custom fabrication route. Treat as variable until verified.',
   },
+  {
+    lane: 'OTHER',
+    label: 'Restrainers / Accessory Products',
+    departments: ['Receiving', 'Assembly', 'QA', 'Shipping'],
+    dependencies: [
+      { name: 'Receiving Material Readiness', kind: 'MATERIAL', required: true },
+      { name: 'Assembly Hardware Stock', kind: 'MATERIAL', required: true },
+    ],
+    bypassCapability: true,
+    commandNote: 'Restrainers and accessories go directly to Assembly after Receiving. Short lane — hardware availability is the main risk.',
+  },
 ];

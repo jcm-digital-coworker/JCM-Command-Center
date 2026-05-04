@@ -7,7 +7,8 @@ export type DocumentCategory =
   | "Print"
   | "Manual"
   | "Inspection"
-  | "Setup Guide";
+  | "Setup Guide"
+  | "Reference";
 
 export type DocumentStatus = "Available" | "Placeholder" | "Needs Upload";
 
