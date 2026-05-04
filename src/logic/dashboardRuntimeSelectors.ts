@@ -1,5 +1,12 @@
 import type { ProductionOrder } from '../types/productionOrder';
 import { productionOrders } from '../data/productionOrders';
+import {
+  isBlockedProductionOrder,
+  isClosedProductionStatus,
+  isMaterialIssueStatus,
+  isRunnableProductionOrder,
+  normalizeOrderToken,
+} from './orderStatusTruth';
 import { getRuntimeProductionOrders } from './workflowRuntimeState';
 
 export type DashboardRuntimeTruth = {
@@ -21,10 +28,10 @@ export function selectDashboardRuntimeTruth(
   orders: ProductionOrder[],
   alertCount = 0,
 ): DashboardRuntimeTruth {
-  const openOrders = orders.filter((order) => !isClosedOrder(order));
+  const openOrders = orders.filter((order) => !isClosedProductionStatus(order.status));
   const blockedOrders = openOrders.filter(isDashboardBlockedOrder);
   const materialIssues = openOrders.filter(isDashboardMaterialIssue);
-  const qaHolds = openOrders.filter((order) => normalizeStatus(order.qaStatus) === 'HOLD' || normalizeStatus(order.qaStatus) === 'FAILED');
+  const qaHolds = openOrders.filter((order) => normalizeOrderToken(order.qaStatus) === 'HOLD' || normalizeOrderToken(order.qaStatus) === 'FAILED');
   const runnableOrders = openOrders.filter(isDashboardRunnableOrder);
   const dueSoonOrders = [...openOrders]
     .sort((a, b) => (a.projectedShipDate ?? '').localeCompare(b.projectedShipDate ?? ''))
@@ -43,25 +50,13 @@ export function selectDashboardRuntimeTruth(
 }
 
 export function isDashboardBlockedOrder(order: ProductionOrder): boolean {
-  return normalizeStatus(order.status) === 'BLOCKED' || normalizeStatus(order.flowStatus) === 'BLOCKED' || order.blockers.length > 0;
+  return isBlockedProductionOrder(order);
 }
 
 export function isDashboardRunnableOrder(order: ProductionOrder): boolean {
-  const status = normalizeStatus(order.status);
-  const flowStatus = normalizeStatus(order.flowStatus);
-  return status === 'READY' || status === 'IN_PROGRESS' || flowStatus === 'RUNNABLE';
+  return isRunnableProductionOrder(order);
 }
 
 export function isDashboardMaterialIssue(order: ProductionOrder): boolean {
-  const materialStatus = normalizeStatus(order.materialStatus);
-  return materialStatus !== '' && materialStatus !== 'RECEIVED' && materialStatus !== 'STAGED';
-}
-
-function isClosedOrder(order: ProductionOrder): boolean {
-  const status = normalizeStatus(order.status);
-  return status === 'DONE' || status === 'COMPLETE' || status === 'COMPLETED';
-}
-
-function normalizeStatus(value: string | undefined): string {
-  return String(value ?? '').trim().toUpperCase();
+  return isMaterialIssueStatus(order.materialStatus);
 }
