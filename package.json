@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test:order-truth": "node --experimental-strip-types src/logic/orderStatusTruth.regression.ts",
+    "test:order-truth": "node --experimental-strip-types scripts/orderStatusTruth.regression.mjs",
     "build": "npm run test:order-truth && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
