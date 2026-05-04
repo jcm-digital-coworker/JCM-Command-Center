@@ -13,6 +13,7 @@ export function orderRequiresBlueprintPacket(order: ProductionOrder): boolean {
 
 export function getStationPacket(order: ProductionOrder, blueprint?: PartBlueprint) {
   const blockers = order.blockers?.map((b) => b.message) ?? [];
+  const packetStatus = getStationPacketStatus(order, blockers);
 
   if (!blueprint && orderRequiresBlueprintPacket(order)) {
     return {
@@ -29,7 +30,7 @@ export function getStationPacket(order: ProductionOrder, blueprint?: PartBluepri
   if (!blueprint) {
     return {
       orderNumber: order.orderNumber,
-      status: blockers.length ? 'BLOCKED' : 'READY',
+      status: packetStatus,
       message: 'No blueprint packet attached. Using legacy shop-floor order data.',
       blockers,
       operation: order.productFamily,
@@ -44,11 +45,22 @@ export function getStationPacket(order: ProductionOrder, blueprint?: PartBluepri
 
   return {
     orderNumber: order.orderNumber,
-    status: blockers.length ? 'BLOCKED' : 'READY',
+    status: packetStatus,
     message: step?.operation ?? 'Blueprint packet attached.',
     operation: step?.operation,
     instructions: step?.instructions ?? [],
     blockers,
     next: step?.handoffTo,
   };
+}
+
+function getStationPacketStatus(order: ProductionOrder, blockers: string[]): 'READY' | 'BLOCKED' {
+  const status = normalizeToken(order.status);
+  const flowStatus = normalizeToken(order.flowStatus);
+  if (blockers.length > 0 || status === 'BLOCKED' || flowStatus === 'BLOCKED') return 'BLOCKED';
+  return 'READY';
+}
+
+function normalizeToken(value: unknown): string {
+  return String(value ?? '').trim().toUpperCase();
 }
