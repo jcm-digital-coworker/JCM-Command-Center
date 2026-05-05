@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import { productionOrders } from '../data/productionOrders';
 import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import { generatePlantTravelers } from '../logic/dynamicTraveler';
 import { getUrgencyScore } from '../logic/urgencyScore';
 import { isBlockedProductionOrder, isClosedProductionStatus, isCriticalPriority, isHotPriority } from '../logic/orderStatusTruth';
 import KanbanCard from '../components/kanban/KanbanCard';
 import OrderDetailModal from '../components/orders/OrderDetailModal';
+import type { PlantTraveler } from '../types/dynamicTraveler';
 import type { ProductionOrder } from '../types/productionOrder';
 import type { Department } from '../types/machine';
 import type { AppTab } from '../types/app';
@@ -39,23 +41,26 @@ export default function KanbanPage({ theme = 'dark', onGoToTab }: Props) {
     };
   }, []);
 
-  const allOrders = useMemo(() => getRuntimeProductionOrders(productionOrders), [tick]);
+  const allTravelers = useMemo(() => {
+    const runtimeOrders = getRuntimeProductionOrders(productionOrders);
+    return generatePlantTravelers(runtimeOrders);
+  }, [tick]);
 
-  const activeOrders = useMemo(() => {
-    let base = showDone ? allOrders : allOrders.filter((o) => !isClosedProductionStatus(o.status));
-    if (priorityFilter === 'CRITICAL') base = base.filter((o) => isCriticalPriority(o.priority));
-    if (priorityFilter === 'HOT') base = base.filter((o) => isHotPriority(o.priority) || isCriticalPriority(o.priority));
-    if (priorityFilter === 'BLOCKED') base = base.filter(isBlockedProductionOrder);
-    return [...base].sort((a, b) => getUrgencyScore(b) - getUrgencyScore(a));
-  }, [allOrders, showDone, priorityFilter]);
+  const activeTravelers = useMemo(() => {
+    let base = showDone ? allTravelers : allTravelers.filter((traveler) => !isClosedProductionStatus(traveler.order.status));
+    if (priorityFilter === 'CRITICAL') base = base.filter((traveler) => isCriticalPriority(traveler.order.priority));
+    if (priorityFilter === 'HOT') base = base.filter((traveler) => isHotPriority(traveler.order.priority) || isCriticalPriority(traveler.order.priority));
+    if (priorityFilter === 'BLOCKED') base = base.filter((traveler) => traveler.overallStatus === 'BLOCKED' || isBlockedProductionOrder(traveler.order));
+    return [...base].sort((a, b) => getTravelerSortScore(b) - getTravelerSortScore(a));
+  }, [allTravelers, showDone, priorityFilter]);
 
   const visibleColumns = deptFilter === 'ALL' ? PLANT_COLUMNS : PLANT_COLUMNS.filter((d) => d === deptFilter);
 
-  function ordersForColumn(dept: Department): ProductionOrder[] {
-    return activeOrders.filter((o) => o.currentDepartment === dept);
+  function travelersForColumn(dept: Department): PlantTraveler[] {
+    return activeTravelers.filter((traveler) => traveler.activeDepartment === dept);
   }
 
-  const blockedTotal = activeOrders.filter(isBlockedProductionOrder).length;
+  const blockedTotal = activeTravelers.filter((traveler) => traveler.overallStatus === 'BLOCKED' || isBlockedProductionOrder(traveler.order)).length;
 
   return (
     <div style={pageStyle}>
@@ -72,7 +77,7 @@ export default function KanbanPage({ theme = 'dark', onGoToTab }: Props) {
           <div style={eyebrowStyle}>PLANT-WIDE VIEW</div>
           <h2 style={titleStyle(theme)}>War Board</h2>
           <p style={subTextStyle(theme)}>
-            {activeOrders.length} order{activeOrders.length !== 1 ? 's' : ''} across {visibleColumns.length} department{visibleColumns.length !== 1 ? 's' : ''}
+            {activeTravelers.length} traveler{activeTravelers.length !== 1 ? 's' : ''} across {visibleColumns.length} department{visibleColumns.length !== 1 ? 's' : ''}
             {blockedTotal > 0 && <span style={{ color: '#dc2626', fontWeight: 900 }}> · {blockedTotal} BLOCKED</span>}
           </p>
         </div>
@@ -110,33 +115,43 @@ export default function KanbanPage({ theme = 'dark', onGoToTab }: Props) {
 
       <div style={boardStyle}>
         {visibleColumns.map((dept) => {
-          const cards = ordersForColumn(dept);
-          const blocked = cards.filter(isBlockedProductionOrder).length;
+          const travelers = travelersForColumn(dept);
+          const blocked = travelers.filter((traveler) => traveler.overallStatus === 'BLOCKED' || isBlockedProductionOrder(traveler.order)).length;
           return (
             <div key={dept} style={columnStyle(theme, blocked > 0)}>
               <div style={columnHeaderStyle(theme, blocked > 0)}>
                 <span style={columnTitleStyle}>{dept.toUpperCase()}</span>
                 <span style={columnCountStyle(blocked > 0, theme)}>
-                  {cards.length}{blocked > 0 ? ` · ${blocked}⚠` : ''}
+                  {travelers.length}{blocked > 0 ? ` · ${blocked}⚠` : ''}
                 </span>
               </div>
               <div style={columnBodyStyle}>
-                {cards.length === 0 ? (
+                {travelers.length === 0 ? (
                   <div style={emptyColumnStyle(theme)}>—</div>
                 ) : (
-                  cards.map((order) => (
-                    <KanbanCard
-                      key={order.orderNumber}
-                      order={order}
-                      theme={theme}
-                      subStageLabel={
-                        order.deptSubStage?.department === dept
-                          ? order.deptSubStage.stage
-                          : undefined
-                      }
-                      onClick={() => setSelectedOrder(order)}
-                    />
-                  ))
+                  travelers.map((traveler) => {
+                    const order = traveler.order;
+                    const activeStep = traveler.departmentSteps.find((step) => step.department === dept);
+                    return (
+                      <KanbanCard
+                        key={order.orderNumber}
+                        order={order}
+                        theme={theme}
+                        travelerStatus={traveler.overallStatus}
+                        routeProgressLabel={`${traveler.completedStepCount}/${traveler.totalStepCount}`}
+                        nextHandoffLabel={traveler.nextDepartment ? String(traveler.nextDepartment) : undefined}
+                        currentInstruction={traveler.currentInstruction}
+                        subStageLabel={
+                          order.deptSubStage?.department === dept
+                            ? order.deptSubStage.stage
+                            : activeStep?.department === dept && activeStep.stepStatus !== 'NOT_READY'
+                              ? activeStep.stepStatus
+                              : undefined
+                        }
+                        onClick={() => setSelectedOrder(order)}
+                      />
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -145,6 +160,16 @@ export default function KanbanPage({ theme = 'dark', onGoToTab }: Props) {
       </div>
     </div>
   );
+}
+
+function getTravelerSortScore(traveler: PlantTraveler): number {
+  const orderScore = getUrgencyScore(traveler.order);
+  const statusScore = traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD'
+    ? 100
+    : traveler.overallStatus === 'READY' || traveler.overallStatus === 'ACTIVE'
+      ? 50
+      : 0;
+  return statusScore + orderScore + Math.max(0, 100 - traveler.completionPercent) / 10;
 }
 
 const pageStyle: CSSProperties = { minHeight: '100vh' };
