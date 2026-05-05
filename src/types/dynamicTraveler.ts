@@ -112,5 +112,6 @@ export type PlantTraveler = {
   totalStepCount: number;
   blockers: FlowBlocker[];
   currentInstruction: string;
+  /** Active department action projection. The source of truth remains departmentSteps. */
   actions: TravelerAction[];
 };
