@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo, type CSSProperties } from 'react';
 import { productionOrders } from '../data/productionOrders';
 import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import { generatePlantTravelers } from '../logic/dynamicTraveler';
 import { getUrgencyScore } from '../logic/urgencyScore';
 import { isBlockedProductionOrder, isClosedProductionStatus } from '../logic/orderStatusTruth';
 import type { Department } from '../types/machine';
-import type { ProductionOrder } from '../types/productionOrder';
+import type { PlantTraveler } from '../types/dynamicTraveler';
+import type { AppTab } from '../types/app';
 
 const FALLBACK_DEPT_DOWNSTREAM: Partial<Record<Department, string>> = {
   'Sales': 'Engineering',
@@ -19,8 +21,6 @@ const FALLBACK_DEPT_DOWNSTREAM: Partial<Record<Department, string>> = {
   'QA': 'Shipping',
   'Shipping': 'Customer',
 };
-
-import type { AppTab } from '../types/app';
 
 type Props = {
   department: Department;
@@ -39,25 +39,26 @@ export default function NextHandoffBanner({ department, theme, onGoToTab }: Prop
     return () => { window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, bump); window.removeEventListener('storage', bump); };
   }, []);
 
-  const topOrders: ProductionOrder[] = useMemo(() => {
+  const topTravelers: PlantTraveler[] = useMemo(() => {
     const runtime = getRuntimeProductionOrders(productionOrders);
-    return runtime
-      .filter((order) => order.currentDepartment === department && !isClosedProductionStatus(order.status))
-      .sort((a, b) => getUrgencyScore(b) - getUrgencyScore(a))
+    return generatePlantTravelers(runtime)
+      .filter((traveler) => traveler.activeDepartment === department && !isClosedProductionStatus(traveler.order.status))
+      .sort((a, b) => getTravelerHandoffScore(b) - getTravelerHandoffScore(a))
       .slice(0, 3);
   }, [tick, department]);
 
   useEffect(() => {
-    if (topOrders.length <= 1) { setIdx(0); return; }
-    const id = setInterval(() => setIdx((i) => (i + 1) % topOrders.length), 6000);
+    if (topTravelers.length <= 1) { setIdx(0); return; }
+    const id = setInterval(() => setIdx((i) => (i + 1) % topTravelers.length), 6000);
     return () => clearInterval(id);
-  }, [topOrders.length]);
+  }, [topTravelers.length]);
 
-  if (topOrders.length === 0) return null;
+  if (topTravelers.length === 0) return null;
 
-  const order = topOrders[idx % topOrders.length];
-  const isBlocked = isBlockedProductionOrder(order);
-  const downstream = order.nextDepartment ?? FALLBACK_DEPT_DOWNSTREAM[department] ?? 'Next dept';
+  const traveler = topTravelers[idx % topTravelers.length];
+  const order = traveler.order;
+  const isBlocked = traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD' || isBlockedProductionOrder(order);
+  const downstream = traveler.nextDepartment ?? FALLBACK_DEPT_DOWNSTREAM[department] ?? 'Next dept';
   const daysToShip = order.projectedShipDate
     ? Math.ceil((new Date(order.projectedShipDate).getTime() - Date.now()) / 86400000)
     : null;
@@ -76,6 +77,7 @@ export default function NextHandoffBanner({ department, theme, onGoToTab }: Prop
         <span style={orderStyle(theme)}>#{order.orderNumber}</span>
         <span style={familyStyle(theme)}>{order.productFamily}</span>
         {order.customer && <span style={customerStyle}>{order.customer}</span>}
+        <span style={progressStyle(theme)}>{traveler.completedStepCount}/{traveler.totalStepCount} ROUTE</span>
       </div>
       <div style={rightStyle}>
         {daysToShip !== null && (
@@ -84,14 +86,22 @@ export default function NextHandoffBanner({ department, theme, onGoToTab }: Prop
           </span>
         )}
         {isBlocked && (
-          <span style={blockedChip}>⚠ BLOCKED</span>
+          <span style={blockedChip}>⚠ {traveler.overallStatus}</span>
         )}
-        {topOrders.length > 1 && (
-          <span style={cycleStyle}>{idx + 1}/{topOrders.length}</span>
+        {topTravelers.length > 1 && (
+          <span style={cycleStyle}>{idx + 1}/{topTravelers.length}</span>
         )}
       </div>
     </div>
   );
+}
+
+function getTravelerHandoffScore(traveler: PlantTraveler): number {
+  let score = getUrgencyScore(traveler.order);
+  if (traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD') score += 80;
+  if (traveler.overallStatus === 'READY' || traveler.overallStatus === 'ACTIVE') score += 40;
+  score += Math.max(0, 100 - traveler.completionPercent) / 10;
+  return score;
 }
 
 function bannerStyle(theme: 'dark' | 'light', tone: string): CSSProperties {
@@ -116,6 +126,7 @@ const labelStyle: CSSProperties = { fontSize: 9, fontWeight: 900, color: '#f9731
 function orderStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 12, fontWeight: 900, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }; }
 function familyStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 11, fontWeight: 700, color: theme === 'dark' ? '#cbd5e1' : '#475569' }; }
 const customerStyle: CSSProperties = { fontSize: 10, color: '#64748b', fontWeight: 600 };
+function progressStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 9, color: theme === 'dark' ? '#94a3b8' : '#64748b', fontWeight: 900, letterSpacing: '0.7px' }; }
 function daysChip(days: number): CSSProperties { const c = days < 0 ? '#dc2626' : days <= 2 ? '#f59e0b' : '#10b981'; return { fontSize: 10, fontWeight: 900, color: c, background: `${c}18`, border: `1px solid ${c}44`, borderRadius: 3, padding: '2px 7px' }; }
 const blockedChip: CSSProperties = { fontSize: 10, fontWeight: 900, color: '#dc2626', background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.4)', borderRadius: 3, padding: '2px 7px' };
 const cycleStyle: CSSProperties = { fontSize: 10, color: '#475569', fontWeight: 700 };
