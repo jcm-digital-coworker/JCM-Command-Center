@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import type { ProductionOrder } from '../../types/productionOrder';
 import { getUrgencyScore, getUrgencyColor } from '../../logic/urgencyScore';
 import { isFeatureEnabled } from '../../logic/featureFlags';
+import { isBlockedProductionOrder, isRunnableProductionOrder } from '../../logic/orderStatusTruth';
 
 type Props = {
   order: ProductionOrder;
@@ -12,8 +13,8 @@ type Props = {
 };
 
 export default function KanbanCard({ order, theme, subStageLabel, onAdvanceSubStage, onClick }: Props) {
-  const isBlocked = (order.blockers ?? []).length > 0 || String(order.flowStatus).toLowerCase() === 'blocked';
-  const isRunnable = String(order.flowStatus).toLowerCase() === 'runnable';
+  const isBlocked = isBlockedProductionOrder(order);
+  const isRunnable = isRunnableProductionOrder(order);
   const priority = String(order.priority ?? 'normal').toUpperCase();
   const priorityColor = priority === 'CRITICAL' ? '#dc2626' : priority === 'HOT' ? '#f59e0b' : '#64748b';
   const borderColor = isBlocked ? '#dc2626' : isRunnable ? '#10b981' : '#475569';
