@@ -51,6 +51,7 @@ export default function AppDrawer({
   const activeGroupId = getActiveGroupId(tab, visibleGroups);
   const [openGroupId, setOpenGroupId] = useState<NavigationGroupId | null>(activeGroupId);
   const [workCentersOpen, setWorkCentersOpen] = useState(departmentFilter !== 'All');
+  const [devToolsOpen, setDevToolsOpen] = useState(false);
   const [flags, setFlags] = useState(() => getAllFeatureFlags());
 
   function toggleFlag(flag: FeatureFlag) {
@@ -63,6 +64,10 @@ export default function AppDrawer({
     setOpenGroupId(activeGroupId);
     setWorkCentersOpen(departmentFilter !== 'All');
   }, [activeGroupId, departmentFilter, open]);
+
+  useEffect(() => {
+    if (!open) setDevToolsOpen(false);
+  }, [open]);
 
   if (!open) return null;
 
@@ -218,16 +223,40 @@ export default function AppDrawer({
               </button>
             </div>
           </div>
+        </div>
 
-          <div style={devToolsSectionStyle}>
-          <div style={devToolsHeaderStyle}>CO-WORKER VIEW</div>
+        <div style={footerStyle}>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>Nash, Texas</div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setDevToolsOpen((current) => !current)}
+        style={devFlyoutButtonStyle(devToolsOpen)}
+        aria-expanded={devToolsOpen}
+      >
+        DEV
+      </button>
+
+      {devToolsOpen && (
+        <div style={devFlyoutPanelStyle}>
+          <div style={devFlyoutHeaderStyle}>
+            <div>
+              <div style={devToolsHeaderStyle}>CO-WORKER VIEW</div>
+              <div style={devFlyoutTitleStyle}>Developer Toolkit</div>
+            </div>
+            <button type="button" onClick={() => setDevToolsOpen(false)} style={devFlyoutCloseStyle}>X</button>
+          </div>
+
           <button
             onClick={() => goToTab('warRoomContext')}
             style={tab === 'warRoomContext' ? devTabActiveStyle : devTabStyle}
           >
             WAR ROOM CONTEXT
           </button>
-          <div style={{ marginBottom: 8 }}>
+
+          <div style={{ marginBottom: 12 }}>
             <div style={{ ...devToolsLabelStyle, marginBottom: 6 }}>FEATURE FLAGS</div>
             {(Object.keys(FLAG_LABELS) as FeatureFlag[]).map((flag) => (
               <div key={flag} style={flagRowStyle}>
@@ -242,6 +271,7 @@ export default function AppDrawer({
               </div>
             ))}
           </div>
+
           <div style={devToolsItemStyle}>
             <span style={devToolsLabelStyle}>ROLE</span>
             <select
@@ -269,13 +299,8 @@ export default function AppDrawer({
               ))}
             </select>
           </div>
-          </div>
         </div>
-
-        <div style={footerStyle}>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>Nash, Texas</div>
-        </div>
-      </div>
+      )}
     </>
   );
 }
@@ -299,6 +324,27 @@ function indicatorStyle(active: boolean): CSSProperties {
     background: active ? '#f97316' : 'transparent',
     borderRadius: 2,
     marginRight: 12,
+  };
+}
+
+function devFlyoutButtonStyle(open: boolean): CSSProperties {
+  return {
+    position: 'fixed',
+    top: 98,
+    left: 292,
+    zIndex: 1002,
+    width: 46,
+    height: 38,
+    borderRadius: '0 6px 6px 0',
+    border: '1px solid #f97316',
+    borderLeft: 'none',
+    background: open ? '#f97316' : '#0f172a',
+    color: open ? '#111827' : '#f97316',
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: '1px',
+    cursor: 'pointer',
+    boxShadow: '4px 4px 14px rgba(0,0,0,0.3)',
   };
 }
 
@@ -519,10 +565,49 @@ const footerStyle: CSSProperties = {
   flexShrink: 0,
 };
 
-const devToolsSectionStyle: CSSProperties = {
-  borderTop: '1px dashed #334155',
-  padding: '12px 20px',
-  flexShrink: 0,
+const devFlyoutPanelStyle: CSSProperties = {
+  position: 'fixed',
+  top: 98,
+  left: 338,
+  width: 270,
+  maxHeight: 'calc(100vh - 120px)',
+  overflowY: 'auto',
+  zIndex: 1001,
+  background: '#0f172a',
+  border: '1px solid #334155',
+  borderLeft: '3px solid #f97316',
+  borderRadius: '0 8px 8px 0',
+  boxShadow: '8px 8px 24px rgba(0,0,0,0.38)',
+  padding: 14,
+};
+
+const devFlyoutHeaderStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: 10,
+  marginBottom: 12,
+  paddingBottom: 10,
+  borderBottom: '1px solid #1e293b',
+};
+
+const devFlyoutTitleStyle: CSSProperties = {
+  color: '#e2e8f0',
+  fontSize: 14,
+  fontWeight: 900,
+  letterSpacing: '0.7px',
+};
+
+const devFlyoutCloseStyle: CSSProperties = {
+  background: 'transparent',
+  border: '1px solid #334155',
+  color: '#64748b',
+  width: 28,
+  height: 28,
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 900,
 };
 
 const devToolsHeaderStyle: CSSProperties = {
@@ -530,7 +615,7 @@ const devToolsHeaderStyle: CSSProperties = {
   fontWeight: 800,
   color: '#475569',
   letterSpacing: '1.5px',
-  marginBottom: 10,
+  marginBottom: 3,
 };
 
 const devToolsItemStyle: CSSProperties = {
@@ -553,14 +638,14 @@ const devTabStyle: CSSProperties = {
   textAlign: 'left',
   background: 'transparent',
   border: '1px solid #334155',
-  color: '#475569',
-  padding: '7px 10px',
+  color: '#64748b',
+  padding: '8px 10px',
   borderRadius: 4,
   fontSize: 11,
-  fontWeight: 700,
+  fontWeight: 800,
   cursor: 'pointer',
   letterSpacing: '0.5px',
-  marginBottom: 8,
+  marginBottom: 12,
 };
 
 const devTabActiveStyle: CSSProperties = {
@@ -571,13 +656,13 @@ const devTabActiveStyle: CSSProperties = {
 };
 
 const devSelectStyle: CSSProperties = {
-  background: '#0f172a',
+  background: '#020617',
   border: '1px solid #334155',
-  color: '#64748b',
-  padding: '4px 8px',
+  color: '#94a3b8',
+  padding: '5px 8px',
   borderRadius: 4,
   fontSize: 11,
-  fontWeight: 600,
+  fontWeight: 700,
   cursor: 'pointer',
   outline: 'none',
   maxWidth: 160,
@@ -587,16 +672,16 @@ const flagRowStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  marginBottom: 5,
+  marginBottom: 6,
+  gap: 8,
 };
 
 const flagLabelStyle: CSSProperties = {
   fontSize: 10,
-  color: '#475569',
+  color: '#64748b',
   fontWeight: 700,
   letterSpacing: '0.3px',
   flex: 1,
-  paddingRight: 8,
 };
 
 const flagOnStyle: CSSProperties = {
@@ -615,5 +700,5 @@ const flagOffStyle: CSSProperties = {
   ...flagOnStyle,
   border: '1px solid #334155',
   background: 'transparent',
-  color: '#475569',
+  color: '#64748b',
 };
