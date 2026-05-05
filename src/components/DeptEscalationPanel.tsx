@@ -3,10 +3,11 @@ import type { Department } from '../types/machine';
 import type { ProductionOrder } from '../types/productionOrder';
 import type { AppTab } from '../types/app';
 import { productionOrders } from '../data/productionOrders';
-import { getRuntimeProductionOrders, applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import { addWorkflowAction } from '../logic/workflowActions';
 import { getOrderLastTouchedHours, getBlockerAgeLabel, getBlockerAgeTone, getBlockerAgeToneColor } from '../logic/blockerAge';
 import { getUrgencyScore } from '../logic/urgencyScore';
+import { isBlockedProductionOrder, isClosedProductionStatus } from '../logic/orderStatusTruth';
 
 type BlockerAgeTone = ReturnType<typeof getBlockerAgeTone>;
 
@@ -27,23 +28,19 @@ const STALE_THRESHOLD_HOURS = 1;
 function getBlockedDeptOrders(department: Department): EscalationEntry[] {
   const orders = getRuntimeProductionOrders(productionOrders);
   return orders
-    .filter((o) => {
+    .filter((order) => {
       const deptMatch =
-        o.currentDepartment === department ||
-        (o.requiredDepartments ?? []).includes(department);
-      const isBlocked =
-        String(o.status).toUpperCase() === 'BLOCKED' ||
-        String(o.flowStatus).toUpperCase() === 'BLOCKED' ||
-        (o.blockers ?? []).length > 0;
-      const isOpen = !['DONE', 'COMPLETE', 'COMPLETED'].includes(String(o.status).toUpperCase());
-      return deptMatch && isBlocked && isOpen;
+        order.currentDepartment === department ||
+        (order.requiredDepartments ?? []).includes(department);
+      const isOpen = !isClosedProductionStatus(order.status);
+      return deptMatch && isBlockedProductionOrder(order) && isOpen;
     })
     .map((order) => {
       const ageHours = getOrderLastTouchedHours(order.orderNumber);
       const tone = ageHours !== null ? getBlockerAgeTone(ageHours) : 'aging';
       return { order, ageHours, tone };
     })
-    .filter((e) => e.ageHours === null || e.ageHours >= STALE_THRESHOLD_HOURS)
+    .filter((entry) => entry.ageHours === null || entry.ageHours >= STALE_THRESHOLD_HOURS)
     .sort((a, b) => {
       const urgencyDiff = getUrgencyScore(b.order) - getUrgencyScore(a.order);
       if (urgencyDiff !== 0) return urgencyDiff;
@@ -66,7 +63,7 @@ export default function DeptEscalationPanel({ department, theme = 'dark', onGoTo
     };
   }, [department]);
 
-  const visible = entries.filter((e) => !dismissed.has(e.order.orderNumber));
+  const visible = entries.filter((entry) => !dismissed.has(entry.order.orderNumber));
   if (visible.length === 0) return null;
 
   const isDark = theme === 'dark';
@@ -77,11 +74,12 @@ export default function DeptEscalationPanel({ department, theme = 'dark', onGoTo
   const cardBorder = isDark ? '#334155' : '#e2e8f0';
 
   function handleEscalateEngineering(entry: EscalationEntry) {
-    applyWorkflowRuntimeAction(
-      entry.order.orderNumber,
-      'ESCALATE_ENGINEERING',
-      `Escalated to Engineering from ${department} — blocked ${entry.ageHours !== null ? getBlockerAgeLabel(entry.ageHours) : 'unknown time'}`,
-    );
+    addWorkflowAction({
+      orderNumber: entry.order.orderNumber,
+      actionType: 'NOTIFICATION',
+      department,
+      note: `Engineering escalation requested from ${department} — blocker untouched ${entry.ageHours !== null ? getBlockerAgeLabel(entry.ageHours) : 'unknown time'}. Order state preserved for review.`,
+    });
     setActioned((prev) => new Set(prev).add(entry.order.orderNumber));
   }
 
@@ -147,9 +145,9 @@ export default function DeptEscalationPanel({ department, theme = 'dark', onGoTo
 
               {blockerList.length > 0 && (
                 <div style={{ marginBottom: 8 }}>
-                  {blockerList.map((b, i) => (
+                  {blockerList.map((blocker, i) => (
                     <span key={i} style={{ display: 'inline-block', fontSize: 11, background: isDark ? '#1e293b' : '#fef2f2', color: '#ef4444', border: '1px solid #ef444433', borderRadius: 4, padding: '2px 6px', marginRight: 4, marginBottom: 2 }}>
-                      {b.type?.replace(/_/g, ' ')}{b.message ? ` — ${b.message}` : ''}
+                      {blocker.type?.replace(/_/g, ' ')}{blocker.message ? ` — ${blocker.message}` : ''}
                     </span>
                   ))}
                 </div>
@@ -157,7 +155,7 @@ export default function DeptEscalationPanel({ department, theme = 'dark', onGoTo
 
               {wasActioned ? (
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#10b981', marginTop: 4 }}>
-                  Action logged — monitor for response
+                  Notification logged — order state preserved
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
@@ -166,7 +164,7 @@ export default function DeptEscalationPanel({ department, theme = 'dark', onGoTo
                       style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', textTransform: 'uppercase' }}
                       onClick={() => handleEscalateEngineering(entry)}
                     >
-                      ESCALATE TO ENGINEERING
+                      NOTIFY ENGINEERING
                     </button>
                   )}
                   <button
