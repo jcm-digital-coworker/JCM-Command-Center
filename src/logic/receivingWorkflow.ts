@@ -1,4 +1,4 @@
-import type { ReceivingOrder, ReceivingOrderDraft, ReceivingOrderStatus } from '../types/receiving';
+import type { ReceivingExceptionType, ReceivingOrder, ReceivingOrderDraft, ReceivingOrderStatus } from '../types/receiving';
 
 export const RECEIVING_STORAGE_KEY = 'jcm_receiving_orders_v1';
 
@@ -98,6 +98,25 @@ export function putReceivingOrderOnHold(order: ReceivingOrder, notes: string): R
   };
 }
 
+
+export function reportReceivingException(order: ReceivingOrder, exceptionType: ReceivingExceptionType, reportedBy: string, notes: string): ReceivingOrder {
+  const now = new Date().toISOString();
+  const detail = notes?.trim() ? `${exceptionType}: ${notes}` : exceptionType;
+  return {
+    ...order,
+    status: 'PROBLEM_HOLD',
+    receiverNotes: detail,
+    notificationLog: [
+      ...order.notificationLog,
+      {
+        id: `note-${Date.now()}`,
+        at: now,
+        audience: `${order.orderedBy} + ${order.destinationDepartment} Supervisor + Receiving Supervisor`,
+        message: `${reportedBy || 'Receiving'} reported exception on ${order.itemName}: ${detail}.`,
+      },
+    ],
+  };
+}
 export function getReceivingNextAction(order: ReceivingOrder): string {
   if (order.status === 'ORDERED') return `Waiting for arrival from ${order.supplier || 'supplier'}.`;
   if (order.status === 'ARRIVING_TODAY') return 'Receiver should verify quantity, condition, PO/receiver, and destination.';

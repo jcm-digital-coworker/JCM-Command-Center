@@ -6,7 +6,7 @@ import type { ClassificationReviewConfirmation, ClassificationReviewDraft } from
 import { seedCoverage } from '../data/coverage';
 import { productionOrders } from '../data/productionOrders';
 import { COVERAGE_STORAGE_KEY } from '../logic/coverage';
-import { getWorkCenterWorkflowGroups } from '../logic/workflowPanelSelectors';
+import { getWorkCenterWorkflowGroups, type WorkflowButtonAction } from '../logic/workflowPanelSelectors';
 import { generateDynamicTravelers } from '../logic/dynamicTraveler';
 import { addWorkflowAction } from '../logic/workflowActions';
 import { applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
@@ -108,8 +108,8 @@ export default function WorkCenterWorkflowPanelV2({
     window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
   }
 
-  function runAction(label: string, orderNumber: string) {
-    const notice = act(label, orderNumber, workCenter.department, {
+  function runAction(actionId: WorkflowButtonAction, label: string, orderNumber: string) {
+    const notice = act(actionId, label, orderNumber, workCenter.department, {
       onOpenReceiving,
       onOpenEngineering,
       onOpenMaintenance,
@@ -263,7 +263,7 @@ function TravelerCard({ traveler, theme, onOpen }: { traveler: DynamicTraveler; 
   );
 }
 
-function WorkflowCard({ card, theme, onAction }: { card: any; theme: 'dark' | 'light'; onAction: (label: string, orderNumber: string) => void }) {
+function WorkflowCard({ card, theme, onAction }: { card: any; theme: 'dark' | 'light'; onAction: (actionId: WorkflowButtonAction, label: string, orderNumber: string) => void }) {
   const order = card.order;
   const signal = card.signal;
   const packet = card.packet;
@@ -300,8 +300,8 @@ function WorkflowCard({ card, theme, onAction }: { card: any; theme: 'dark' | 'l
       {signal.watchers.length > 0 ? <SignalList title="Watchers" items={signal.watchers} theme={theme} /> : null}
 
       <div style={wrapRowStyle}>
-        <button type="button" style={buttonStyle(card.urgency.color)} onClick={() => onAction(card.buttons.primary, order.orderNumber)}>{safeButtonLabel(card.buttons.primary)}</button>
-        <button type="button" style={buttonStyle('#64748b')} onClick={() => onAction(card.buttons.secondary, order.orderNumber)}>{safeButtonLabel(card.buttons.secondary)}</button>
+        <button type="button" style={buttonStyle(card.urgency.color)} onClick={() => onAction(card.buttons.primaryAction, card.buttons.primary, order.orderNumber)}>{safeButtonLabel(card.buttons.primary)}</button>
+        <button type="button" style={buttonStyle('#64748b')} onClick={() => onAction(card.buttons.secondaryAction, card.buttons.secondary, order.orderNumber)}>{safeButtonLabel(card.buttons.secondary)}</button>
       </div>
     </article>
   );
@@ -403,41 +403,41 @@ function Empty({ children, theme }: { children: string; theme: 'dark' | 'light' 
   return <div style={emptyStyle(theme)}>{children}</div>;
 }
 
-function act(label: string, orderNumber: string, dept: WorkCenter['department'], deps: ActionDeps): string | null {
-  if (label === 'No Action') return null;
-
-  if (label.includes('Engineering') || label.includes('Hold')) {
-    addWorkflowAction({ orderNumber, actionType: 'ENGINEERING_ESCALATION', department: 'Engineering', note: label });
-    applyWorkflowRuntimeAction(orderNumber, 'ESCALATE_ENGINEERING', label);
-    deps.onOpenEngineering?.();
-    return 'Engineering escalation recorded.';
+function act(actionId: WorkflowButtonAction, label: string, orderNumber: string, dept: WorkCenter['department'], deps: ActionDeps): string | null {
+  switch (actionId) {
+    case 'NO_ACTION':
+      return null;
+    case 'ESCALATE_ENGINEERING': {
+      addWorkflowAction({ orderNumber, actionType: 'ENGINEERING_ESCALATION', department: 'Engineering', note: label });
+      applyWorkflowRuntimeAction(orderNumber, 'ESCALATE_ENGINEERING', label);
+      deps.onOpenEngineering?.();
+      return 'Engineering escalation recorded.';
+    }
+    case 'REQUEST_MATERIAL': {
+      addWorkflowAction({ orderNumber, actionType: 'MATERIAL_REQUEST', department: 'Receiving', note: label });
+      applyWorkflowRuntimeAction(orderNumber, 'REQUEST_MATERIAL', label);
+      deps.onOpenReceiving?.('submit', dept);
+      return 'Material request started through Receiving.';
+    }
+    case 'OPEN_MAINTENANCE': {
+      addWorkflowAction({ orderNumber, actionType: 'BLOCKER_RESOLUTION', department: 'Maintenance', note: label });
+      deps.onOpenMaintenance?.();
+      return 'Maintenance follow-up opened. The blocker remains until the issue is actually cleared.';
+    }
+    case 'REVIEW_BLOCKER':
+    case 'NOTIFY_LEAD':
+    case 'HOLD_STATION': {
+      addWorkflowAction({ orderNumber, actionType: 'BLOCKER_RESOLUTION', department: dept, note: label });
+      return 'Blocker review logged here. No blocker was cleared and no route changed; assign the owning department or use material/engineering/maintenance when that is the true owner.';
+    }
+    case 'START_WORK': {
+      addWorkflowAction({ orderNumber, actionType: 'WORK_STARTED', department: dept, note: label });
+      applyWorkflowRuntimeAction(orderNumber, 'START_WORK', label);
+      return 'Work action recorded.';
+    }
+    default:
+      return null;
   }
-
-  if (label.includes('Material') || label.includes('Areas')) {
-    addWorkflowAction({ orderNumber, actionType: 'MATERIAL_REQUEST', department: 'Receiving', note: label });
-    applyWorkflowRuntimeAction(orderNumber, 'REQUEST_MATERIAL', label);
-    deps.onOpenReceiving?.('submit', dept);
-    return 'Material request started through Receiving.';
-  }
-
-  if (isMaintenanceAction(label)) {
-    addWorkflowAction({ orderNumber, actionType: 'BLOCKER_RESOLUTION', department: 'Maintenance', note: label });
-    deps.onOpenMaintenance?.();
-    return 'Maintenance follow-up opened. The blocker remains until the issue is actually cleared.';
-  }
-
-  if (label.includes('Blocker') || label.includes('Lead')) {
-    addWorkflowAction({ orderNumber, actionType: 'BLOCKER_RESOLUTION', department: dept, note: label });
-    return 'Blocker review logged here. No blocker was cleared and no route changed; assign the owning department or use material/engineering/maintenance when that is the true owner.';
-  }
-
-  addWorkflowAction({ orderNumber, actionType: 'WORK_STARTED', department: dept, note: label });
-  applyWorkflowRuntimeAction(orderNumber, 'START_WORK', label);
-  return 'Work action recorded.';
-}
-
-function isMaintenanceAction(label: string): boolean {
-  return /maintenance|machine|service|repair|alarm|down|downtime/i.test(label);
 }
 
 function safeButtonLabel(label: string): string {
