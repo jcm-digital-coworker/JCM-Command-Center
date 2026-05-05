@@ -112,4 +112,5 @@ export type PlantTraveler = {
   totalStepCount: number;
   blockers: FlowBlocker[];
   currentInstruction: string;
+  actions: TravelerAction[];
 };
