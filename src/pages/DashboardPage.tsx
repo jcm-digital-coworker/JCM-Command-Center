@@ -155,7 +155,7 @@ export default function DashboardPage({
         onGoToTab={onGoToTab}
       />
 
-      <DeptHealthTilesPanel onNavigate={onGoToTab} theme={theme} />
+      <DeptHealthTilesPanel onNavigate={onGoToTab} theme={theme} roleView={roleView} />
 
       <AccordionSection title="BLOCKED ORDERS" count={blockedOrders.length} color="#dc2626" expanded={expandedSection === 'blockedOrders'} onToggle={() => toggleSection('blockedOrders')} onViewAll={() => onGoToTab('orders')} theme={theme}>
         {blockedOrders.length > 0 ? (
