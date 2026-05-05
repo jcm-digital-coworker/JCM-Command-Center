@@ -2,21 +2,22 @@ import { useEffect, useState, useMemo, type CSSProperties } from 'react';
 import { productionOrders } from '../data/productionOrders';
 import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import { getUrgencyScore } from '../logic/urgencyScore';
+import { isBlockedProductionOrder, isClosedProductionStatus } from '../logic/orderStatusTruth';
 import type { Department } from '../types/machine';
 import type { ProductionOrder } from '../types/productionOrder';
 
-const DEPT_DOWNSTREAM: Partial<Record<Department, string>> = {
-  'Sales':            'Engineering',
-  'Engineering':      'Fab / Production',
-  'Receiving':        'Dept destination',
-  'Machine Shop':     'Fab',
-  'Material Handling':'Fab',
-  'Fab':              'Coating',
-  'Coating':          'Assembly',
-  'Assembly':         'QA / Shipping',
-  'Saddles Dept':     'QA / Shipping',
-  'QA':               'Shipping',
-  'Shipping':         'Customer',
+const FALLBACK_DEPT_DOWNSTREAM: Partial<Record<Department, string>> = {
+  'Sales': 'Engineering',
+  'Engineering': 'Fab / Production',
+  'Receiving': 'Dept destination',
+  'Machine Shop': 'Fab',
+  'Material Handling': 'Fab',
+  'Fab': 'Coating',
+  'Coating': 'Assembly',
+  'Assembly': 'QA / Shipping',
+  'Saddles Dept': 'QA / Shipping',
+  'QA': 'Shipping',
+  'Shipping': 'Customer',
 };
 
 type Props = {
@@ -38,7 +39,7 @@ export default function NextHandoffBanner({ department, theme }: Props) {
   const topOrders: ProductionOrder[] = useMemo(() => {
     const runtime = getRuntimeProductionOrders(productionOrders);
     return runtime
-      .filter((o) => o.currentDepartment === department && !['done', 'DONE', 'complete', 'COMPLETE', 'shipped', 'SHIPPED'].includes(String(o.status ?? '')))
+      .filter((order) => order.currentDepartment === department && !isClosedProductionStatus(order.status))
       .sort((a, b) => getUrgencyScore(b) - getUrgencyScore(a))
       .slice(0, 3);
   }, [tick, department]);
@@ -52,8 +53,8 @@ export default function NextHandoffBanner({ department, theme }: Props) {
   if (topOrders.length === 0) return null;
 
   const order = topOrders[idx % topOrders.length];
-  const isBlocked = (order.blockers ?? []).length > 0 || String(order.flowStatus).toLowerCase() === 'blocked';
-  const downstream = DEPT_DOWNSTREAM[department] ?? 'Next dept';
+  const isBlocked = isBlockedProductionOrder(order);
+  const downstream = order.nextDepartment ?? FALLBACK_DEPT_DOWNSTREAM[department] ?? 'Next dept';
   const daysToShip = order.projectedShipDate
     ? Math.ceil((new Date(order.projectedShipDate).getTime() - Date.now()) / 86400000)
     : null;
@@ -63,7 +64,7 @@ export default function NextHandoffBanner({ department, theme }: Props) {
   return (
     <div style={bannerStyle(theme, tone)}>
       <div style={leftStyle}>
-        <span style={labelStyle}>NEXT HANDOFF → {downstream.toUpperCase()}</span>
+        <span style={labelStyle}>NEXT HANDOFF → {String(downstream).toUpperCase()}</span>
         <span style={orderStyle(theme)}>#{order.orderNumber}</span>
         <span style={familyStyle(theme)}>{order.productFamily}</span>
         {order.customer && <span style={customerStyle}>{order.customer}</span>}
