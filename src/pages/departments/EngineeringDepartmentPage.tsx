@@ -1,14 +1,15 @@
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import EngineeringBacklogPanel from '../../components/EngineeringBacklogPanel';
-import { CardGrid, CrewGuidancePanel, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
-  const engineeringHolds = productionOrders.filter(
+  const runtimeOrders = getRuntimeProductionOrders(productionOrders);
+  const engineeringHolds = runtimeOrders.filter(
     (o) => o.engineeringRequired && o.engineeringStatus === 'PENDING',
   );
-  const released = productionOrders.filter(
+  const released = runtimeOrders.filter(
     (o) => o.engineeringRequired && o.engineeringStatus === 'RELEASED',
   );
 
@@ -18,6 +19,7 @@ export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }:
       subtitle="Engineering is the blueprint and routing release gate. No engineered order can run until Engineering releases the packet. This view surfaces what's blocked, what's been released, and the full blueprint backlog."
       theme={theme}
     >
+      <DeptEnhancements department="Engineering" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Engineering" theme={theme} onGoToTab={onGoToTab} />
       </Section>
@@ -33,13 +35,13 @@ export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }:
       <Section title="Engineering holds — pending release" theme={theme}>
         {engineeringHolds.length === 0
           ? <EmptyState text="No orders are currently held pending Engineering release." theme={theme} />
-          : <CardGrid>{engineeringHolds.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} />)}</CardGrid>}
+          : <CardGrid>{engineeringHolds.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
       </Section>
 
       <Section title="Engineering released" theme={theme}>
         {released.length === 0
           ? <EmptyState text="No engineered orders have been released yet." theme={theme} />
-          : <CardGrid>{released.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} />)}</CardGrid>}
+          : <CardGrid>{released.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
       </Section>
     </PageShell>
   );

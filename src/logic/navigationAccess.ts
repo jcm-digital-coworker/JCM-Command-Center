@@ -74,6 +74,7 @@ export const navigationGroups: NavigationGroup[] = [
       { id: 'coverage', label: 'Crew / Coverage', roles: [...plantLeadershipRoles, ...productionRoles, ...supportRoles], description: 'Crew availability and coverage gaps.' },
       { id: 'receiving', label: 'Receiving', roles: [...plantLeadershipRoles, ...supportRoles, ...productionRoles], description: 'Material intake, staging, and request flow.' },
       { id: 'shiftHandoff', label: 'Shift Handoff', roles: [...plantLeadershipRoles], description: 'End-of-shift snapshot: crew, orders, maintenance. Copy as text for incoming lead.' },
+      { id: 'kanban', label: 'War Board', roles: [...plantLeadershipRoles], description: 'Plant-wide kanban: all orders across departments in one view. Sorted by urgency.' },
     ],
   },
   {

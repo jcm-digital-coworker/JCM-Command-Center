@@ -116,7 +116,7 @@ export const plantDocuments: PlantDocument[] = [
     status: "Available",
     ownerRole: "Operator",
     description:
-      "Torque values (ft-lbs) for T-bolts and hex bolts by coupling size and material (DI, CS, SS). Required reference for all assembly bench technicians. Under-torque causes leaks; over-torque cracks flanges. Must be verified with calibrated torque wrench before QA handoff.",
+      "Torque values (ft-lbs) for T-bolts and hex bolts by coupling size and material (DI, CS, SS). ASTM A242 5/8\" T-bolt: 100 ft-lbs minimum, 150 ft-lbs maximum. ASTM A242 3/4\" T-bolt: 150 ft-lbs minimum, 200 ft-lbs maximum. Tighten in star/cross pattern — never sequential. UCC 101/102: two-pass torque (snug then final). Tapping sleeve flanges: use calibrated torque wrench, do not impact-gun final pass. Under-torque causes field leaks; over-torque cracks cast flanges. Must be verified before QA handoff.",
   },
   {
     id: "doc-coupling-assembly",
@@ -230,5 +230,113 @@ export const plantDocuments: PlantDocument[] = [
     ownerRole: "Shared",
     description:
       "Future location for engineering prints tied to machine, part family, setup, and simulator workflows. Will cover all JCM product models: 101, 102, 401, 406, 415, 432, 801.",
+  },
+
+  // ── JCM ENGINEERING MANUAL ────────────────────────────────────────────────────
+  {
+    id: "doc-engineering-manual",
+    title: "JCM Engineering Manual",
+    department: "Engineering",
+    category: "Manual",
+    status: "Available",
+    ownerRole: "Lead / Engineer",
+    description:
+      "JCM's primary engineering reference covering product design criteria, dimensional standards, pressure ratings, and application guidance for repair, connection, branching, and engineered fitting families. Reference for all engineered-to-order work and non-standard pipe diameter applications.",
+  },
+  {
+    id: "doc-hdpe-manual",
+    title: "JCM High Density Polyethylene Pipe Fittings Manual",
+    department: "Engineering",
+    category: "Manual",
+    status: "Available",
+    ownerRole: "Lead / Engineer",
+    description:
+      "Application and installation guide for JCM HDPE pipe fittings. Covers product selection, pipe OD tolerance ranges, thrust restraint requirements, and compatibility with HDPE distribution pipe. Reference for any order specifying HDPE pipe material.",
+  },
+
+  // ── PRODUCT CATALOG / PRICE BOOK ──────────────────────────────────────────────
+  {
+    id: "doc-product-catalog",
+    title: "JCM Product Catalog",
+    department: "Sales",
+    category: "Reference",
+    status: "Available",
+    ownerRole: "Shared",
+    description:
+      "Full JCM product catalog covering all product lines: Repair Fittings (100-series), Connection Fittings (200-300-series), Branching Fittings / Service Saddles and Tapping Sleeves (400-500-series), Restrainers (600-series), and Engineered / Pipe Fabrications (800-900-series). Reference for model number lookup, size ranges, and product family assignment.",
+  },
+  {
+    id: "doc-price-book",
+    title: "Current Price Book",
+    department: "Sales",
+    category: "Reference",
+    status: "Available",
+    ownerRole: "Lead / Engineer",
+    description:
+      "Current JCM price book (PDF and Excel). Used by Sales for order quoting. Reference for standard product pricing by model, size, and material. Not for shop floor use — applies to Sales and Office order intake workflow.",
+  },
+
+  // ── COMPLIANCE / CERTIFICATIONS ────────────────────────────────────────────────
+  {
+    id: "doc-ais-buy-american",
+    title: "American Iron and Steel (AIS) / Buy American Compliance Guide",
+    department: "QA",
+    category: "Inspection",
+    status: "Available",
+    ownerRole: "Shared",
+    description:
+      "JCM's AIS / Buy American Act compliance documentation. Required for federally funded water infrastructure projects (EPA, USDA Rural Development, FHWA). All steel and iron products used in JCM fittings must meet AIS requirements when specified by the customer. Reference for QA cert packet when AIS compliance is required on an order.",
+  },
+  {
+    id: "doc-industry-crossref",
+    title: "Industry Cross Reference Chart",
+    department: "Sales",
+    category: "Reference",
+    status: "Available",
+    ownerRole: "Shared",
+    description:
+      "JCM model cross-reference chart comparing JCM products to competitor and industry-standard model numbers. Used by Sales and Engineering to match customer specifications to the correct JCM product family and model. Relevant for engineered orders where a customer specifies a non-JCM part number.",
+  },
+
+  // ── INSTALLATION INSTRUCTIONS ─────────────────────────────────────────────────
+  {
+    id: "doc-install-service-saddle",
+    title: "Service Saddle Installation Instructions — 401/402/403/404 Series",
+    department: "Assembly",
+    category: "Setup Guide",
+    status: "Available",
+    ownerRole: "Operator",
+    description:
+      "Step-by-step installation guide for JCM DI service saddles (single-strap, double-strap, wide-body). Covers pipe surface preparation, saddle seating, strap torque sequence, and outlet drilling procedure. Required reference for Assembly technicians on saddle orders.",
+  },
+  {
+    id: "doc-install-tapping-sleeve",
+    title: "Tapping Sleeve Installation Instructions — 412/414/432/452 Series",
+    department: "Assembly",
+    category: "Setup Guide",
+    status: "Available",
+    ownerRole: "Operator",
+    description:
+      "Installation guide for carbon steel and stainless steel tapping sleeves. Covers pipe size verification, gasket seating, bolt torque pattern, and outlet branch connection. Applies to plain outlet, MJ outlet, and threaded outlet variants. Reference for Assembly and QA on tapping sleeve orders.",
+  },
+  {
+    id: "doc-install-ucc",
+    title: "UCC / Repair Clamp Installation Instructions — 101/102/131/132 Series",
+    department: "Assembly",
+    category: "Setup Guide",
+    status: "Available",
+    ownerRole: "Operator",
+    description:
+      "Installation instructions for JCM Universal Clamp Couplings (single-band 101, multi-band 102) and stainless variants (131, 132). Covers pipe surface requirements, middle ring and gasket placement, T-bolt positioning, and final torque specification. Required reference for all UCC and repair clamp assembly work.",
+  },
+  {
+    id: "doc-product-specs",
+    title: "Product Specifications — All Series",
+    department: "QA",
+    category: "Reference",
+    status: "Available",
+    ownerRole: "Shared",
+    description:
+      "JCM product specifications library. Key ratings: Model 412 CS Tapping Sleeve — 175 PSI working / 300 PSI hydrostatic test; Model 432 SS Tapping Sleeve — 175 PSI working / 300 PSI hydrostatic; Model 502 DI Full-Body Sleeve — 200 PSI working; Model 101/102 UCC — 200 PSI working (varies by pipe OD tolerance); Model 401/402 DI Service Saddle — 200 PSI working. Material specs: bodies ASTM A285 Gr.C or A516 Gr.70 (CS), A-36 (structural), ASTM A242 (hardware). Pipe size range: 3/4\" through 144\"+ for engineered. Reference for QA dimensional verification, engineering review, and customer submittal packages.",
   },
 ];

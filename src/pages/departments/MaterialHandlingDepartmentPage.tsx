@@ -1,7 +1,7 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function MaterialHandlingDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
@@ -15,6 +15,7 @@ export default function MaterialHandlingDepartmentPage({ theme = 'dark', onGoToT
       subtitle="Cut, roll, saw, press, expand, and stage material. This page focuses on equipment constraints and the queues feeding the rest of the plant."
       theme={theme}
     >
+      <DeptEnhancements department="Material Handling" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Material Handling" theme={theme} onGoToTab={onGoToTab} />
       </Section>
@@ -31,13 +32,13 @@ export default function MaterialHandlingDepartmentPage({ theme = 'dark', onGoToT
 
       <Section title="Orders depending on Material Handling" theme={theme}>
         {orders.length === 0 ? <EmptyState text="No orders currently routed through Material Handling." theme={theme} /> : (
-          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
 
       <Section title="Current MH blockers" theme={theme}>
         {blocked.length === 0 ? <EmptyState text="No Material Handling related sample blockers right now." theme={theme} /> : (
-          <CardGrid>{blocked.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{blocked.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
     </PageShell>

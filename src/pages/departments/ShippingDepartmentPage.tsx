@@ -1,7 +1,7 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
@@ -16,6 +16,7 @@ export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: De
       subtitle="Shipping is the readiness gate. It should show what can leave, what is almost ready, and what is held by QA, production, or missing components."
       theme={theme}
     >
+      <DeptEnhancements department="Shipping" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Shipping" theme={theme} onGoToTab={onGoToTab} />
       </Section>
@@ -30,13 +31,13 @@ export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: De
 
       <Section title="Ready to ship" theme={theme}>
         {readyToShip.length === 0 ? <EmptyState text="No sample orders are fully ship-ready yet." theme={theme} /> : (
-          <CardGrid>{readyToShip.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{readyToShip.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
 
       <Section title="Not ship-ready yet" theme={theme}>
         {waiting.length === 0 ? <EmptyState text="No waiting sample orders." theme={theme} /> : (
-          <CardGrid>{waiting.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{waiting.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
     </PageShell>

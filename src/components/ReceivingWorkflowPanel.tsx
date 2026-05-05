@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { seedReceivingOrders } from '../data/receivingOrders';
 import type { ReceivingOrder } from '../types/receiving';
 import { RECEIVING_STORAGE_KEY } from '../logic/receivingWorkflow';
@@ -12,7 +12,14 @@ interface ReceivingWorkflowPanelProps {
 }
 
 export default function ReceivingWorkflowPanel({ theme = 'dark', onOpenQueue }: ReceivingWorkflowPanelProps) {
-  const [orders] = useState<ReceivingOrder[]>(() => loadOrders());
+  const [orders, setOrders] = useState<ReceivingOrder[]>(() => loadOrders());
+
+  useEffect(() => {
+    const refresh = () => setOrders(loadOrders());
+    window.addEventListener('storage', refresh);
+    return () => window.removeEventListener('storage', refresh);
+  }, []);
+
   const summary = useMemo(() => ({
     arriving: orders.filter((order) => order.status === 'ARRIVING_TODAY').length,
     ready: orders.filter((order) => order.status === 'CHECKED_IN').length,

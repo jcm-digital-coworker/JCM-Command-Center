@@ -1,4 +1,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
+import NextHandoffBanner from '../../components/NextHandoffBanner';
+import DeptKanbanBoard from '../../components/kanban/DeptKanbanBoard';
+import DeptEscalationPanel from '../../components/DeptEscalationPanel';
 import { workers } from '../../data/workers';
 import { seedCoverage } from '../../data/coverage';
 import { productionOrders } from '../../data/productionOrders';
@@ -7,6 +10,8 @@ import { getCrewGuidanceForDepartment } from '../../logic/crewGuidance';
 import { getSkillGapAlerts } from '../../logic/skillGapAlerts';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { departmentOperatingProfiles } from '../../data/departmentOperatingProfiles';
+import { isFeatureEnabled } from '../../logic/featureFlags';
+import { getUrgencyScore, getUrgencyColor } from '../../logic/urgencyScore';
 import type { Department } from '../../types/machine';
 import type { CoveragePerson } from '../../types/coverage';
 import type { PlantAsset, PlantAssetKind } from '../../types/plantAsset';
@@ -139,6 +144,7 @@ export function AssetCard({
 export function OrderCard({
   order,
   theme = 'dark',
+  onGoToTab,
 }: DepartmentPageProps & { order: ProductionOrder }) {
   const isBlocked = (order.blockers ?? []).length > 0 || String(order.flowStatus).toLowerCase() === 'blocked';
   const isRunnable = String(order.flowStatus).toLowerCase() === 'runnable';
@@ -150,12 +156,23 @@ export function OrderCard({
   const isOverdue = !isDone && order.projectedShipDate
     ? new Date(order.projectedShipDate) < new Date(new Date().toDateString())
     : false;
+  const showUrgency = isFeatureEnabled('urgencyScore');
+  const urgencyScore = showUrgency ? getUrgencyScore(order) : 0;
+  const urgencyColor = getUrgencyColor(urgencyScore);
+  const hasMaterialIssue =
+    (order.blockers ?? []).some((b) => b.type === 'material') ||
+    ['MISSING', 'NOT_RECEIVED', 'ORDER_REQUIRED', 'PARTIAL'].includes(String(order.materialStatus ?? '').toUpperCase());
 
   return (
     <div style={{ ...cardStyle(theme), borderLeft: `4px solid ${borderColor}` }}>
       <div style={cardHeaderStyle}>
         <strong style={cardTitleStyle(theme)}>#{order.orderNumber} — {order.productFamily}</strong>
-        <span style={priorityPillStyle(priorityColor)}>{priority.toUpperCase()}</span>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {showUrgency && (
+            <span style={urgencyBadgeStyle(urgencyColor)}>{urgencyScore}</span>
+          )}
+          <span style={priorityPillStyle(priorityColor)}>{priority.toUpperCase()}</span>
+        </div>
       </div>
       <div style={metaStyle(theme)}>
         {order.currentDepartment}{order.nextDepartment ? ` → ${order.nextDepartment}` : ''}
@@ -178,6 +195,15 @@ export function OrderCard({
           ⚠ {blocker.type.toUpperCase()}: {blocker.message}
         </div>
       ))}
+      {hasMaterialIssue && onGoToTab && (
+        <button
+          type="button"
+          style={requestMaterialButtonStyle}
+          onClick={() => onGoToTab('receiving')}
+        >
+          → RECEIVING
+        </button>
+      )}
     </div>
   );
 }
@@ -244,6 +270,20 @@ export function CrewGuidancePanel({
         );
       })}
     </CardGrid>
+  );
+}
+
+export function DeptEnhancements({ department, theme = 'dark', onGoToTab }: DepartmentPageProps & { department: Department }) {
+  const showHandoff = isFeatureEnabled('nextHandoff');
+  const showKanban = isFeatureEnabled('subStageKanban');
+  const showEscalation = isFeatureEnabled('deptEscalation');
+  if (!showHandoff && !showKanban && !showEscalation) return null;
+  return (
+    <>
+      {showEscalation && <DeptEscalationPanel department={department} theme={theme} onGoToTab={onGoToTab} />}
+      {showHandoff && <NextHandoffBanner department={department} theme={theme} onGoToTab={onGoToTab} />}
+      {showKanban && <DeptKanbanBoard department={department} theme={theme} onGoToTab={onGoToTab} />}
+    </>
   );
 }
 
@@ -640,6 +680,23 @@ function skillGapBannerStyle(theme: 'dark' | 'light'): CSSProperties {
     gap: 2,
   };
 }
+
+function urgencyBadgeStyle(color: string): CSSProperties {
+  return { fontSize: 10, fontWeight: 900, color, background: `${color}22`, border: `1px solid ${color}55`, borderRadius: 3, padding: '2px 6px', letterSpacing: '0.3px' };
+}
+
+const requestMaterialButtonStyle: CSSProperties = {
+  marginTop: 8,
+  padding: '6px 10px',
+  borderRadius: 4,
+  border: '1px solid #38bdf8',
+  background: 'rgba(56,189,248,0.12)',
+  color: '#38bdf8',
+  fontSize: 11,
+  fontWeight: 900,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+};
 
 const crewGapActionButtonStyle: CSSProperties = {
   padding: '4px 10px',

@@ -1,6 +1,6 @@
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 const assemblyCells = [
@@ -21,6 +21,7 @@ export default function AssemblyDepartmentPage({ theme = 'dark', onGoToTab }: De
       subtitle="Assembly is kit-readiness and final build flow. It reveals missing or bad inputs from upstream, so this page focuses on readiness and blockers."
       theme={theme}
     >
+      <DeptEnhancements department="Assembly" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Assembly" theme={theme} onGoToTab={onGoToTab} />
       </Section>
@@ -35,13 +36,13 @@ export default function AssemblyDepartmentPage({ theme = 'dark', onGoToTab }: De
 
       <Section title="Orders touching Assembly" theme={theme}>
         {orders.length === 0 ? <EmptyState text="No current sample orders routed through Assembly." theme={theme} /> : (
-          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{orders.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
 
       <Section title="Ready / active build candidates" theme={theme}>
         {ready.length === 0 ? <EmptyState text="No ready assembly candidates currently shown." theme={theme} /> : (
-          <CardGrid>{ready.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{ready.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
     </PageShell>

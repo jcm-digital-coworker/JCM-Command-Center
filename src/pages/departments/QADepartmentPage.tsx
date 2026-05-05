@@ -1,12 +1,13 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, getDepartmentAssets, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function QADepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
   const assets = getDepartmentAssets(plantAssets, 'QA');
-  const orders = productionOrders.filter((order) => order.qaStatus !== 'NOT_REQUIRED');
+  const runtimeOrders = getRuntimeProductionOrders(productionOrders);
+  const orders = runtimeOrders.filter((order) => order.qaStatus !== 'NOT_REQUIRED');
   const holds = orders.filter((order) => order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED');
   const pending = orders.filter((order) => order.qaStatus === 'PENDING');
 
@@ -16,6 +17,7 @@ export default function QADepartmentPage({ theme = 'dark', onGoToTab }: Departme
       subtitle="QA is the truth layer: testing, compliance, inspection, and release. This page focuses on holds, pending checks, and what protects Shipping from bad exits."
       theme={theme}
     >
+      <DeptEnhancements department="QA" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="QA" theme={theme} onGoToTab={onGoToTab} />
       </Section>
@@ -30,13 +32,13 @@ export default function QADepartmentPage({ theme = 'dark', onGoToTab }: Departme
 
       <Section title="QA holds / failures" theme={theme}>
         {holds.length === 0 ? <EmptyState text="No QA holds or failures in sample orders." theme={theme} /> : (
-          <CardGrid>{holds.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{holds.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
 
       <Section title="Pending QA checks" theme={theme}>
         {pending.length === 0 ? <EmptyState text="No pending sample QA checks." theme={theme} /> : (
-          <CardGrid>{pending.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} />)}</CardGrid>
+          <CardGrid>{pending.map((order) => <OrderCard key={order.orderNumber} order={order} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         )}
       </Section>
     </PageShell>

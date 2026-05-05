@@ -27,6 +27,7 @@ type ThemeMode = "dark" | "light";
 type ReceivingView =
   | "hub"
   | "submit"
+  | "ordered"
   | "arriving"
   | "ready"
   | "claimed"
@@ -163,6 +164,14 @@ export default function ReceivingPage({
       {view !== "submit" ? (
         <section style={getMetricGridStyle()}>
           <StatusButton
+            label="On order"
+            value={summary.ordered}
+            tone="SLATE"
+            active={view === "ordered"}
+            onClick={() => setView("ordered")}
+            theme={theme}
+          />
+          <StatusButton
             label="Arriving today"
             value={summary.arriving}
             tone="HOT"
@@ -287,6 +296,12 @@ export default function ReceivingPage({
               onChange={(value) =>
                 setDraft({ ...draft, destinationDetail: value })
               }
+              theme={theme}
+            />
+            <Field
+              label="Supplier / vendor"
+              value={draft.supplier}
+              onChange={(value) => setDraft({ ...draft, supplier: value })}
               theme={theme}
             />
             <Field
@@ -487,33 +502,45 @@ function loadOrders(): ReceivingOrder[] {
   }
 }
 
+function getPriorityScore(priority: ReceivingOrderPriority): number {
+  if (priority === "CRITICAL") return 2;
+  if (priority === "HOT") return 1;
+  return 0;
+}
+
+function sortByPriority(orders: ReceivingOrder[]): ReceivingOrder[] {
+  return [...orders].sort((a, b) => getPriorityScore(b.priority) - getPriorityScore(a.priority));
+}
+
 function getSummary(orders: ReceivingOrder[]) {
   return {
-    arriving: orders.filter((order) => order.status === "ARRIVING_TODAY")
-      .length,
+    ordered: orders.filter((order) => order.status === "ORDERED").length,
+    arriving: orders.filter((order) => order.status === "ARRIVING_TODAY").length,
     ready: orders.filter((order) => order.status === "CHECKED_IN").length,
-    claimed: orders.filter((order) => order.status === "CLAIMED_FOR_DELIVERY")
-      .length,
+    claimed: orders.filter((order) => order.status === "CLAIMED_FOR_DELIVERY").length,
     delivered: orders.filter((order) => order.status === "DELIVERED").length,
     holds: orders.filter((order) => order.status === "PROBLEM_HOLD").length,
   };
 }
 
 function filterOrders(orders: ReceivingOrder[], view: ReceivingView) {
+  if (view === "ordered")
+    return sortByPriority(orders.filter((order) => order.status === "ORDERED"));
   if (view === "arriving")
-    return orders.filter((order) => order.status === "ARRIVING_TODAY");
+    return sortByPriority(orders.filter((order) => order.status === "ARRIVING_TODAY"));
   if (view === "ready")
-    return orders.filter((order) => order.status === "CHECKED_IN");
+    return sortByPriority(orders.filter((order) => order.status === "CHECKED_IN"));
   if (view === "claimed")
-    return orders.filter((order) => order.status === "CLAIMED_FOR_DELIVERY");
+    return sortByPriority(orders.filter((order) => order.status === "CLAIMED_FOR_DELIVERY"));
   if (view === "delivered")
     return orders.filter((order) => order.status === "DELIVERED");
   if (view === "holds")
-    return orders.filter((order) => order.status === "PROBLEM_HOLD");
+    return sortByPriority(orders.filter((order) => order.status === "PROBLEM_HOLD"));
   return orders;
 }
 
 function getViewTitle(view: ReceivingView) {
+  if (view === "ordered") return "On order / expected";
   if (view === "arriving") return "Today's inbound queue";
   if (view === "ready") return "Ready for driver";
   if (view === "claimed") return "Claimed deliveries";
@@ -712,6 +739,7 @@ function getToneColor(tone: string): string {
   if (tone === "WARN") return "#f59e0b";
   if (tone === "DANGER") return "#dc2626";
   if (tone === "INFO") return "#38bdf8";
+  if (tone === "SLATE") return "#64748b";
   return "#f97316";
 }
 function getMetricButtonStyle(

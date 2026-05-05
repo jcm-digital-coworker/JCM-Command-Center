@@ -135,4 +135,5 @@ export type ProductionOrder = {
   dependencies?: OrderDependency[];
   lastAction?: string;
   lastActionAt?: string;
+  deptSubStage?: { department: string; stage: string; enteredAt: string };
 };

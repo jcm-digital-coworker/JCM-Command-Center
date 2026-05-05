@@ -21,6 +21,7 @@ export type RuntimeOrderOverride = Partial<Pick<
   | 'blockers'
   | 'currentDepartment'
   | 'nextDepartment'
+  | 'deptSubStage'
 >> & {
   lastAction?: string;
   lastActionAt?: string;
