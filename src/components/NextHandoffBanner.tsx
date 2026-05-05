@@ -20,12 +20,15 @@ const FALLBACK_DEPT_DOWNSTREAM: Partial<Record<Department, string>> = {
   'Shipping': 'Customer',
 };
 
+import type { AppTab } from '../types/app';
+
 type Props = {
   department: Department;
   theme: 'dark' | 'light';
+  onGoToTab?: (tab: AppTab) => void;
 };
 
-export default function NextHandoffBanner({ department, theme }: Props) {
+export default function NextHandoffBanner({ department, theme, onGoToTab }: Props) {
   const [tick, setTick] = useState(0);
   const [idx, setIdx] = useState(0);
 
@@ -62,7 +65,12 @@ export default function NextHandoffBanner({ department, theme }: Props) {
   const tone = isBlocked ? '#dc2626' : daysToShip !== null && daysToShip <= 1 ? '#f59e0b' : '#10b981';
 
   return (
-    <div style={bannerStyle(theme, tone)}>
+    <div
+      style={{ ...bannerStyle(theme, tone), cursor: onGoToTab ? 'pointer' : 'default' }}
+      onClick={onGoToTab ? () => onGoToTab('orders') : undefined}
+      role={onGoToTab ? 'button' : undefined}
+      tabIndex={onGoToTab ? 0 : undefined}
+    >
       <div style={leftStyle}>
         <span style={labelStyle}>NEXT HANDOFF → {String(downstream).toUpperCase()}</span>
         <span style={orderStyle(theme)}>#{order.orderNumber}</span>

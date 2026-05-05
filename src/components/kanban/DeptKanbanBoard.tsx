@@ -7,13 +7,15 @@ import { isClosedProductionStatus, isBlockedProductionOrder } from '../../logic/
 import KanbanCard from './KanbanCard';
 import type { Department } from '../../types/machine';
 import type { ProductionOrder } from '../../types/productionOrder';
+import type { AppTab } from '../../types/app';
 
 type Props = {
   department: Department;
   theme: 'dark' | 'light';
+  onGoToTab?: (tab: AppTab) => void;
 };
 
-export default function DeptKanbanBoard({ department, theme }: Props) {
+export default function DeptKanbanBoard({ department, theme, onGoToTab }: Props) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -84,6 +86,7 @@ export default function DeptKanbanBoard({ department, theme }: Props) {
                       theme={theme}
                       subStageLabel={stage}
                       onAdvanceSubStage={!isLast ? () => advanceOrder(order) : undefined}
+                      onClick={onGoToTab ? () => onGoToTab('orders') : undefined}
                     />
                   ))
                 )}

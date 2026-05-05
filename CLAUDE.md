@@ -116,13 +116,19 @@ src/
 │   │   └── dashboardStyles.ts             ← shared DashboardTheme + color helpers
 │   ├── orders/
 │   │   └── OrderDetailModal.tsx     ← order detail modal (close + go-to-orders)
+│   ├── kanban/
+│   │   ├── KanbanCard.tsx           ← shared order card for plant + dept kanban (urgency badge, blocker tag, ADVANCE →, onClick)
+│   │   └── DeptKanbanBoard.tsx      ← per-dept sub-stage columns; ADVANCE → calls applyWorkflowRuntimeAction
 │   ├── shell/
-│   │   ├── AppHeader.tsx            ← back button + menu button
-│   │   ├── AppDrawer.tsx            ← nav drawer + Dev Tools section
+│   │   ├── AppHeader.tsx            ← back button + menu button + DevToolkitFlyout mount
+│   │   ├── AppDrawer.tsx            ← nav drawer; Settings + Dev Tools inside scrollable area
 │   │   ├── CommandNavigationBar.tsx ← command navigation bar (role-aware)
+│   │   ├── DevToolkitFlyout.tsx     ← floating DEV button (bottom-right); feature flag ON/OFF toggles
 │   │   └── DepartmentCards.tsx      ← (dead — not imported; safe to delete)
 │   ├── maintenance/
 │   │   └── MaintenanceCommandPanel.tsx ← daily control board (pressure score, lanes, asset health, Epicor readiness)
+│   ├── DeptEscalationPanel.tsx      ← flag-gated; surfaces blocked dept orders ≥1h untouched; notify-only (no state mutation)
+│   ├── NextHandoffBanner.tsx        ← flag-gated; top-3 urgency ticker per dept, 6s auto-cycle; reads order.nextDepartment first
 │   ├── EngineeringBacklogPanel.tsx  ← engineering order backlog
 │   ├── LiveCoveragePanel.tsx        ← crew sign-in shortcuts (supervisor only)
 │   ├── MachineDetail.tsx
@@ -162,6 +168,7 @@ src/
 │   ├── structuredSelections.ts ← form selection helpers (assets, orders, roles, co-workers)
 │   ├── workCenterAssets.ts
 │   ├── workCenterResources.ts
+│   ├── departmentSubStages.ts ← ordered sub-stage lists for 11 departments; getSubStagesForDept()
 │   ├── workCenters.ts       ← includes Sales and Engineering work centers
 │   ├── workers.ts           ← 28 named workers with real JCM job titles
 │   ├── workRoles.ts
@@ -191,12 +198,14 @@ src/
 │   ├── orderWorkflow.ts         ← workflow signal generation
 │   ├── plantSignals.ts          ← getPlantSignals() → PlantSignal[] (QA holds, material, etc.)
 │   ├── receivingWorkflow.ts     ← receiving order CRUD + RECEIVING_STORAGE_KEY
+│   ├── featureFlags.ts          ← isFeatureEnabled / setFeatureFlag / getAllFeatureFlags; jcm_feature_flags localStorage key
 │   ├── skillGapAlerts.ts        ← maps WorkerSkill→skillTags, surfaces coverage gaps
+│   ├── urgencyScore.ts          ← getUrgencyScore(order) 0–100 composite; getUrgencyColor(); uses orderStatusTruth helpers
 │   ├── warnings.ts
 │   ├── workflowActions.ts       ← action logging helpers
 │   ├── workflowEvaluation.ts    ← checkpoint-based workflow evaluator
 │   ├── workflowPanelSelectors.ts ← groups orders by operator responsibility
-│   └── workflowRuntimeState.ts  ← runtime reducer + custom event bus
+│   └── workflowRuntimeState.ts  ← runtime reducer + custom event bus; deptSubStage in RuntimeOrderOverride
 ├── modules/
 │   └── crewGuidance.ts          ← (legacy location; logic/ version is canonical)
 ├── pages/
@@ -215,10 +224,11 @@ src/
 │   ├── ReceivingPage.tsx
 │   ├── ShiftHandoffPage.tsx     ← end-of-shift snapshot; 5 section toggles; text report copy
 │   ├── SimulationPage.tsx       ← machine simulation (LV4500 tap codes)
+│   ├── KanbanPage.tsx           ← plant-wide war board; 11 dept columns; priority + dept filters; SHOW DONE toggle; onGoToTab
 │   ├── WorkCenterDetailPage.tsx ← station tablet, WorkCenterWorkflowPanelV2, QR deep-link
 │   ├── WarRoomContextPage.tsx   ← dev/internal only
 │   └── departments/
-│       ├── DepartmentPageTools.tsx      ← PageShell, Section, OrderCard, LiveCrewSection (+ skill gap alerts + onGoToTab), CardGrid, helpers
+│       ├── DepartmentPageTools.tsx      ← PageShell, Section, OrderCard (urgency badge), LiveCrewSection, DeptEnhancements, CardGrid, helpers
 │       ├── SalesDepartmentPage.tsx
 │       ├── EngineeringDepartmentPage.tsx
 │       ├── MaterialHandlingDepartmentPage.tsx
@@ -229,7 +239,7 @@ src/
 │       ├── SaddlesDepartmentPage.tsx    ← Saddles cell — LV4500 service saddle production
 │       └── QADepartmentPage.tsx
 ├── types/
-│   ├── app.ts                   ← AppTab (includes saddles, shiftHandoff), RoleView, DepartmentFilter
+│   ├── app.ts                   ← AppTab (includes saddles, shiftHandoff, kanban), RoleView, DepartmentFilter
 │   ├── classificationReview.ts  ← ClassificationReviewQuestion/Answer/Confirmation
 │   ├── coverage.ts              ← CoveragePerson type
 │   ├── documents.ts             ← Document type
@@ -392,6 +402,7 @@ accent: '#f97316' (safety orange)
 - `jcm-classification-review-target-v1` — orderNumber string (order queued for classification review; written by WorkCenterWorkflowPanelV2, read by ClassificationReviewQueue)
 - `jcm_pressure_history` — PressureSnapshot[] (ring buffer, max 48, throttled 30 min) for Dashboard sparkline
 - `jcm_shift_start_snapshot` — ShiftSnapshot (ts + orderNums + blockedNums + maintCount) for ShiftHandoffPage diff
+- `jcm_feature_flags` — Record<FeatureFlag, boolean>; toggled via DevToolkitFlyout (floating DEV button)
 
 ---
 
@@ -460,6 +471,14 @@ accent: '#f97316' (safety orange)
 - Typed workflow button actions — `WorkflowButtonAction` IDs replace text-inferred dispatch in WorkCenterWorkflowPanelV2; action handler switches on typed IDs, not label strings; view/no-op actions emit NO_ACTION without state mutation
 - `orderStatusTruth.ts` — shared status normalization helpers; regression script (`scripts/orderStatusTruth.regression.mjs`) runs on every build
 - Status normalization sweep — dashboard selectors, workflow panel, plant signals, order readiness all normalize status casing and honor runtime flowStatus + explicit blockers
+- Feature flag system — `featureFlags.ts` + `DevToolkitFlyout.tsx`; floating DEV button (bottom-right); four flags: subStageKanban, urgencyScore, nextHandoff, deptEscalation; all toggle OFF = original behavior
+- Urgency score — `urgencyScore.ts`; 0–100 composite (priority 40/25/10 + overdue capped 30 + blockers capped 20 + material gap 10); badge on OrderCard + KanbanCard when flag ON
+- War Board (KanbanPage) — plant-wide kanban; 11 dept columns sorted by urgency; priority filter (ALL/CRITICAL/HOT/BLOCKED) + dept dropdown + SHOW DONE; card click → orders tab; live via WORKFLOW_RUNTIME_UPDATED_EVENT
+- Dept sub-stage kanban — `DeptKanbanBoard.tsx`; per-dept sub-stage columns from `departmentSubStages.ts`; ADVANCE → button calls applyWorkflowRuntimeAction with deptSubStage extraOverride; flag-gated
+- Next handoff banner — `NextHandoffBanner.tsx`; top-3 urgency ticker, 6s auto-cycle; reads order.nextDepartment first, falls back to hardcoded map; clickable → orders tab; flag-gated
+- Dept escalation panel — `DeptEscalationPanel.tsx`; surfaces blocked orders ≥1h untouched per dept; notify-only (NOTIFICATION log, no state mutation); ESCALATE TO ENGINEERING / NOTIFY SUPERVISOR / VIEW ORDER; flag-gated
+- DeptEnhancements — single component in DepartmentPageTools exported to all 9 dept pages; renders escalation + handoff + kanban based on active flags; threads onGoToTab to all three
+- `deptSubStage` added to ProductionOrder type and RuntimeOrderOverride Pick; persists via existing runtime storage
 
 **Queued for Phase 3:**
 - Supabase backend (replace localStorage)
@@ -518,6 +537,6 @@ git push -u origin <your-branch>
 
 ---
 
-**Last Updated:** May 4, 2026
-**Version:** v1.7 (Receiving overhaul, maintenance command center, typed workflow actions, status normalization, JCM product data integration)
+**Last Updated:** May 5, 2026
+**Version:** v1.8 (Feature flags + DevToolkit flyout, War Board kanban, dept sub-stage kanban, urgency score, next handoff banner, dept escalation panel, onGoToTab threading completed)
 **Developer:** Manufacturing Engineering Technician, JCM Industries, Nash, Texas

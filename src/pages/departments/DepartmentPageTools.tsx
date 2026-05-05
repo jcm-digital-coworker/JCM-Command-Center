@@ -281,8 +281,8 @@ export function DeptEnhancements({ department, theme = 'dark', onGoToTab }: Depa
   return (
     <>
       {showEscalation && <DeptEscalationPanel department={department} theme={theme} onGoToTab={onGoToTab} />}
-      {showHandoff && <NextHandoffBanner department={department} theme={theme} />}
-      {showKanban && <DeptKanbanBoard department={department} theme={theme} />}
+      {showHandoff && <NextHandoffBanner department={department} theme={theme} onGoToTab={onGoToTab} />}
+      {showKanban && <DeptKanbanBoard department={department} theme={theme} onGoToTab={onGoToTab} />}
     </>
   );
 }
