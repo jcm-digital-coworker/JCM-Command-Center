@@ -1,5 +1,4 @@
 import type { CSSProperties } from 'react';
-import DevToolkitFlyout from './DevToolkitFlyout';
 
 const JCM_NAVIGATE_EVENT = 'jcm:navigate';
 
@@ -19,35 +18,32 @@ export default function AppHeader({
   theme = 'dark',
 }: AppHeaderProps) {
   return (
-    <>
-      <div style={getHeaderStyle(theme)}>
-        <div style={headerSideStyle}>
-          <button onClick={onMenuClick} style={getMenuButtonStyle(theme)}>
-            MENU
+    <div style={getHeaderStyle(theme)}>
+      <div style={headerSideStyle}>
+        <button onClick={onMenuClick} style={getMenuButtonStyle(theme)}>
+          MENU
+        </button>
+        {showBack && onBackClick ? (
+          <button onClick={onBackClick} style={getBackButtonStyle(theme)}>
+            BACK
           </button>
-          {showBack && onBackClick ? (
-            <button onClick={onBackClick} style={getBackButtonStyle(theme)}>
-              BACK
-            </button>
-          ) : null}
-        </div>
-
-        <div style={titleContainerStyle}>
-          <div style={getTitleStyle(theme)}>JCM</div>
-          <div style={getSubtitleStyle(theme)}>COMMAND CENTER</div>
-        </div>
-
-        <div style={rightActionsStyle}>
-          <button
-            onClick={onHomeClick ?? dispatchCommandHome}
-            style={getHomeButtonStyle(theme)}
-          >
-            HOME
-          </button>
-        </div>
+        ) : null}
       </div>
-      <DevToolkitFlyout theme={theme} />
-    </>
+
+      <div style={titleContainerStyle}>
+        <div style={getTitleStyle(theme)}>JCM</div>
+        <div style={getSubtitleStyle(theme)}>COMMAND CENTER</div>
+      </div>
+
+      <div style={rightActionsStyle}>
+        <button
+          onClick={onHomeClick ?? dispatchCommandHome}
+          style={getHomeButtonStyle(theme)}
+        >
+          HOME
+        </button>
+      </div>
+    </div>
   );
 }
 
