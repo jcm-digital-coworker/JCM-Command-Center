@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { productionOrders } from '../data/productionOrders';
 import { getRuntimeProductionOrders, applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import { isClosedProductionStatus, isMaterialIssueStatus } from '../logic/orderStatusTruth';
 import type { AppTab } from '../types/app';
 
 type Props = {
@@ -25,18 +26,15 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
   void tick;
 
   const materialOrders = runtimeOrders.filter((order) => {
-    const materialStatus = String(order.materialStatus ?? '').toUpperCase();
-    return (
-      materialStatus === 'MISSING' ||
-      materialStatus === 'NOT_RECEIVED' ||
-      materialStatus === 'ORDER_REQUIRED' ||
-      materialStatus === 'PARTIAL' ||
-      order.blockers.some((blocker) => blocker.type === 'material')
-    );
+    if (isClosedProductionStatus(order.status)) return false;
+    const hasMaterialBlocker = (order.blockers ?? []).some((blocker) => blocker.type === 'material');
+    return isMaterialIssueStatus(order.materialStatus) || hasMaterialBlocker;
   });
 
   function handleMarkStaged(orderNumber: string) {
-    applyWorkflowRuntimeAction(orderNumber, 'MARK_MATERIAL_STAGED', 'Material staged from Receiving closure panel.');
+    const confirmed = confirm('Confirm material is physically verified, staged, and ready for the destination department?');
+    if (!confirmed) return;
+    applyWorkflowRuntimeAction(orderNumber, 'MARK_MATERIAL_STAGED', 'Material physically verified and staged from Receiving closure panel.');
   }
 
   return (
@@ -45,7 +43,7 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
         <div>
           <div style={eyebrowStyle}>RECEIVING LOOP</div>
           <h3 style={getTitleStyle(theme)}>Material closure</h3>
-          <p style={subTextStyle(theme)}>Orders waiting on material from Receiving. Mark staged once material is verified and delivered.</p>
+          <p style={subTextStyle(theme)}>Orders waiting on material from Receiving. Mark staged only after material is physically verified and ready for delivery.</p>
         </div>
         <span style={countBadgeStyle(materialOrders.length)}>{materialOrders.length} OPEN</span>
       </div>
@@ -55,9 +53,9 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
       ) : (
         <div style={stackStyle}>
           {materialOrders.map((order) => {
-            const materialBlockers = order.blockers.filter((b) => b.type === 'material');
+            const materialBlockers = (order.blockers ?? []).filter((blocker) => blocker.type === 'material');
             const materialStatus = order.materialStatus ?? 'UNKNOWN';
-            const isPartial = materialStatus === 'PARTIAL';
+            const isPartial = String(materialStatus).toUpperCase() === 'PARTIAL';
             return (
               <div key={order.id} style={getCardStyle(theme, isPartial)}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -75,7 +73,7 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
                   )}
                   <div style={metaRowStyle}>
                     <span style={deptStyle(theme)}>{order.currentDepartment}</span>
-                    <span style={getMaterialChip(materialStatus)}>{materialStatus.replace(/_/g, ' ')}</span>
+                    <span style={getMaterialChip(materialStatus)}>{String(materialStatus).replace(/_/g, ' ')}</span>
                     {order.projectedShipDate && (
                       <span style={dateStyle(theme)}>DUE {order.projectedShipDate}</span>
                     )}
@@ -90,7 +88,7 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
                     style={stagedButtonStyle}
                     onClick={() => handleMarkStaged(order.orderNumber)}
                   >
-                    MARK STAGED
+                    VERIFY + STAGE
                   </button>
                   {onGoToTab && (
                     <button
