@@ -1,6 +1,6 @@
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 const assemblyCells = [
@@ -21,6 +21,7 @@ export default function AssemblyDepartmentPage({ theme = 'dark', onGoToTab }: De
       subtitle="Assembly is kit-readiness and final build flow. It reveals missing or bad inputs from upstream, so this page focuses on readiness and blockers."
       theme={theme}
     >
+      <DeptEnhancements department="Assembly" theme={theme} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Assembly" theme={theme} onGoToTab={onGoToTab} />
       </Section>

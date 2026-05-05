@@ -1,7 +1,7 @@
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import EngineeringBacklogPanel from '../../components/EngineeringBacklogPanel';
-import { CardGrid, CrewGuidancePanel, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
@@ -19,6 +19,7 @@ export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }:
       subtitle="Engineering is the blueprint and routing release gate. No engineered order can run until Engineering releases the packet. This view surfaces what's blocked, what's been released, and the full blueprint backlog."
       theme={theme}
     >
+      <DeptEnhancements department="Engineering" theme={theme} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Engineering" theme={theme} onGoToTab={onGoToTab} />
       </Section>

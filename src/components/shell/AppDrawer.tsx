@@ -7,6 +7,8 @@ import {
   getHomeTabForRole,
   getVisibleNavigationGroups,
 } from '../../logic/navigationAccess';
+import { getAllFeatureFlags, setFeatureFlag, FLAG_LABELS } from '../../logic/featureFlags';
+import type { FeatureFlag } from '../../logic/featureFlags';
 
 interface AppDrawerProps {
   open: boolean;
@@ -49,6 +51,12 @@ export default function AppDrawer({
   const activeGroupId = getActiveGroupId(tab, visibleGroups);
   const [openGroupId, setOpenGroupId] = useState<NavigationGroupId | null>(activeGroupId);
   const [workCentersOpen, setWorkCentersOpen] = useState(departmentFilter !== 'All');
+  const [flags, setFlags] = useState(() => getAllFeatureFlags());
+
+  function toggleFlag(flag: FeatureFlag) {
+    setFeatureFlag(flag, !flags[flag]);
+    setFlags(getAllFeatureFlags());
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -220,6 +228,21 @@ export default function AppDrawer({
           >
             WAR ROOM CONTEXT
           </button>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ ...devToolsLabelStyle, marginBottom: 6 }}>FEATURE FLAGS</div>
+            {(Object.keys(FLAG_LABELS) as FeatureFlag[]).map((flag) => (
+              <div key={flag} style={flagRowStyle}>
+                <span style={flagLabelStyle}>{FLAG_LABELS[flag]}</span>
+                <button
+                  type="button"
+                  onClick={() => toggleFlag(flag)}
+                  style={flags[flag] ? flagOnStyle : flagOffStyle}
+                >
+                  {flags[flag] ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            ))}
+          </div>
           <div style={devToolsItemStyle}>
             <span style={devToolsLabelStyle}>ROLE</span>
             <select
@@ -558,4 +581,39 @@ const devSelectStyle: CSSProperties = {
   cursor: 'pointer',
   outline: 'none',
   maxWidth: 160,
+};
+
+const flagRowStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 5,
+};
+
+const flagLabelStyle: CSSProperties = {
+  fontSize: 10,
+  color: '#475569',
+  fontWeight: 700,
+  letterSpacing: '0.3px',
+  flex: 1,
+  paddingRight: 8,
+};
+
+const flagOnStyle: CSSProperties = {
+  fontSize: 9,
+  fontWeight: 900,
+  padding: '3px 8px',
+  borderRadius: 3,
+  border: '1px solid #10b981',
+  background: 'rgba(16,185,129,0.15)',
+  color: '#10b981',
+  cursor: 'pointer',
+  letterSpacing: '0.5px',
+};
+
+const flagOffStyle: CSSProperties = {
+  ...flagOnStyle,
+  border: '1px solid #334155',
+  background: 'transparent',
+  color: '#475569',
 };

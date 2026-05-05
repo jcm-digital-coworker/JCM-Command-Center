@@ -1,7 +1,7 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function FabDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
@@ -15,6 +15,7 @@ export default function FabDepartmentPage({ theme = 'dark', onGoToTab }: Departm
       subtitle="Fab is cell and skill driven, not machine driven. This view keeps Industrial, Special, 412, 452, and 432 work visible as separate capacity lanes."
       theme={theme}
     >
+      <DeptEnhancements department="Fab" theme={theme} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Fab" theme={theme} onGoToTab={onGoToTab} />
       </Section>

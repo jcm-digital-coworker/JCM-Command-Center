@@ -43,6 +43,7 @@ import SalesDepartmentPage from './pages/departments/SalesDepartmentPage';
 import EngineeringDepartmentPage from './pages/departments/EngineeringDepartmentPage';
 import SaddlesDepartmentPage from './pages/departments/SaddlesDepartmentPage';
 import ShiftHandoffPage from './pages/ShiftHandoffPage';
+import KanbanPage from './pages/KanbanPage';
 import WarRoomContextPage from './pages/WarRoomContextPage';
 
 type DetailTab = 'overview' | 'events' | 'patterns' | 'notes';
@@ -473,6 +474,7 @@ export default function App() {
     if (tab === 'documents') return <DocumentsPage documents={filteredDocuments} theme={theme} />;
     if (tab === 'risk') return <RiskPage risks={filteredRisks} roleView={roleView} theme={theme} />;
     if (tab === 'shiftHandoff') return <ShiftHandoffPage theme={theme} />;
+    if (tab === 'kanban') return <KanbanPage theme={theme} />;
     if (tab === 'warRoomContext') return <WarRoomContextPage theme={theme} />;
 
     if (tab === 'maintenance') {
@@ -529,6 +531,7 @@ function getCommandLabel(tab: AppTab): string {
     risk: 'QA / Safety',
     saddles: 'Saddles Dept',
     shiftHandoff: 'Shift Handoff',
+    kanban: 'War Board',
     warRoomContext: 'War Room Context',
   };
   return labels[tab];

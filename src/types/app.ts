@@ -23,6 +23,7 @@ export type AppTab =
   | 'documents'
   | 'risk'
   | 'shiftHandoff'
+  | 'kanban'
   | 'warRoomContext';
 
 export type DepartmentFilter = 'All' | Department;

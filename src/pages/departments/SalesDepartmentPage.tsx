@@ -1,6 +1,6 @@
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
-import { CardGrid, CrewGuidancePanel, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
@@ -15,6 +15,7 @@ export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: Depar
       subtitle="Sales is the release gate. Orders don't enter production until Sales releases them. This view shows what's been handed off, what's blocked on engineering, and what hasn't been released yet."
       theme={theme}
     >
+      <DeptEnhancements department="Sales" theme={theme} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Sales" theme={theme} onGoToTab={onGoToTab} />
       </Section>

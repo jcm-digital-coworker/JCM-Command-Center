@@ -1,7 +1,7 @@
 import { plantAssets } from '../../data/plantAssets';
 import { productionOrders } from '../../data/productionOrders';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
-import { AssetCard, CardGrid, CrewGuidancePanel, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
+import { AssetCard, CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState, getDepartmentAssets, getDepartmentOrders, LiveCrewSection, OrderCard, PageShell, Section } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function SaddlesDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
@@ -17,6 +17,7 @@ export default function SaddlesDepartmentPage({ theme = 'dark', onGoToTab }: Dep
       subtitle="The Saddles cell runs service saddle products on the LV4500. Work here is skill-specific and cell-driven — crew availability and machine state directly gate throughput."
       theme={theme}
     >
+      <DeptEnhancements department="Saddles Dept" theme={theme} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Saddles Dept" theme={theme} onGoToTab={onGoToTab} />
       </Section>
