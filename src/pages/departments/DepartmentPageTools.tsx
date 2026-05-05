@@ -13,6 +13,7 @@ import { departmentOperatingProfiles } from '../../data/departmentOperatingProfi
 import { isFeatureEnabled } from '../../logic/featureFlags';
 import { getUrgencyScore, getUrgencyColor } from '../../logic/urgencyScore';
 import { generatePlantTraveler } from '../../logic/dynamicTraveler';
+import { getPlantTravelerMaterialAction } from '../../logic/plantTravelerSelectors';
 import { isBlockedProductionOrder } from '../../logic/orderStatusTruth';
 import type { Department } from '../../types/machine';
 import type { CoveragePerson } from '../../types/coverage';
@@ -158,7 +159,7 @@ export function OrderCard({
   const showUrgency = isFeatureEnabled('urgencyScore');
   const urgencyScore = showUrgency ? getUrgencyScore(order) : 0;
   const urgencyColor = getUrgencyColor(urgencyScore);
-  const materialAction = traveler.actions.find((action) => action.type === 'REQUEST_MATERIAL');
+  const materialAction = getPlantTravelerMaterialAction(traveler);
   const hasMaterialIssue = Boolean(materialAction?.enabled);
   const activeDepartment = traveler.activeDepartment ?? order.currentDepartment;
   const nextDepartment = traveler.nextDepartment ?? order.nextDepartment;
