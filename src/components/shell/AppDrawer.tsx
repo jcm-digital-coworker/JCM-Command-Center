@@ -198,29 +198,28 @@ export default function AppDrawer({
               )}
             </div>
           </div>
-        </div>
 
-        <div style={settingsSectionStyle}>
-          <div style={settingsHeaderStyle}>SETTINGS</div>
+          <div style={settingsSectionStyle}>
+            <div style={settingsHeaderStyle}>SETTINGS</div>
 
-          <div style={settingItemStyle}>
-            <span
-              style={{
-                fontSize: 13,
-                color: '#94a3b8',
-                fontWeight: 700,
-                letterSpacing: '0.5px',
-              }}
-            >
-              THEME
-            </span>
-            <button onClick={onToggleTheme} style={themeToggleStyle}>
-              {theme === 'dark' ? 'DARK' : 'LIGHT'}
-            </button>
+            <div style={settingItemStyle}>
+              <span
+                style={{
+                  fontSize: 13,
+                  color: '#94a3b8',
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
+                }}
+              >
+                THEME
+              </span>
+              <button onClick={onToggleTheme} style={themeToggleStyle}>
+                {theme === 'dark' ? 'DARK' : 'LIGHT'}
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div style={devToolsSectionStyle}>
+          <div style={devToolsSectionStyle}>
           <div style={devToolsHeaderStyle}>CO-WORKER VIEW</div>
           <button
             onClick={() => goToTab('warRoomContext')}
@@ -269,6 +268,7 @@ export default function AppDrawer({
                 </option>
               ))}
             </select>
+          </div>
           </div>
         </div>
 
