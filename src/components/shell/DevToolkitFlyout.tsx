@@ -40,7 +40,7 @@ export default function DevToolkitFlyout({ theme }: DevToolkitFlyoutProps) {
           </div>
 
           <p style={descriptionStyle}>
-            Toggle in-progress command features without digging through the drawer scroll.
+            Toggle in-progress command features without adding noise to operator navigation.
           </p>
 
           <div style={flagStackStyle}>
@@ -59,7 +59,7 @@ export default function DevToolkitFlyout({ theme }: DevToolkitFlyoutProps) {
           </div>
 
           <div style={hintStyle(theme)}>
-            Flags are browser-local. Use this for preview/debug only, not plant-wide policy.
+            Flags are stored locally in this browser. Refresh-safe, not plant-wide policy.
           </div>
         </section>
       )}

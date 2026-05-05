@@ -19,7 +19,9 @@ export function setFeatureFlag(flag: FeatureFlag, enabled: boolean): void {
     flags[flag] = enabled;
     localStorage.setItem(FLAGS_KEY, JSON.stringify(flags));
     window.dispatchEvent(new Event('storage'));
-  } catch { /* ignore */ }
+  } catch {
+    // Keep feature flags non-critical. If localStorage is unavailable, the app should keep running.
+  }
 }
 
 export function getAllFeatureFlags(): Record<FeatureFlag, boolean> {
@@ -27,15 +29,15 @@ export function getAllFeatureFlags(): Record<FeatureFlag, boolean> {
     const stored = localStorage.getItem(FLAGS_KEY);
     const flags: Record<string, boolean> = stored ? JSON.parse(stored) : {};
     const keys: FeatureFlag[] = ['subStageKanban', 'urgencyScore', 'nextHandoff', 'deptEscalation'];
-    return Object.fromEntries(keys.map((k) => [k, flags[k] === true])) as Record<FeatureFlag, boolean>;
+    return Object.fromEntries(keys.map((key) => [key, flags[key] === true])) as Record<FeatureFlag, boolean>;
   } catch {
     return { subStageKanban: false, urgencyScore: false, nextHandoff: false, deptEscalation: false };
   }
 }
 
 export const FLAG_LABELS: Record<FeatureFlag, string> = {
-  subStageKanban: 'Kanban (dept + plant)',
-  urgencyScore:   'Urgency score on orders',
-  nextHandoff:    'Next handoff banner',
-  deptEscalation: 'Dept blocker escalation',
+  subStageKanban: 'Kanban and department sub-stages',
+  urgencyScore: 'Urgency score on production orders',
+  nextHandoff: 'Next handoff banner',
+  deptEscalation: 'Department blocker escalation',
 };
