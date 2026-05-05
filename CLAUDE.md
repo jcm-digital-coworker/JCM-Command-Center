@@ -473,7 +473,7 @@ accent: '#f97316' (safety orange)
 - Status normalization sweep — dashboard selectors, workflow panel, plant signals, order readiness all normalize status casing and honor runtime flowStatus + explicit blockers
 - Feature flag system — `featureFlags.ts` + `DevToolkitFlyout.tsx`; floating DEV button (bottom-right); four flags: subStageKanban, urgencyScore, nextHandoff, deptEscalation; all toggle OFF = original behavior
 - Urgency score — `urgencyScore.ts`; 0–100 composite (priority 40/25/10 + overdue capped 30 + blockers capped 20 + material gap 10); badge on OrderCard + KanbanCard when flag ON
-- War Board (KanbanPage) — plant-wide kanban; 11 dept columns sorted by urgency; priority filter (ALL/CRITICAL/HOT/BLOCKED) + dept dropdown + SHOW DONE; card click → orders tab; live via WORKFLOW_RUNTIME_UPDATED_EVENT
+- War Board (KanbanPage) — plant-wide kanban; traveler-driven via `generatePlantTravelers(runtimeOrders)`; 11 dept columns keyed on `traveler.activeDepartment`; priority filter (ALL/CRITICAL/HOT/BLOCKED) + dept dropdown + SHOW DONE toggle; card tap → inline OrderDetailModal (read-only; "OPEN FULL ORDERS" escapes to orders tab); KanbanCard shows travelerStatus badge, route progress, next dept handoff chip, current instruction; live via WORKFLOW_RUNTIME_UPDATED_EVENT
 - Dept sub-stage kanban — `DeptKanbanBoard.tsx`; per-dept sub-stage columns from `departmentSubStages.ts`; ADVANCE → button calls applyWorkflowRuntimeAction with deptSubStage extraOverride; flag-gated
 - Next handoff banner — `NextHandoffBanner.tsx`; top-3 urgency ticker, 6s auto-cycle; reads order.nextDepartment first, falls back to hardcoded map; clickable → orders tab; flag-gated
 - Dept escalation panel — `DeptEscalationPanel.tsx`; surfaces blocked orders ≥1h untouched per dept; notify-only (NOTIFICATION log, no state mutation); ESCALATE TO ENGINEERING / NOTIFY SUPERVISOR / VIEW ORDER; flag-gated
@@ -543,5 +543,5 @@ git push -u origin <your-branch>
 ---
 
 **Last Updated:** May 5, 2026
-**Version:** v1.8 (Feature flags + DevToolkit flyout, War Board kanban, dept sub-stage kanban, urgency score, next handoff banner, dept escalation panel, onGoToTab threading completed)
+**Version:** v1.8 (Feature flags + DevToolkit flyout, War Board kanban traveler-driven via generatePlantTravelers, dept sub-stage kanban, urgency score, next handoff banner, dept escalation panel, onGoToTab threading completed, inline OrderDetailModal on kanban cards)
 **Developer:** Manufacturing Engineering Technician, JCM Industries, Nash, Texas
