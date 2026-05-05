@@ -474,7 +474,7 @@ export default function App() {
     if (tab === 'documents') return <DocumentsPage documents={filteredDocuments} theme={theme} />;
     if (tab === 'risk') return <RiskPage risks={filteredRisks} roleView={roleView} theme={theme} />;
     if (tab === 'shiftHandoff') return <ShiftHandoffPage theme={theme} />;
-    if (tab === 'kanban') return <KanbanPage theme={theme} />;
+    if (tab === 'kanban') return <KanbanPage theme={theme} onGoToTab={navigateTo} />;
     if (tab === 'warRoomContext') return <WarRoomContextPage theme={theme} />;
 
     if (tab === 'maintenance') {

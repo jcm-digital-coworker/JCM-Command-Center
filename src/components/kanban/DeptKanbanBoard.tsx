@@ -3,6 +3,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { getSubStagesForDept } from '../../data/departmentSubStages';
 import { getRuntimeProductionOrders, applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../../logic/workflowRuntimeState';
 import { getUrgencyScore } from '../../logic/urgencyScore';
+import { isClosedProductionStatus, isBlockedProductionOrder } from '../../logic/orderStatusTruth';
 import KanbanCard from './KanbanCard';
 import type { Department } from '../../types/machine';
 import type { ProductionOrder } from '../../types/productionOrder';
@@ -26,7 +27,7 @@ export default function DeptKanbanBoard({ department, theme }: Props) {
   const deptOrders = useMemo(() => {
     const runtime = getRuntimeProductionOrders(productionOrders);
     return runtime
-      .filter((o) => o.currentDepartment === department && !['done', 'DONE', 'complete', 'COMPLETE', 'shipped', 'SHIPPED'].includes(String(o.status ?? '')))
+      .filter((o) => o.currentDepartment === department && !isClosedProductionStatus(o.status))
       .sort((a, b) => getUrgencyScore(b) - getUrgencyScore(a));
   }, [tick, department]);
 
@@ -52,7 +53,7 @@ export default function DeptKanbanBoard({ department, theme }: Props) {
     orders: deptOrders.filter((o) => getStageForOrder(o) === stage),
   }));
 
-  const totalBlocked = deptOrders.filter((o) => (o.blockers ?? []).length > 0 || String(o.flowStatus).toLowerCase() === 'blocked').length;
+  const totalBlocked = deptOrders.filter((o) => isBlockedProductionOrder(o)).length;
 
   return (
     <div style={wrapperStyle}>
@@ -64,7 +65,7 @@ export default function DeptKanbanBoard({ department, theme }: Props) {
       </div>
       <div style={boardStyle}>
         {columns.map(({ stage, orders }) => {
-          const blocked = orders.filter((o) => (o.blockers ?? []).length > 0 || String(o.flowStatus).toLowerCase() === 'blocked').length;
+          const blocked = orders.filter((o) => isBlockedProductionOrder(o)).length;
           const isLast = stage === stages[stages.length - 1];
           return (
             <div key={stage} style={columnStyle(theme)}>
