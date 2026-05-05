@@ -3,7 +3,7 @@ import { plantDepartmentOrder } from '../data/workCenters';
 import { seedReceivingOrders } from '../data/receivingOrders';
 import { getMaterialLabel, getMaterialsForDepartment } from '../data/materialCatalog';
 import type { Department } from '../types/machine';
-import type { ReceivingExceptionType, ReceivingGateStatus, ReceivingOrder, ReceivingOrderDraft, ReceivingOrderPriority, ReceivingOrderStatus } from '../types/receiving';
+import type { ReceivingExceptionType, ReceivingGateStatus, ReceivingOrder, ReceivingOrderDraft, ReceivingOrderPriority } from '../types/receiving';
 import {
   RECEIVING_STORAGE_KEY,
   checkInReceivingOrder,
