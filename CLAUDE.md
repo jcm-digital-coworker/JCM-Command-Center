@@ -492,6 +492,11 @@ accent: '#f97316' (safety orange)
 - No Office department page — 1 order with `currentDepartment: 'Office'` exists but it's admin-only, no dept page needed.
 - Workflow button copy should always come from typed `WorkflowButtonAction` IDs — never infer behavior from display labels.
 
+**Kanban card interaction boundary rule (established issue #32):**
+- Card tap = inline read-only `OrderDetailModal` — preserves board context, filters, scroll
+- Full Orders navigation = explicit "OPEN FULL ORDERS" button inside the modal
+- Workflow mutations must stay in controlled action surfaces (TravelerDetailModal, WorkCenterWorkflowPanelV2) — never inside the passive kanban modal
+
 **Important: production order status values in seed data**
 Orders use lowercase/mixed values: `'ready'`, `'blocked'`, `'hold'` — NOT `'IN_PROGRESS'`, `'DONE'`, `'COMPLETE'`.
 Runtime overrides may write uppercase (e.g., `'DONE'`). Always normalize when filtering.
