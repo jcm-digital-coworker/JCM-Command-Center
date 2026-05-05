@@ -17,7 +17,7 @@ export default function SaddlesDepartmentPage({ theme = 'dark', onGoToTab }: Dep
       subtitle="The Saddles cell runs service saddle products on the LV4500. Work here is skill-specific and cell-driven — crew availability and machine state directly gate throughput."
       theme={theme}
     >
-      <DeptEnhancements department="Saddles Dept" theme={theme} />
+      <DeptEnhancements department="Saddles Dept" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Saddles Dept" theme={theme} onGoToTab={onGoToTab} />
       </Section>

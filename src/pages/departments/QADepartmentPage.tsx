@@ -17,7 +17,7 @@ export default function QADepartmentPage({ theme = 'dark', onGoToTab }: Departme
       subtitle="QA is the truth layer: testing, compliance, inspection, and release. This page focuses on holds, pending checks, and what protects Shipping from bad exits."
       theme={theme}
     >
-      <DeptEnhancements department="QA" theme={theme} />
+      <DeptEnhancements department="QA" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="QA" theme={theme} onGoToTab={onGoToTab} />
       </Section>

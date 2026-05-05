@@ -15,7 +15,7 @@ export default function FabDepartmentPage({ theme = 'dark', onGoToTab }: Departm
       subtitle="Fab is cell and skill driven, not machine driven. This view keeps Industrial, Special, 412, 452, and 432 work visible as separate capacity lanes."
       theme={theme}
     >
-      <DeptEnhancements department="Fab" theme={theme} />
+      <DeptEnhancements department="Fab" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Fab" theme={theme} onGoToTab={onGoToTab} />
       </Section>

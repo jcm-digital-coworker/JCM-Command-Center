@@ -15,7 +15,7 @@ export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: Depar
       subtitle="Sales is the release gate. Orders don't enter production until Sales releases them. This view shows what's been handed off, what's blocked on engineering, and what hasn't been released yet."
       theme={theme}
     >
-      <DeptEnhancements department="Sales" theme={theme} />
+      <DeptEnhancements department="Sales" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Sales" theme={theme} onGoToTab={onGoToTab} />
       </Section>

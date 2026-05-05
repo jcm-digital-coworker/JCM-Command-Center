@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import NextHandoffBanner from '../../components/NextHandoffBanner';
 import DeptKanbanBoard from '../../components/kanban/DeptKanbanBoard';
+import DeptEscalationPanel from '../../components/DeptEscalationPanel';
 import { workers } from '../../data/workers';
 import { seedCoverage } from '../../data/coverage';
 import { productionOrders } from '../../data/productionOrders';
@@ -272,12 +273,14 @@ export function CrewGuidancePanel({
   );
 }
 
-export function DeptEnhancements({ department, theme = 'dark' }: DepartmentPageProps & { department: Department }) {
+export function DeptEnhancements({ department, theme = 'dark', onGoToTab }: DepartmentPageProps & { department: Department }) {
   const showHandoff = isFeatureEnabled('nextHandoff');
   const showKanban = isFeatureEnabled('subStageKanban');
-  if (!showHandoff && !showKanban) return null;
+  const showEscalation = isFeatureEnabled('deptEscalation');
+  if (!showHandoff && !showKanban && !showEscalation) return null;
   return (
     <>
+      {showEscalation && <DeptEscalationPanel department={department} theme={theme} onGoToTab={onGoToTab} />}
       {showHandoff && <NextHandoffBanner department={department} theme={theme} />}
       {showKanban && <DeptKanbanBoard department={department} theme={theme} />}
     </>

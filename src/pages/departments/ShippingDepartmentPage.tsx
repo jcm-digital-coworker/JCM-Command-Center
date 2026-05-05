@@ -16,7 +16,7 @@ export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: De
       subtitle="Shipping is the readiness gate. It should show what can leave, what is almost ready, and what is held by QA, production, or missing components."
       theme={theme}
     >
-      <DeptEnhancements department="Shipping" theme={theme} />
+      <DeptEnhancements department="Shipping" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Shipping" theme={theme} onGoToTab={onGoToTab} />
       </Section>

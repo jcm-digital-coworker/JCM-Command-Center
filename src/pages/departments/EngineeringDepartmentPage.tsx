@@ -19,7 +19,7 @@ export default function EngineeringDepartmentPage({ theme = 'dark', onGoToTab }:
       subtitle="Engineering is the blueprint and routing release gate. No engineered order can run until Engineering releases the packet. This view surfaces what's blocked, what's been released, and the full blueprint backlog."
       theme={theme}
     >
-      <DeptEnhancements department="Engineering" theme={theme} />
+      <DeptEnhancements department="Engineering" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Engineering" theme={theme} onGoToTab={onGoToTab} />
       </Section>

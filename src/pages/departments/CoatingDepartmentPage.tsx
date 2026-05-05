@@ -15,7 +15,7 @@ export default function CoatingDepartmentPage({ theme = 'dark', onGoToTab }: Dep
       subtitle="Coating is process-zone based: blast, enamel, dip, passivation, and cure/finish flow. The page avoids pretending this area is just another machine list."
       theme={theme}
     >
-      <DeptEnhancements department="Coating" theme={theme} />
+      <DeptEnhancements department="Coating" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Coating" theme={theme} onGoToTab={onGoToTab} />
       </Section>

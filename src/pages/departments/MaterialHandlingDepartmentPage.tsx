@@ -15,7 +15,7 @@ export default function MaterialHandlingDepartmentPage({ theme = 'dark', onGoToT
       subtitle="Cut, roll, saw, press, expand, and stage material. This page focuses on equipment constraints and the queues feeding the rest of the plant."
       theme={theme}
     >
-      <DeptEnhancements department="Material Handling" theme={theme} />
+      <DeptEnhancements department="Material Handling" theme={theme} onGoToTab={onGoToTab} />
       <Section title="Crew on Shift" theme={theme}>
         <LiveCrewSection department="Material Handling" theme={theme} onGoToTab={onGoToTab} />
       </Section>
