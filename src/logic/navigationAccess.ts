@@ -1,6 +1,6 @@
 import type { AppTab, RoleView } from '../types/app';
 
-export type NavigationGroupId = 'command' | 'production' | 'workflow' | 'support';
+export type NavigationGroupId = 'command' | 'production' | 'departments' | 'workflow' | 'support';
 
 export type NavigationItem = {
   id: AppTab;
@@ -53,16 +53,23 @@ export const navigationGroups: NavigationGroup[] = [
   },
   {
     id: 'production',
-    label: 'Departments',
-    description: 'All plant departments — floor, support, and office.',
+    label: 'Production',
+    description: 'Plant-wide order and equipment views.',
     items: [
       { id: 'orders', label: 'Orders', roles: [...plantLeadershipRoles, ...productionRoles, ...supportRoles], description: 'Order status, readiness, and release signals.' },
       { id: 'plantMap', label: 'Plant Map', roles: [...plantLeadershipRoles, ...productionRoles, ...maintenanceRoles, ...supportRoles], description: 'Department and work-center overview.' },
       { id: 'machines', label: 'Equipment', roles: [...plantLeadershipRoles, ...productionRoles, ...maintenanceRoles], description: 'Equipment status and machine detail cards.' },
+    ],
+  },
+  {
+    id: 'departments',
+    label: 'Departments',
+    description: 'Every department in plant-flow order.',
+    items: [
       { id: 'sales', label: 'Sales', roles: [...managementRoles, ...supportRoles, ...plantLeadershipRoles], description: 'Sales and customer order signal.' },
       { id: 'engineering', label: 'Engineering', roles: [...plantLeadershipRoles, ...supportRoles], description: 'Engineering release and routing support.' },
       { id: 'receiving', label: 'Receiving', roles: [...plantLeadershipRoles, ...supportRoles, ...productionRoles], description: 'Material intake, staging, and request flow.' },
-      { id: 'materialHandling', label: 'Material Handling', roles: [...plantLeadershipRoles, ...supportRoles], description: 'Material movement and cut-form flow.' },
+      { id: 'materialHandling', label: 'Material Handling', roles: [...plantLeadershipRoles, ...productionRoles, ...supportRoles], description: 'Material movement and cut-form flow.' },
       { id: 'fab', label: 'Fab', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Fabrication department view.' },
       { id: 'coating', label: 'Coating', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Coating department view.' },
       { id: 'assembly', label: 'Assembly', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Assembly department view.' },

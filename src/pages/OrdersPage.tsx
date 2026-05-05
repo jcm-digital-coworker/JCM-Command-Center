@@ -5,7 +5,6 @@ import {
   formatMaterialStatus,
   formatStatus,
   getOrderBlockReason,
-  getOrderStatusLabel,
 } from '../logic/orderReadiness';
 import type { ProductionOrder } from '../types/productionOrder';
 import type { AppTab } from '../types/app';
