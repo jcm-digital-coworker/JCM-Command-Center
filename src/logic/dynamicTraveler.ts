@@ -117,6 +117,10 @@ export function getRequiredCapabilities(order: ProductionOrder, department: Depa
   if (department === 'QA') return ['inspection'];
   if (department === 'Shipping') return ['shipping'];
 
+  if (department === 'Saddles Dept') {
+    return getSaddlesCapabilities(order);
+  }
+
   if (department === 'Machine Shop') {
     return getMachineShopCapabilities(order);
   }
@@ -203,11 +207,22 @@ function getPlantTravelerSortScore(traveler: PlantTraveler): number {
   return score;
 }
 
+function getSaddlesCapabilities(order: ProductionOrder): TravelerCapability[] {
+  const lane = order.productLane as ProductLane | undefined;
+  const family = String(order.productFamily ?? '').toUpperCase();
+
+  if (lane === 'SERVICE_SADDLE' || family.includes('SERVICE_SADDLE') || family.includes('SADDLE')) {
+    return ['service-saddle', 'lv4500-cell', 'saddle-machining', 'gauge-flow'];
+  }
+
+  return ['service-saddle', 'gauge-flow'];
+}
+
 function getMachineShopCapabilities(order: ProductionOrder): TravelerCapability[] {
   const lane = order.productLane as ProductLane | undefined;
   const family = String(order.productFamily ?? '').toUpperCase();
 
-  if (lane === 'SERVICE_SADDLE' || family.includes('SERVICE_SADDLE')) return ['service-saddle', 'large-turning'];
+  if (lane === 'SERVICE_SADDLE' || family.includes('SERVICE_SADDLE') || family.includes('SADDLE')) return [];
   if (lane === 'TAPPING_SLEEVE' || family.includes('TAPPING_SLEEVE')) return ['tapping-sleeve', 'large-turning'];
   if (lane === 'COUPLING' || family.includes('COUPLING')) return ['coupling', 'turning'];
   if (lane === 'PIPE_FABRICATION' || family.includes('PIPE_FABRICATION')) return ['pipe-fabrication', 'large-turning'];
@@ -282,6 +297,7 @@ function getCurrentInstruction(
   if (department === 'QA') return `Inspect or release order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
   if (department === 'Shipping') return `Stage and ship order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
   if (department === 'Machine Shop') return `Run order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
+  if (department === 'Saddles Dept') return `Run saddle order #${order.orderNumber}${resourceLabel}. Validate macro simulation and gauge requirements before handoff.${handoffLabel}`;
 
   return `Work order #${order.orderNumber}${resourceLabel}.${handoffLabel}`;
 }
