@@ -20,6 +20,7 @@ import {
 } from './orderStatusTruth';
 
 const DEFAULT_PLANT_ROUTE: Department[] = ['Receiving', 'Machine Shop', 'Assembly', 'QA', 'Shipping'];
+const ACTIVE_PLANT_STEP_STATUSES: TravelerStepStatus[] = ['READY', 'ACTIVE', 'BLOCKED', 'HOLD'];
 
 export function generateDynamicTravelers(
   orders: ProductionOrder[],
@@ -49,7 +50,7 @@ export function generatePlantTraveler(order: ProductionOrder): PlantTraveler {
   const completedStepCount = departmentSteps.filter((step) => step.stepStatus === 'DONE').length;
   const totalStepCount = departmentSteps.length;
   const completionPercent = totalStepCount === 0 ? 0 : Math.round((completedStepCount / totalStepCount) * 100);
-  const activeStep = departmentSteps[activeIndex] ?? departmentSteps.find((step) => step.stepStatus === 'READY' || step.stepStatus === 'ACTIVE');
+  const activeStep = getActivePlantTravelerStepFromSteps(departmentSteps, order.currentDepartment);
   const overallStatus = getPlantTravelerStatus(order, departmentSteps);
   const nextDepartment = activeStep?.nextHandoff ?? order.nextDepartment;
 
@@ -171,6 +172,17 @@ function normalizePlantStepForRoute(step: DynamicTraveler, index: number, active
   }
 
   return step;
+}
+
+function getActivePlantTravelerStepFromSteps(
+  steps: DynamicTraveler[],
+  currentDepartment: Department,
+): DynamicTraveler | undefined {
+  return (
+    steps.find((step) => step.department === currentDepartment) ??
+    steps.find((step) => ACTIVE_PLANT_STEP_STATUSES.includes(step.stepStatus)) ??
+    steps[0]
+  );
 }
 
 function getPlantTravelerStatus(order: ProductionOrder, steps: DynamicTraveler[]): PlantTravelerStatus {
