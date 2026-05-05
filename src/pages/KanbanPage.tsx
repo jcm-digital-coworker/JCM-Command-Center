@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import { productionOrders } from '../data/productionOrders';
 import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import { getUrgencyScore } from '../logic/urgencyScore';
+import { isBlockedProductionOrder, isClosedProductionStatus } from '../logic/orderStatusTruth';
 import KanbanCard from '../components/kanban/KanbanCard';
 import type { ProductionOrder } from '../types/productionOrder';
 import type { Department } from '../types/machine';
@@ -11,8 +12,6 @@ const PLANT_COLUMNS: Department[] = [
   'Material Handling', 'Fab', 'Coating', 'Assembly',
   'Saddles Dept', 'QA', 'Shipping',
 ];
-
-const DONE_STATUSES = new Set(['done', 'complete', 'completed', 'DONE', 'COMPLETE', 'COMPLETED', 'shipped', 'SHIPPED']);
 
 type Props = { theme?: 'dark' | 'light' };
 
@@ -30,7 +29,7 @@ export default function KanbanPage({ theme = 'dark' }: Props) {
   const allOrders = useMemo(() => getRuntimeProductionOrders(productionOrders), [tick]);
 
   const activeOrders = useMemo(() => {
-    const base = showDone ? allOrders : allOrders.filter((o) => !DONE_STATUSES.has(String(o.status ?? '')));
+    const base = showDone ? allOrders : allOrders.filter((order) => !isClosedProductionStatus(order.status));
     return [...base].sort((a, b) => getUrgencyScore(b) - getUrgencyScore(a));
   }, [allOrders, showDone]);
 
@@ -38,7 +37,7 @@ export default function KanbanPage({ theme = 'dark' }: Props) {
     return activeOrders.filter((o) => o.currentDepartment === dept);
   }
 
-  const blockedTotal = activeOrders.filter((o) => (o.blockers ?? []).length > 0 || String(o.flowStatus).toLowerCase() === 'blocked').length;
+  const blockedTotal = activeOrders.filter(isBlockedProductionOrder).length;
 
   return (
     <div style={pageStyle}>
@@ -63,7 +62,7 @@ export default function KanbanPage({ theme = 'dark' }: Props) {
       <div style={boardStyle}>
         {PLANT_COLUMNS.map((dept) => {
           const cards = ordersForColumn(dept);
-          const blocked = cards.filter((o) => (o.blockers ?? []).length > 0 || String(o.flowStatus).toLowerCase() === 'blocked').length;
+          const blocked = cards.filter(isBlockedProductionOrder).length;
           return (
             <div key={dept} style={columnStyle(theme, blocked > 0)}>
               <div style={columnHeaderStyle(theme, blocked > 0)}>
