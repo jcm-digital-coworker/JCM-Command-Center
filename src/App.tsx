@@ -30,7 +30,7 @@ import DocumentsPage from './pages/DocumentsPage';
 import RiskPage from './pages/RiskPage';
 import WorkCenterDetailPage from './pages/WorkCenterDetailPage';
 import CoveragePage from './pages/CoveragePage';
-import ReceivingPage from './pages/ReceivingPage';
+import ReceivingPage from './pages/ReceivingGatePage';
 import OrdersPage from './pages/OrdersPage';
 import PlantMapPage from './pages/PlantMapPage';
 import MaterialHandlingDepartmentPage from './pages/departments/MaterialHandlingDepartmentPage';

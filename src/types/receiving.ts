@@ -55,3 +55,16 @@ export type ReceivingOrderDraft = {
   poOrReceiver: string;
   priority: ReceivingOrderPriority;
 };
+
+export type ReceivingGateStatus = 'QUEUED' | 'VERIFY_REQUIRED' | 'READY_FOR_CLAIM' | 'IN_TRANSIT' | 'HOLD' | 'COMPLETE';
+export type ReceivingExceptionType = 'DAMAGE' | 'MISSING_PAPERWORK' | 'WRONG_ITEM' | 'SHORT_QTY' | 'OTHER';
+export type ReceivingLaneType = 'PRODUCTION' | 'LOGISTICS' | 'SUPPORT';
+
+export type ReceivingPressureSummary = {
+  total: number;
+  arriving: number;
+  ready: number;
+  claimed: number;
+  holds: number;
+  critical: number;
+};
