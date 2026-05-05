@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { seedReceivingOrders } from '../data/receivingOrders';
 import type { ReceivingOrder } from '../types/receiving';
 import { RECEIVING_STORAGE_KEY } from '../logic/receivingWorkflow';
+import { getReceivingAgeLabel, getReceivingPressureSummary } from '../logic/receivingGate';
 
 type ThemeMode = 'dark' | 'light';
 type ReceivingShortcut = 'arriving' | 'ready' | 'claimed' | 'delivered' | 'holds';
@@ -28,6 +29,8 @@ export default function ReceivingWorkflowPanel({ theme = 'dark', onOpenQueue }: 
     holds: orders.filter((order) => order.status === 'PROBLEM_HOLD').length,
   }), [orders]);
 
+  const pressure = useMemo(() => getReceivingPressureSummary(orders), [orders]);
+
   return (
     <section style={getShellStyle(theme)}>
       <div style={getHeaderStyle()}>
@@ -37,6 +40,15 @@ export default function ReceivingWorkflowPanel({ theme = 'dark', onOpenQueue }: 
           <p style={getSubTextStyle(theme)}>Tap a status to open the working queue. Department material requests enter here after Receiving verifies and fulfills them.</p>
         </div>
       </div>
+
+      <div style={pressureGridStyle}>
+        <Pressure label="Open gates" value={pressure.open} tone="HOT" theme={theme} />
+        <Pressure label="Ready to stage" value={pressure.readyToStage} tone="INFO" theme={theme} />
+        <Pressure label="Exceptions" value={pressure.exceptionHolds} tone="DANGER" theme={theme} />
+        <Pressure label="Hot / Critical" value={pressure.hotOrCritical} tone="WARN" theme={theme} />
+        <Pressure label="Oldest open" value={getReceivingAgeLabel(pressure.oldestOpenAgeHours)} tone="SLATE" theme={theme} />
+      </div>
+
       <div style={getMetricGridStyle()}>
         <Shortcut label="Arriving today" value={summary.arriving} tone="HOT" onClick={() => onOpenQueue?.('arriving')} theme={theme} />
         <Shortcut label="Ready for driver" value={summary.ready} tone="INFO" onClick={() => onOpenQueue?.('ready')} theme={theme} />
@@ -63,13 +75,26 @@ function Shortcut({ label, value, tone, onClick, theme }: { label: string; value
   return <button onClick={onClick} style={getMetricButtonStyle(theme, tone)}><div style={getMetricValueStyle(theme)}>{value}</div><div style={getMetricLabelStyle(theme)}>{label}</div></button>;
 }
 
+function Pressure({ label, value, tone, theme }: { label: string; value: number | string; tone: string; theme: ThemeMode }) {
+  const color = getToneColor(tone);
+  return (
+    <div style={pressureTileStyle(theme, color)}>
+      <div style={pressureValueStyle(theme)}>{value}</div>
+      <div style={getMetricLabelStyle(theme)}>{label}</div>
+    </div>
+  );
+}
+
 const eyebrowStyle: CSSProperties = { color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '1.3px', textTransform: 'uppercase', marginBottom: 8 };
+const pressureGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 14 };
 function getShellStyle(theme: ThemeMode): CSSProperties { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.18)' }; }
 function getHeaderStyle(): CSSProperties { return { display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16 }; }
 function getTitleStyle(theme: ThemeMode): CSSProperties { return { margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 22, fontWeight: 900, letterSpacing: '0.4px' }; }
 function getSubTextStyle(theme: ThemeMode): CSSProperties { return { margin: '6px 0 0 0', color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 13, lineHeight: 1.45 }; }
 function getMetricGridStyle(): CSSProperties { return { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }; }
-function getToneColor(tone: string): string { if (tone === 'OK') return '#10b981'; if (tone === 'WARN') return '#f59e0b'; if (tone === 'DANGER') return '#dc2626'; if (tone === 'INFO') return '#38bdf8'; return '#f97316'; }
+function getToneColor(tone: string): string { if (tone === 'OK') return '#10b981'; if (tone === 'WARN') return '#f59e0b'; if (tone === 'DANGER') return '#dc2626'; if (tone === 'INFO') return '#38bdf8'; if (tone === 'SLATE') return '#64748b'; return '#f97316'; }
 function getMetricButtonStyle(theme: ThemeMode, tone: string): CSSProperties { const color = getToneColor(tone); return { textAlign: 'left', padding: 14, borderRadius: 8, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, cursor: 'pointer' }; }
 function getMetricValueStyle(theme: ThemeMode): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 25, fontWeight: 900 }; }
 function getMetricLabelStyle(theme: ThemeMode): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 900, letterSpacing: '0.8px', textTransform: 'uppercase' }; }
+function pressureTileStyle(theme: ThemeMode, color: string): CSSProperties { return { padding: 10, borderRadius: 7, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}55`, borderLeft: `4px solid ${color}` }; }
+function pressureValueStyle(theme: ThemeMode): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 18, fontWeight: 900 }; }
