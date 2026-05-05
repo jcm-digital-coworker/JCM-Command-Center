@@ -5,6 +5,7 @@ import { getRuntimeProductionOrders, applyWorkflowRuntimeAction, WORKFLOW_RUNTIM
 import { getUrgencyScore } from '../../logic/urgencyScore';
 import { isClosedProductionStatus, isBlockedProductionOrder } from '../../logic/orderStatusTruth';
 import KanbanCard from './KanbanCard';
+import OrderDetailModal from '../orders/OrderDetailModal';
 import type { Department } from '../../types/machine';
 import type { ProductionOrder } from '../../types/productionOrder';
 import type { AppTab } from '../../types/app';
@@ -17,6 +18,7 @@ type Props = {
 
 export default function DeptKanbanBoard({ department, theme, onGoToTab }: Props) {
   const [tick, setTick] = useState(0);
+  const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
 
   useEffect(() => {
     const bump = () => setTick((t) => t + 1);
@@ -59,6 +61,14 @@ export default function DeptKanbanBoard({ department, theme, onGoToTab }: Props)
 
   return (
     <div style={wrapperStyle}>
+      {selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder}
+          theme={theme}
+          onClose={() => setSelectedOrder(null)}
+          onOpenOrders={onGoToTab ? () => { setSelectedOrder(null); onGoToTab('orders'); } : undefined}
+        />
+      )}
       <div style={boardHeaderStyle(theme)}>
         <div style={eyebrowStyle}>DEPT KANBAN</div>
         <span style={countStyle(theme)}>
@@ -86,7 +96,7 @@ export default function DeptKanbanBoard({ department, theme, onGoToTab }: Props)
                       theme={theme}
                       subStageLabel={stage}
                       onAdvanceSubStage={!isLast ? () => advanceOrder(order) : undefined}
-                      onClick={onGoToTab ? () => onGoToTab('orders') : undefined}
+                      onClick={() => setSelectedOrder(order)}
                     />
                   ))
                 )}

@@ -4,6 +4,7 @@ import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../l
 import { getUrgencyScore } from '../logic/urgencyScore';
 import { isBlockedProductionOrder, isClosedProductionStatus, isCriticalPriority, isHotPriority } from '../logic/orderStatusTruth';
 import KanbanCard from '../components/kanban/KanbanCard';
+import OrderDetailModal from '../components/orders/OrderDetailModal';
 import type { ProductionOrder } from '../types/productionOrder';
 import type { Department } from '../types/machine';
 import type { AppTab } from '../types/app';
@@ -26,6 +27,7 @@ export default function KanbanPage({ theme = 'dark', onGoToTab }: Props) {
   const [showDone, setShowDone] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('ALL');
   const [deptFilter, setDeptFilter] = useState<Department | 'ALL'>('ALL');
+  const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
 
   useEffect(() => {
     const bump = () => setTick((t) => t + 1);
@@ -57,6 +59,14 @@ export default function KanbanPage({ theme = 'dark', onGoToTab }: Props) {
 
   return (
     <div style={pageStyle}>
+      {selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder}
+          theme={theme}
+          onClose={() => setSelectedOrder(null)}
+          onOpenOrders={onGoToTab ? () => { setSelectedOrder(null); onGoToTab('orders'); } : undefined}
+        />
+      )}
       <div style={headerStyle(theme)}>
         <div>
           <div style={eyebrowStyle}>PLANT-WIDE VIEW</div>
@@ -124,7 +134,7 @@ export default function KanbanPage({ theme = 'dark', onGoToTab }: Props) {
                           ? order.deptSubStage.stage
                           : undefined
                       }
-                      onClick={onGoToTab ? () => onGoToTab('orders') : undefined}
+                      onClick={() => setSelectedOrder(order)}
                     />
                   ))
                 )}
