@@ -71,6 +71,7 @@ export function generatePlantTraveler(order: ProductionOrder): PlantTraveler {
     totalStepCount,
     blockers: order.blockers ?? [],
     currentInstruction: getPlantTravelerInstruction(order, overallStatus, activeStep, completionPercent),
+    actions: activeStep?.actions ?? [],
   };
 }
 
