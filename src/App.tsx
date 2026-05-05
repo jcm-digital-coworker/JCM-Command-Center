@@ -17,6 +17,7 @@ import Lv4500JcmSimulator from './components/Lv4500JcmSimulator';
 import AppHeader from './components/shell/AppHeader';
 import AppDrawer from './components/shell/AppDrawer';
 import CommandNavigationBar from './components/shell/CommandNavigationBar';
+import DevToolkitFlyout from './components/shell/DevToolkitFlyout';
 import { getHomeTabForRole } from './logic/navigationAccess';
 
 import WorkflowPage from './pages/WorkflowMobilePage';
@@ -390,7 +391,6 @@ export default function App() {
           setMenuOpen(false);
         }}
         roleView={roleView}
-        setRoleView={changeRoleView}
         departmentFilter={departmentFilter}
         setDepartmentFilter={openWorkCenterForDepartment}
         onClose={() => setMenuOpen(false)}
@@ -414,6 +414,16 @@ export default function App() {
         alertCount={filteredAlerts.length}
         theme={theme}
         onNavigate={navigateTo}
+      />
+
+      <DevToolkitFlyout
+        theme={theme}
+        activeTab={tab}
+        roleView={roleView}
+        setRoleView={changeRoleView}
+        departmentFilter={departmentFilter}
+        setDepartmentFilter={openWorkCenterForDepartment}
+        workCenters={workCenters}
       />
 
       {renderCurrentPage()}
