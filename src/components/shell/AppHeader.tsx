@@ -1,4 +1,7 @@
 import type { CSSProperties } from 'react';
+import type { AppTab, DepartmentFilter, RoleView } from '../../types/app';
+import type { WorkCenter } from '../../types/plant';
+import DevToolkitFlyout from './DevToolkitFlyout';
 
 const JCM_NAVIGATE_EVENT = 'jcm:navigate';
 
@@ -8,6 +11,12 @@ interface AppHeaderProps {
   onHomeClick?: () => void;
   showBack?: boolean;
   theme?: 'dark' | 'light';
+  activeTab: AppTab;
+  roleView: RoleView;
+  setRoleView: (view: RoleView) => void;
+  departmentFilter: DepartmentFilter;
+  setDepartmentFilter: (filter: DepartmentFilter) => void;
+  workCenters: WorkCenter[];
 }
 
 export default function AppHeader({
@@ -16,34 +25,51 @@ export default function AppHeader({
   onHomeClick,
   showBack,
   theme = 'dark',
+  activeTab,
+  roleView,
+  setRoleView,
+  departmentFilter,
+  setDepartmentFilter,
+  workCenters,
 }: AppHeaderProps) {
   return (
-    <div style={getHeaderStyle(theme)}>
-      <div style={headerSideStyle}>
-        <button onClick={onMenuClick} style={getMenuButtonStyle(theme)}>
-          MENU
-        </button>
-        {showBack && onBackClick ? (
-          <button onClick={onBackClick} style={getBackButtonStyle(theme)}>
-            BACK
+    <>
+      <div style={getHeaderStyle(theme)}>
+        <div style={headerSideStyle}>
+          <button onClick={onMenuClick} style={getMenuButtonStyle(theme)}>
+            MENU
           </button>
-        ) : null}
-      </div>
+          {showBack && onBackClick ? (
+            <button onClick={onBackClick} style={getBackButtonStyle(theme)}>
+              BACK
+            </button>
+          ) : null}
+        </div>
 
-      <div style={titleContainerStyle}>
-        <div style={getTitleStyle(theme)}>JCM</div>
-        <div style={getSubtitleStyle(theme)}>COMMAND CENTER</div>
-      </div>
+        <div style={titleContainerStyle}>
+          <div style={getTitleStyle(theme)}>JCM</div>
+          <div style={getSubtitleStyle(theme)}>COMMAND CENTER</div>
+        </div>
 
-      <div style={rightActionsStyle}>
-        <button
-          onClick={onHomeClick ?? dispatchCommandHome}
-          style={getHomeButtonStyle(theme)}
-        >
-          HOME
-        </button>
+        <div style={rightActionsStyle}>
+          <button
+            onClick={onHomeClick ?? dispatchCommandHome}
+            style={getHomeButtonStyle(theme)}
+          >
+            HOME
+          </button>
+        </div>
       </div>
-    </div>
+      <DevToolkitFlyout
+        theme={theme}
+        activeTab={activeTab}
+        roleView={roleView}
+        setRoleView={setRoleView}
+        departmentFilter={departmentFilter}
+        setDepartmentFilter={setDepartmentFilter}
+        workCenters={workCenters}
+      />
+    </>
   );
 }
 
