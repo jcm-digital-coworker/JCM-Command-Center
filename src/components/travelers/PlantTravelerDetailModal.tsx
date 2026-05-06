@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { DynamicTraveler, PlantTraveler } from '../../types/dynamicTraveler';
+import { getOperatorSafeStatusLabel } from '../../logic/orderStatusTruth';
 
 type PlantTravelerDetailModalProps = {
   plantTraveler: PlantTraveler;
@@ -34,7 +35,7 @@ export default function PlantTravelerDetailModal({ plantTraveler, theme, onClose
               <div style={smallLabelStyle(theme)}>Whole Order Completion</div>
               <strong style={progressTextStyle(theme)}>{plantTraveler.completionPercent}%</strong>
             </div>
-            <span style={statusBadgeStyle(signalColor)}>{formatToken(plantTraveler.overallStatus)}</span>
+            <span style={statusBadgeStyle(signalColor)}>{getOperatorSafeStatusLabel(plantTraveler.overallStatus)}</span>
           </div>
           <div style={progressTrackStyle(theme)}>
             <div style={progressFillStyle(signalColor, plantTraveler.completionPercent)} />
@@ -68,7 +69,7 @@ export default function PlantTravelerDetailModal({ plantTraveler, theme, onClose
             <div style={listStyle}>
               {plantTraveler.blockers.map((blocker, index) => (
                 <div key={`${blocker.type}-${index}`} style={blockerStyle(theme)}>
-                  {formatToken(blocker.type)}: {blocker.message}
+                  {getOperatorSafeStatusLabel(blocker.type)}: {blocker.message}
                 </div>
               ))}
             </div>
@@ -127,7 +128,7 @@ function DepartmentStepCard({ step, index, theme }: { step: DynamicTraveler; ind
           <div style={stepNumberStyle(color)}>STEP {index + 1}</div>
           <strong style={stepTitleStyle(theme)}>{step.department}</strong>
         </div>
-        <span style={statusBadgeStyle(color)}>{formatToken(step.stepStatus)}</span>
+        <span style={statusBadgeStyle(color)}>{getOperatorSafeStatusLabel(step.stepStatus)}</span>
       </div>
 
       <p style={stepInstructionStyle(theme)}>{step.currentInstruction}</p>
@@ -135,8 +136,8 @@ function DepartmentStepCard({ step, index, theme }: { step: DynamicTraveler; ind
       <div style={infoGridStyle}>
         <Info label="Resource" value={step.bestResource?.label ?? 'No capable resource'} theme={theme} />
         <Info label="Next" value={step.nextHandoff ?? 'Not assigned'} theme={theme} />
-        <Info label="Material" value={formatToken(String(step.materialStatus))} theme={theme} />
-        <Info label="QA" value={formatToken(String(step.qaStatus))} theme={theme} />
+        <Info label="Material" value={getOperatorSafeStatusLabel(step.materialStatus)} theme={theme} />
+        <Info label="QA" value={getOperatorSafeStatusLabel(step.qaStatus)} theme={theme} />
       </div>
 
       {step.blockers.length > 0 ? (
