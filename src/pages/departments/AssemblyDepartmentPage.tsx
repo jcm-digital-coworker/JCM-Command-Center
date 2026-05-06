@@ -1,39 +1,32 @@
-import { productionOrders } from '../../data/productionOrders';
-import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import {
   CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState,
   getDepartmentOrders, getBlockedOrders, getHandoffReadyOrders, getUpstreamWaitingOrders,
-  KpiStrip, LiveCrewSection, OrderCard, PageShell, Section,
+  KpiStrip, LiveCrewSection, OrderCard, PageShell, Section, useRuntimeOrders,
 } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 const assemblyCells = [
-  { id: 'assembly-412', name: '412 Assembly', ownerDepartment: 'Assembly' as const, physicalArea: 'Assembly', kind: 'WORK_CELL' as const, status: 'ACTIVE' as const, primaryFunction: '412 carbon steel lane — repair fittings, standard tapping sleeves.', feeds: ['QA', 'Shipping'], confidence: 'MEDIUM' as const },
-  { id: 'assembly-432', name: '432 Assembly', ownerDepartment: 'Assembly' as const, physicalArea: 'Assembly', kind: 'WORK_CELL' as const, status: 'ACTIVE' as const, primaryFunction: '432 stainless small lane.', feeds: ['QA', 'Shipping'], confidence: 'MEDIUM' as const },
-  { id: 'assembly-452', name: '452 Assembly', ownerDepartment: 'Assembly' as const, physicalArea: 'Assembly', kind: 'WORK_CELL' as const, status: 'ACTIVE' as const, primaryFunction: '452 stainless large lane.', feeds: ['QA', 'Shipping'], confidence: 'MEDIUM' as const },
-  { id: 'assembly-coupling', name: 'Coupling Assembly', ownerDepartment: 'Assembly' as const, physicalArea: 'Assembly', kind: 'WORK_CELL' as const, status: 'ACTIVE' as const, primaryFunction: 'Coupling assembly lane — UCC, expansion joints.', feeds: ['QA', 'Shipping'], confidence: 'MEDIUM' as const },
-  { id: 'assembly-special', name: 'Special / Engineered Assembly', ownerDepartment: 'Assembly' as const, physicalArea: 'Assembly', kind: 'WORK_CELL' as const, status: 'ACTIVE' as const, primaryFunction: 'Special and engineered fittings. Requires blueprint packet.', feeds: ['QA', 'Shipping'], confidence: 'MEDIUM' as const },
+  { id: 'assembly-412', name: '412 Assembly', primaryFunction: '412 carbon steel lane — repair fittings, standard tapping sleeves.' },
+  { id: 'assembly-432', name: '432 Assembly', primaryFunction: '432 stainless small lane.' },
+  { id: 'assembly-452', name: '452 Assembly', primaryFunction: '452 stainless large lane.' },
+  { id: 'assembly-coupling', name: 'Coupling Assembly', primaryFunction: 'Coupling assembly lane — UCC, expansion joints.' },
+  { id: 'assembly-special', name: 'Special / Engineered Assembly', primaryFunction: 'Special and engineered fittings. Requires blueprint packet.' },
 ];
 
 export default function AssemblyDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
-  const orders = getDepartmentOrders(getRuntimeProductionOrders(productionOrders), 'Assembly');
+  const runtimeOrders = useRuntimeOrders();
+  const orders = getDepartmentOrders(runtimeOrders, 'Assembly');
   const blocked = getBlockedOrders(orders);
   const handoffReady = getHandoffReadyOrders(orders);
-  const kitComplete = orders.filter((o) =>
-    o.materialStatus === 'STAGED' || o.materialStatus === 'RECEIVED',
-  );
-  const waitingUpstream = getUpstreamWaitingOrders(orders, [
-    'WAITING_ON_FAB', 'WAITING_ON_COATING', 'WAITING_ON_MATERIAL',
-  ]);
+  const kitComplete = orders.filter((o) => o.materialStatus === 'STAGED' || o.materialStatus === 'RECEIVED');
+  const waitingUpstream = getUpstreamWaitingOrders(orders, ['WAITING_ON_FAB', 'WAITING_ON_COATING', 'WAITING_ON_MATERIAL']);
 
   const couplingOrders = orders.filter((o) => o.productLane === 'COUPLING');
   const engineeredOrders = orders.filter(
     (o) => o.productLane === 'ENGINEERED_FITTING' || o.orderType === 'ENGINEERED' ||
     String(o.productFamily).toLowerCase().includes('engineered'),
   );
-  const standardOrders = orders.filter(
-    (o) => !couplingOrders.includes(o) && !engineeredOrders.includes(o),
-  );
+  const standardOrders = orders.filter((o) => !couplingOrders.includes(o) && !engineeredOrders.includes(o));
 
   const kpis = [
     { label: 'TOTAL', value: orders.length },
@@ -54,7 +47,7 @@ export default function AssemblyDepartmentPage({ theme = 'dark', onGoToTab }: De
         <LiveCrewSection department="Assembly" theme={theme} onGoToTab={onGoToTab} />
       </Section>
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Assembly" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
+        <CrewGuidancePanel department="Assembly" orders={runtimeOrders} theme={theme} />
       </Section>
       <Section title="Assembly Cells" theme={theme}>
         <CardGrid>{assemblyCells.map((cell) => (

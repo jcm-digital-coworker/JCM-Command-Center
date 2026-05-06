@@ -1,17 +1,30 @@
-import { productionOrders } from '../../data/productionOrders';
-import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
+import type { CSSProperties } from 'react';
+import { applyWorkflowRuntimeAction } from '../../logic/workflowRuntimeState';
+import { addWorkflowAction } from '../../logic/workflowActions';
 import {
   CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState,
-  KpiStrip, LiveCrewSection, OrderCard, PageShell, Section,
+  KpiStrip, LiveCrewSection, OrderCard, PageShell, Section, useRuntimeOrders,
 } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
+import type { ProductionOrder } from '../../types/productionOrder';
 
 export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
-  const salesOrders = getRuntimeProductionOrders(productionOrders).filter((o) => o.workflowOrigin === 'SALES');
+  const runtimeOrders = useRuntimeOrders();
+  const salesOrders = runtimeOrders.filter((o) => o.workflowOrigin === 'SALES');
   const released = salesOrders.filter((o) => !!o.salesReleasedAt && o.engineeringStatus !== 'PENDING');
   const pendingEngineering = salesOrders.filter((o) => o.engineeringRequired && o.engineeringStatus === 'PENDING');
   const awaitingRelease = salesOrders.filter((o) => !o.salesReleasedAt);
   const hotOrders = salesOrders.filter((o) => ['hot', 'critical'].includes(String(o.priority).toLowerCase()));
+
+  function releaseToProduction(order: ProductionOrder) {
+    addWorkflowAction({ orderNumber: order.orderNumber, actionType: 'WORK_STARTED', department: 'Sales', note: 'Sales released order to production floor' });
+    applyWorkflowRuntimeAction(order.orderNumber, 'ACKNOWLEDGE_ORDER', 'Sales released to production', {
+      salesReleasedAt: new Date().toISOString(),
+      flowStatus: 'RUNNABLE',
+      status: 'READY',
+      productionSupervisorAcknowledged: true,
+    });
+  }
 
   const kpis = [
     { label: 'TOTAL', value: salesOrders.length },
@@ -20,6 +33,20 @@ export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: Depar
     { label: 'AWAITING RELEASE', value: awaitingRelease.length, color: awaitingRelease.length > 0 ? '#38bdf8' : '#64748b' },
     { label: 'HOT / CRITICAL', value: hotOrders.length, color: hotOrders.length > 0 ? '#ef4444' : '#64748b' },
   ];
+
+  function AwaitingCard({ order }: { order: ProductionOrder }) {
+    const blockedOnEng = order.engineeringRequired && order.engineeringStatus === 'PENDING';
+    return (
+      <div>
+        <OrderCard order={order} theme={theme} onGoToTab={onGoToTab} />
+        {!blockedOnEng && (
+          <button type="button" style={releaseBtnStyle(theme)} onClick={() => releaseToProduction(order)}>
+            RELEASE TO PRODUCTION →
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <PageShell
@@ -33,7 +60,7 @@ export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: Depar
         <LiveCrewSection department="Sales" theme={theme} onGoToTab={onGoToTab} />
       </Section>
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Sales" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
+        <CrewGuidancePanel department="Sales" orders={runtimeOrders} theme={theme} />
       </Section>
       {hotOrders.length > 0 && (
         <Section title={`Hot / Critical Customer Orders (${hotOrders.length})`} theme={theme}>
@@ -53,8 +80,17 @@ export default function SalesDepartmentPage({ theme = 'dark', onGoToTab }: Depar
       <Section title={`Awaiting Sales Release (${awaitingRelease.length})`} theme={theme}>
         {awaitingRelease.length === 0
           ? <EmptyState text="No Sales orders are waiting to be released." theme={theme} />
-          : <CardGrid>{awaitingRelease.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>}
+          : <CardGrid>{awaitingRelease.map((o) => <AwaitingCard key={o.orderNumber} order={o} />)}</CardGrid>}
       </Section>
     </PageShell>
   );
+}
+
+function releaseBtnStyle(theme: 'dark' | 'light'): CSSProperties {
+  void theme;
+  return {
+    marginTop: 6, width: '100%', padding: '8px 12px', borderRadius: 4,
+    border: '1px solid #f97316', background: 'rgba(249,115,22,0.12)', color: '#f97316',
+    fontSize: 11, fontWeight: 900, letterSpacing: '0.06em', cursor: 'pointer',
+  };
 }

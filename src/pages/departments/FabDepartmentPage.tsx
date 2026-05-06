@@ -1,16 +1,16 @@
 import { plantAssets } from '../../data/plantAssets';
-import { productionOrders } from '../../data/productionOrders';
-import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import {
   AssetCard, CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState,
   getDepartmentAssets, getDepartmentOrders, getBlockedOrders, getHandoffReadyOrders,
   getUpstreamWaitingOrders, KpiStrip, LiveCrewSection, OrderCard, PageShell, Section,
+  useRuntimeOrders,
 } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function FabDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
+  const runtimeOrders = useRuntimeOrders();
   const cells = getDepartmentAssets(plantAssets, 'Fab');
-  const orders = getDepartmentOrders(getRuntimeProductionOrders(productionOrders), 'Fab');
+  const orders = getDepartmentOrders(runtimeOrders, 'Fab');
   const blocked = getBlockedOrders(orders);
   const handoffReady = getHandoffReadyOrders(orders);
   const waitingUpstream = getUpstreamWaitingOrders(orders, [
@@ -53,7 +53,7 @@ export default function FabDepartmentPage({ theme = 'dark', onGoToTab }: Departm
         <LiveCrewSection department="Fab" theme={theme} onGoToTab={onGoToTab} />
       </Section>
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Fab" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
+        <CrewGuidancePanel department="Fab" orders={runtimeOrders} theme={theme} />
       </Section>
       <Section title="Fab Work Cells" theme={theme}>
         <CardGrid>{cells.map((asset) => <AssetCard key={asset.id} asset={asset} theme={theme} />)}</CardGrid>

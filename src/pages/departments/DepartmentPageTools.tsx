@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, type CSSProperties, type ReactNode } from 'react';
 import NextHandoffBanner from '../../components/NextHandoffBanner';
 import DeptKanbanBoard from '../../components/kanban/DeptKanbanBoard';
 import DeptEscalationPanel from '../../components/DeptEscalationPanel';
@@ -8,7 +8,7 @@ import { productionOrders } from '../../data/productionOrders';
 import { COVERAGE_STORAGE_KEY } from '../../logic/coverage';
 import { getCrewGuidanceForDepartment } from '../../logic/crewGuidance';
 import { getSkillGapAlerts } from '../../logic/skillGapAlerts';
-import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
+import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../../logic/workflowRuntimeState';
 import { departmentOperatingProfiles } from '../../data/departmentOperatingProfiles';
 import { isFeatureEnabled } from '../../logic/featureFlags';
 import { getUrgencyScore, getUrgencyColor } from '../../logic/urgencyScore';
@@ -61,6 +61,20 @@ export function kindLabel(kind: PlantAssetKind) {
 
 export function statusLabel(value: string | undefined) {
   return String(value ?? 'UNKNOWN').replace(/_/g, ' ');
+}
+
+export function useRuntimeOrders(): ProductionOrder[] {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    function refresh() { setTick((t) => t + 1); }
+    window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
+  return useMemo(() => getRuntimeProductionOrders(productionOrders), [tick]);
 }
 
 export function PageShell({

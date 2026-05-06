@@ -1,16 +1,15 @@
 import { plantAssets } from '../../data/plantAssets';
-import { productionOrders } from '../../data/productionOrders';
-import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import {
   AssetCard, CardGrid, CrewGuidancePanel, DeptEnhancements, EmptyState,
   getDepartmentAssets, getDepartmentOrders, getUpstreamWaitingOrders,
-  KpiStrip, LiveCrewSection, OrderCard, PageShell, Section,
+  KpiStrip, LiveCrewSection, OrderCard, PageShell, Section, useRuntimeOrders,
 } from './DepartmentPageTools';
 import type { DepartmentPageProps } from './DepartmentPageTools';
 
 export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: DepartmentPageProps) {
+  const runtimeOrders = useRuntimeOrders();
   const lanes = getDepartmentAssets(plantAssets, 'Shipping');
-  const orders = getDepartmentOrders(getRuntimeProductionOrders(productionOrders), 'Shipping');
+  const orders = getDepartmentOrders(runtimeOrders, 'Shipping');
 
   const readyToShip = orders.filter((o) => {
     const s = String(o.status).toLowerCase();
@@ -46,7 +45,7 @@ export default function ShippingDepartmentPage({ theme = 'dark', onGoToTab }: De
         <LiveCrewSection department="Shipping" theme={theme} onGoToTab={onGoToTab} />
       </Section>
       <Section title="Crew Guidance" theme={theme}>
-        <CrewGuidancePanel department="Shipping" orders={getRuntimeProductionOrders(productionOrders)} theme={theme} />
+        <CrewGuidancePanel department="Shipping" orders={runtimeOrders} theme={theme} />
       </Section>
       <Section title="Shipping Lanes / Gates" theme={theme}>
         <CardGrid>{lanes.map((asset) => <AssetCard key={asset.id} asset={asset} theme={theme} />)}</CardGrid>
