@@ -2,15 +2,15 @@
 
 Purpose: preserve the smallest useful operating context for the JCM Command Center build so future work continues from the current clean repository state without dragging full chat history forward.
 
-Last updated: 2026-05-05
+Last updated: 2026-05-06
 
 ## Current Build Status
 
 Latest confirmed build is GREEN.
 
 ```text
-Run ID: 25408776708
-Commit: efb12cd27b50b960251b01e32892341b21a30a36
+Run ID: 25410617302
+Commit: d2e2058765e63dd3fe4a0022198c1c61a17cc85d
 Branch: main
 Workflow: Build
 Status: GREEN
@@ -28,39 +28,32 @@ Verified steps:
 
 ## Last Completed Mission
 
-Plant traveler action cleanup is complete.
+Action-handler cleanup around workflow tablet buttons is complete.
 
 What changed:
 
-- PR #38 added explicit active plant traveler action projection logic.
-- `src/logic/plantTravelerSelectors.ts` now owns active plant traveler action lookup helpers.
-- Claude commit `efb12cd27b50b960251b01e32892341b21a30a36` updated `src/pages/departments/DepartmentPageTools.tsx` to import and use `getPlantTravelerMaterialAction(traveler)`.
-- `DepartmentPageTools.tsx` no longer uses the old direct `traveler.actions.find((action) => action.type === 'REQUEST_MATERIAL')` lookup for material action routing.
+- PR #39 kept `BLOCKED_HERE` workflow tablet cards review-only at the selector contract.
+- `src/logic/workflowPanelSelectors.ts` prevents blocked-at-this-station cards from falling through to `START_WORK` when packet status text is not exactly `BLOCKED`.
+- PR #40 removed dead `safeButtonLabel()` display-layer guards from `src/components/WorkCenterWorkflowPanelV2.tsx`.
+- Workflow panel button labels render directly from selector contracts.
+- PR #40 did not change runtime mutation behavior.
 
 Current decision:
 
 ```text
-Actions belong to department traveler steps.
-PlantTraveler.actions is only an active-step compatibility projection.
-New UI code should use selectors from src/logic/plantTravelerSelectors.ts.
-```
-
-Selector helpers:
-
-```text
-getActivePlantTravelerStep
-getActivePlantTravelerActions
-getPlantTravelerMaterialAction
+Workflow button behavior belongs to typed selector contracts.
+Visible labels render the contract; they do not decide runtime behavior.
+Review-only actions must not clear blockers or mutate production state.
 ```
 
 ## Current Mission
 
-Move forward from the green plant traveler cleanup.
+Move forward from the green action-handler cleanup.
 
 Recommended next target:
 
 ```text
-Sweep remaining dashboard, traveler, operator-lane, receiving, engineering, and maintenance action handlers for text-inferred behavior, accidental runtime mutation, and route/copy mismatch.
+Continue the action-handler audit across dashboard, traveler, operator-lane, receiving, engineering, maintenance, and Plant Signals actions.
 ```
 
 Use small branches and verify the latest action run after each source change.
@@ -80,7 +73,10 @@ Use small branches and verify the latest action run after each source change.
 - Product Intelligence appears in traveler modals and workflow cards.
 - Classification review visibility exists in workflow and dashboard surfaces.
 - Active plant traveler action projection is explicit and green.
-- Department order cards now use the plant traveler material-action selector.
+- Department order cards use the plant traveler material-action selector.
+- Work Center workflow buttons use typed action contracts, not visible-label parsing.
+- `BLOCKED_HERE` workflow cards are review-only.
+- The dead `safeButtonLabel()` text-transform shim is removed from `WorkCenterWorkflowPanelV2.tsx`.
 
 ## Guardrails Preserved
 

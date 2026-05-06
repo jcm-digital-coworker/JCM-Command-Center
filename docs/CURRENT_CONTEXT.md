@@ -8,39 +8,40 @@ Build: npm run build
 ## Current Build State
 
 - Latest recorded Action is GREEN.
-- Run ID: 25408776708
-- Source commit: efb12cd27b50b960251b01e32892341b21a30a36
+- Run ID: 25410617302
+- Source commit: d2e2058765e63dd3fe4a0022198c1c61a17cc85d
 - Branch: main
 - Workflow: Build
-- Updated: 2026-05-05T23:53:20Z
+- Updated: 2026-05-06T00:53:55Z
 - Verified job: Typecheck and build succeeded.
 
 ## Last Completed Mission
 
-Plant traveler action cleanup is complete.
+Action-handler cleanup around workflow tablet buttons is complete.
 
 Completed work:
 
-- PR #38 merged the active plant traveler action projection.
-- `src/logic/plantTravelerSelectors.ts` now owns active plant traveler action lookup helpers.
-- Claude commit `efb12cd27b50b960251b01e32892341b21a30a36` updated `src/pages/departments/DepartmentPageTools.tsx` to use `getPlantTravelerMaterialAction(traveler)`.
-- The old direct page-level `traveler.actions.find((action) => action.type === 'REQUEST_MATERIAL')` lookup is no longer the DepartmentPageTools material-action path.
-- Latest Action run confirms the build is green after that cleanup.
+- PR #39 kept `BLOCKED_HERE` workflow tablet cards review-only at the selector contract.
+- `src/logic/workflowPanelSelectors.ts` now prevents blocked-at-this-station cards from falling through to `START_WORK` when packet status text is not exactly `BLOCKED`.
+- PR #40 removed dead `safeButtonLabel()` display-layer guards from `src/components/WorkCenterWorkflowPanelV2.tsx`.
+- Workflow panel button labels now render directly from typed selector contracts.
+- No runtime behavior changed in PR #40.
+- Latest Action run confirms the PR #40 merge commit is green on main.
 
 ## Current Mission
 
-Move forward from the now-green plant traveler cleanup.
+Move forward from the now-green action-handler cleanup.
 
 Recommended next target:
 
 ```text
-Sweep repo memory and action handlers for stale references to the old plant traveler band-aid, then continue the next functional audit in small branches.
+Continue the action-handler audit across dashboard, traveler, operator-lane, receiving, engineering, maintenance, and Plant Signals actions.
 ```
 
 Primary next audit target:
 
 ```text
-Remaining dashboard, traveler, operator-lane, receiving, engineering, and maintenance action handlers for text-inferred behavior, accidental runtime mutation, and route/copy mismatch.
+Find and remove remaining behavior inferred from visible labels, stale route assumptions, accidental runtime mutation, and copy that implies automatic resolution.
 ```
 
 ## Stable Completed Work
@@ -51,9 +52,12 @@ Remaining dashboard, traveler, operator-lane, receiving, engineering, and mainte
 - `src/pages/ReceivingPage.ts` exports `./ReceivingGatePage`.
 - `src/pages/ReceivingGatePage.tsx` contains the real gate-driven Receiving page.
 - Active plant traveler action projection is explicit and green on main.
-- Department order cards now use the plant traveler material-action selector instead of reaching directly into the projection.
+- Department order cards use the plant traveler material-action selector instead of reaching directly into the projection.
+- Work Center workflow buttons use typed action contracts, not visible-label parsing.
+- `BLOCKED_HERE` workflow cards are review-only.
+- `WorkCenterWorkflowPanelV2.tsx` no longer carries the dead `safeButtonLabel()` text-transform shim.
 
-## Important Architecture Decision
+## Important Architecture Decisions
 
 Actions belong to department traveler steps.
 
@@ -71,7 +75,13 @@ getActivePlantTravelerActions
 getPlantTravelerMaterialAction
 ```
 
-Do not treat `PlantTraveler.actions` as independent plant-level truth.
+Workflow tablet button behavior belongs to typed selector contracts from:
+
+```text
+src/logic/workflowPanelSelectors.ts
+```
+
+Visible button text should render the contract, not decide runtime behavior.
 
 ## Protected Shared Files
 
@@ -91,3 +101,5 @@ Do not treat `PlantTraveler.actions` as independent plant-level truth.
 - Pull current repo state before coding.
 - Do not update large files from truncated connector output.
 - Do not use compatibility projections as hidden new architecture.
+- Do not infer runtime action behavior from display copy.
+- Review-only actions must not clear blockers or mutate production state.
