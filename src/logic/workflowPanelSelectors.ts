@@ -160,6 +160,7 @@ function getDueLabel(date?: string) {
 function getButtons(owner: string, checkpoint: string, status: string, groupKey: WorkflowCardGroupKey): WorkflowButtonContract {
   const normalizedStatus = normalizeToken(status);
   if (groupKey === 'WATCH_ONLY' || groupKey === 'INCOMING') return buttonContract('No Action', 'No Action', 'NO_ACTION', 'NO_ACTION');
+  if (groupKey === 'BLOCKED_HERE') return buttonContract('Review blocker', 'Notify Lead', 'REVIEW_BLOCKER', 'NOTIFY_LEAD');
   if (owner === 'Engineering' || checkpoint === 'ENGINEERING_REVIEW') return buttonContract('Escalate Engineering', 'Hold Station', 'ESCALATE_ENGINEERING', 'HOLD_STATION');
   if (owner === 'Receiving' || owner === 'Purchasing' || checkpoint === 'MATERIAL_READINESS') return buttonContract('Request Material', 'No Action', 'REQUEST_MATERIAL', 'NO_ACTION');
   if (owner === 'Maintenance') return buttonContract('Open Maintenance', 'Notify Lead', 'OPEN_MAINTENANCE', 'NOTIFY_LEAD');

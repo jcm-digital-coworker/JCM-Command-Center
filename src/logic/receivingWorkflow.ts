@@ -1,4 +1,5 @@
-import type { ReceivingOrder, ReceivingOrderDraft, ReceivingOrderStatus } from '../types/receiving';
+import type { ReceivingExceptionType, ReceivingOrder, ReceivingOrderDraft, ReceivingOrderStatus } from '../types/receiving';
+import { getReceivingExceptionAudience, getReceivingExceptionMessage } from './receivingGate';
 
 export const RECEIVING_STORAGE_KEY = 'jcm_receiving_orders_v1';
 
@@ -93,6 +94,25 @@ export function putReceivingOrderOnHold(order: ReceivingOrder, notes: string): R
         at: now,
         audience: `${order.orderedBy} + Receiving Supervisor`,
         message: `${order.itemName} is on hold: ${notes || 'receiver issue needs review'}.`,
+      },
+    ],
+  };
+}
+
+export function reportReceivingException(order: ReceivingOrder, type: ReceivingExceptionType, notes: string): ReceivingOrder {
+  const now = new Date().toISOString();
+  const message = getReceivingExceptionMessage(type, order, notes);
+  return {
+    ...order,
+    status: 'PROBLEM_HOLD',
+    receiverNotes: message,
+    notificationLog: [
+      ...order.notificationLog,
+      {
+        id: `note-${Date.now()}`,
+        at: now,
+        audience: getReceivingExceptionAudience(type, order),
+        message,
       },
     ],
   };

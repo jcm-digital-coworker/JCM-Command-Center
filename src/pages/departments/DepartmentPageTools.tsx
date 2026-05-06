@@ -12,6 +12,9 @@ import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { departmentOperatingProfiles } from '../../data/departmentOperatingProfiles';
 import { isFeatureEnabled } from '../../logic/featureFlags';
 import { getUrgencyScore, getUrgencyColor } from '../../logic/urgencyScore';
+import { generatePlantTraveler } from '../../logic/dynamicTraveler';
+import { getPlantTravelerMaterialAction } from '../../logic/plantTravelerSelectors';
+import { isBlockedProductionOrder } from '../../logic/orderStatusTruth';
 import type { Department } from '../../types/machine';
 import type { CoveragePerson } from '../../types/coverage';
 import type { PlantAsset, PlantAssetKind } from '../../types/plantAsset';
@@ -40,11 +43,7 @@ export function getDepartmentOrders(orders: ProductionOrder[], department: Depar
 }
 
 export function getBlockedOrders(orders: ProductionOrder[]) {
-  return orders.filter((order) =>
-    String(order.status).toLowerCase() === 'blocked' ||
-    String(order.flowStatus).toLowerCase() === 'blocked' ||
-    (order.blockers ?? []).length > 0,
-  );
+  return orders.filter(isBlockedProductionOrder);
 }
 
 export function kindLabel(kind: PlantAssetKind) {
@@ -146,9 +145,10 @@ export function OrderCard({
   theme = 'dark',
   onGoToTab,
 }: DepartmentPageProps & { order: ProductionOrder }) {
-  const isBlocked = (order.blockers ?? []).length > 0 || String(order.flowStatus).toLowerCase() === 'blocked';
-  const isRunnable = String(order.flowStatus).toLowerCase() === 'runnable';
-  const isDone = String(order.status).toLowerCase() === 'done';
+  const traveler = generatePlantTraveler(order);
+  const isBlocked = traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD';
+  const isRunnable = traveler.overallStatus === 'READY' || traveler.overallStatus === 'ACTIVE';
+  const isDone = traveler.overallStatus === 'COMPLETE';
   const priority = String(order.priority ?? 'normal').toLowerCase();
   const priorityColor = priority === 'critical' ? '#dc2626' : priority === 'hot' ? '#f59e0b' : '#64748b';
   const flowColor = isBlocked ? '#dc2626' : isRunnable ? '#10b981' : '#64748b';
@@ -159,9 +159,11 @@ export function OrderCard({
   const showUrgency = isFeatureEnabled('urgencyScore');
   const urgencyScore = showUrgency ? getUrgencyScore(order) : 0;
   const urgencyColor = getUrgencyColor(urgencyScore);
-  const hasMaterialIssue =
-    (order.blockers ?? []).some((b) => b.type === 'material') ||
-    ['MISSING', 'NOT_RECEIVED', 'ORDER_REQUIRED', 'PARTIAL'].includes(String(order.materialStatus ?? '').toUpperCase());
+  const materialAction = getPlantTravelerMaterialAction(traveler);
+  const hasMaterialIssue = Boolean(materialAction?.enabled);
+  const activeDepartment = traveler.activeDepartment ?? order.currentDepartment;
+  const nextDepartment = traveler.nextDepartment ?? order.nextDepartment;
+  const progressLabel = `${traveler.completedStepCount}/${traveler.totalStepCount} (${traveler.completionPercent}%)`;
 
   return (
     <div style={{ ...cardStyle(theme), borderLeft: `4px solid ${borderColor}` }}>
@@ -175,12 +177,14 @@ export function OrderCard({
         </div>
       </div>
       <div style={metaStyle(theme)}>
-        {order.currentDepartment}{order.nextDepartment ? ` → ${order.nextDepartment}` : ''}
+        {activeDepartment}{nextDepartment ? ` → ${nextDepartment}` : ''}
       </div>
+      <p style={travelerInstructionStyle(theme)}>{traveler.currentInstruction}</p>
       <div style={{ ...chipRowStyle, marginTop: 8 }}>
         <span style={flowChipStyle(flowColor)}>
-          {isBlocked ? 'BLOCKED' : isRunnable ? 'RUNNABLE' : statusLabel(order.status)}
+          {traveler.overallStatus}
         </span>
+        <span style={chipStyle(theme)}>Route: {progressLabel}</span>
         {order.materialStatus && order.materialStatus !== 'UNKNOWN' && (
           <span style={chipStyle(theme)}>MAT: {statusLabel(order.materialStatus)}</span>
         )}
@@ -190,11 +194,22 @@ export function OrderCard({
           </span>
         )}
       </div>
-      {(order.blockers ?? []).map((blocker, i) => (
+      {(traveler.blockers ?? []).map((blocker, i) => (
         <div key={i} style={blockerRowStyle(theme)}>
           ⚠ {blocker.type.toUpperCase()}: {blocker.message}
         </div>
       ))}
+      {traveler.classificationReviewReasons.length > 0 && (
+        <div style={travelerReviewStyle(theme)}>
+          Review: {traveler.classificationReviewReasons.join(', ')}
+        </div>
+      )}
+      {traveler.route.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div style={travelerRouteLabelStyle(theme)}>TRAVELER ROUTE</div>
+          <div style={travelerRouteStyle(theme)}>{traveler.route.join(' → ')}</div>
+        </div>
+      )}
       {hasMaterialIssue && onGoToTab && (
         <button
           type="button"
@@ -666,6 +681,54 @@ function blockerRowStyle(theme: 'dark' | 'light'): CSSProperties {
   return { marginTop: 8, padding: '7px 10px', borderRadius: 4, background: theme === 'dark' ? 'rgba(220,38,38,0.12)' : '#fef2f2', border: '1px solid rgba(220,38,38,0.3)', color: theme === 'dark' ? '#fca5a5' : '#991b1b', fontSize: 12, fontWeight: 800, lineHeight: 1.4, wordBreak: 'break-word' };
 }
 
+function travelerInstructionStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    color: theme === 'dark' ? '#cbd5e1' : '#334155',
+    fontSize: 12,
+    fontWeight: 750,
+    lineHeight: 1.45,
+    margin: '10px 0 0',
+    padding: '8px 10px',
+    borderRadius: 4,
+    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    background: theme === 'dark' ? 'rgba(30,41,59,0.65)' : '#ffffff',
+  };
+}
+
+function travelerRouteLabelStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    color: theme === 'dark' ? '#94a3b8' : '#64748b',
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: '0.8px',
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  };
+}
+
+function travelerRouteStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    color: theme === 'dark' ? '#cbd5e1' : '#475569',
+    fontSize: 11,
+    fontWeight: 800,
+    lineHeight: 1.45,
+  };
+}
+
+function travelerReviewStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    marginTop: 8,
+    padding: '7px 10px',
+    borderRadius: 4,
+    background: theme === 'dark' ? 'rgba(245,158,11,0.12)' : '#fffbeb',
+    border: '1px solid rgba(245,158,11,0.35)',
+    color: theme === 'dark' ? '#fcd34d' : '#92400e',
+    fontSize: 12,
+    fontWeight: 800,
+    lineHeight: 1.4,
+  };
+}
+
 const crewSummaryRowStyle: CSSProperties = { display: 'flex', gap: 10, flexWrap: 'wrap' };
 
 function skillGapBannerStyle(theme: 'dark' | 'light'): CSSProperties {
@@ -745,4 +808,3 @@ function formatRelativeTime(isoString?: string): string {
   if (mins < 60) return `${mins}m ago`;
   return `${Math.floor(mins / 60)}h ago`;
 }
-

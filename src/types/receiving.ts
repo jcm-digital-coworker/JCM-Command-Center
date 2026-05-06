@@ -10,6 +10,30 @@ export type ReceivingOrderStatus =
 
 export type ReceivingOrderPriority = 'NORMAL' | 'HOT' | 'CRITICAL';
 
+export type ReceivingGateStatus =
+  | 'NOT_ARRIVED'
+  | 'ARRIVING_TODAY'
+  | 'INSPECTION_NEEDED'
+  | 'READY_TO_STAGE'
+  | 'CLAIMED_FOR_DELIVERY'
+  | 'STAGED_OR_DELIVERED'
+  | 'EXCEPTION_HOLD';
+
+export type ReceivingExceptionType =
+  | 'SHORTAGE'
+  | 'DAMAGE'
+  | 'WRONG_MATERIAL'
+  | 'MISSING_PAPERWORK'
+  | 'VENDOR_ISSUE'
+  | 'ENGINEERING_REVIEW';
+
+export type ReceivingLaneType =
+  | 'PRODUCTION_ORDER_MATERIAL'
+  | 'MAINTENANCE_PART'
+  | 'TOOLING'
+  | 'CONSUMABLE'
+  | 'UNKNOWN_REVIEW';
+
 export type ReceivingOrder = {
   id: string;
   itemName: string;
@@ -54,4 +78,17 @@ export type ReceivingOrderDraft = {
   supplier: string;
   poOrReceiver: string;
   priority: ReceivingOrderPriority;
+};
+
+export type ReceivingPressureSummary = {
+  open: number;
+  notArrived: number;
+  arrivingToday: number;
+  inspectionNeeded: number;
+  readyToStage: number;
+  claimedForDelivery: number;
+  stagedOrDelivered: number;
+  exceptionHolds: number;
+  hotOrCritical: number;
+  oldestOpenAgeHours: number | null;
 };

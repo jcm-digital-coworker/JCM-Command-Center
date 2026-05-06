@@ -89,6 +89,7 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
       blockerAction,
       { label: 'Check Crew Coverage', detail: 'See available crew and coverage gaps', intent: 'OPEN_CREW_COVERAGE', tone: state.blockedOrderCount > 0 ? 'orange' : 'slate', priority: 3 },
       { label: 'Open Departments', detail: 'Review work-center focus and department status', intent: 'OPEN_PLANT_MAP', tone: 'green', priority: 2 },
+      { label: 'Open War Board', detail: state.blockedOrderCount > 0 ? `${state.blockedOrderCount} blocked — see full plant urgency view` : 'Full plant kanban, urgency-sorted across all departments', intent: 'OPEN_KANBAN', tone: 'blue', priority: state.blockedOrderCount > 0 ? 4 : 2 },
       alertAction,
       { label: 'Open Engineering Review', detail: state.blockedOrderCount > 0 ? 'Check blueprint, routing, or release blockers' : 'Review engineering release status', intent: 'OPEN_ENGINEERING', tone: 'blue', priority: state.blockedOrderCount > 0 ? 4 : 2 },
       maintenanceAction,
@@ -99,6 +100,7 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
     return sortQuickActions([
       { label: 'Plant Command Review', detail: 'Review plant criticals, flow, and department status', intent: 'OPEN_DASHBOARD', tone: state.blockedOrderCount + state.alertCount > 0 ? 'orange' : 'slate', priority: 2 },
       blockerAction,
+      { label: 'Open War Board', detail: state.blockedOrderCount > 0 ? `${state.blockedOrderCount} blocked — full plant kanban by urgency` : 'Full plant kanban — all orders across all departments, urgency-sorted', intent: 'OPEN_KANBAN', tone: 'blue', priority: state.blockedOrderCount > 0 ? 5 : 3 },
       { label: 'Check Crew Coverage', detail: 'Review staffing status across departments', intent: 'OPEN_CREW_COVERAGE', tone: 'slate', priority: 2 },
       { label: 'Open Departments', detail: 'Review department focus and work-center status', intent: 'OPEN_PLANT_MAP', tone: 'green', priority: 2 },
       alertAction,

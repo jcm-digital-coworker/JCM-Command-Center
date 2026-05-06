@@ -5,12 +5,13 @@ import {
   formatMaterialStatus,
   formatStatus,
   getOrderBlockReason,
-  getOrderStatusLabel,
 } from '../logic/orderReadiness';
 import type { ProductionOrder } from '../types/productionOrder';
 import type { AppTab } from '../types/app';
 import type { Department } from '../types/machine';
+import type { PlantTraveler } from '../types/dynamicTraveler';
 import { getOrderLane, getProductFlow } from '../logic/flowLogic';
+import { generatePlantTravelers } from '../logic/dynamicTraveler';
 import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import {
   getOrderLastTouchedHours,
@@ -34,7 +35,7 @@ type OrderSortMode = 'priority' | 'shipDate' | 'status' | 'orderNumber';
 
 export default function OrdersPage({ theme = 'dark', onGoToTab }: OrdersPageProps) {
   const [sortMode, setSortMode] = useState<OrderSortMode>('priority');
-  const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
+  const [selectedTraveler, setSelectedTraveler] = useState<PlantTraveler | null>(null);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -48,11 +49,12 @@ export default function OrdersPage({ theme = 'dark', onGoToTab }: OrdersPageProp
   }, []);
 
   const liveOrders = getRuntimeProductionOrders();
-  const blockedCount = liveOrders.filter((order) => getOrderBlockReason(order)).length;
-  const readyCount = liveOrders.filter(isReadyForOrdersPage).length;
-  const engineeredCount = liveOrders.filter((order) => order.orderType === 'ENGINEERED' || order.productFamily === 'ENGINEERED_FITTING').length;
+  const plantTravelers = useMemo(() => generatePlantTravelers(liveOrders), [liveOrders]);
+  const blockedCount = plantTravelers.filter((traveler) => traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD').length;
+  const readyCount = plantTravelers.filter((traveler) => traveler.overallStatus === 'READY' || traveler.overallStatus === 'ACTIVE').length;
+  const engineeredCount = plantTravelers.filter((traveler) => traveler.order.orderType === 'ENGINEERED' || traveler.order.productFamily === 'ENGINEERED_FITTING').length;
 
-  const sortedOrders = useMemo(() => sortOrders(liveOrders, sortMode), [liveOrders, sortMode]);
+  const sortedTravelers = useMemo(() => sortTravelers(plantTravelers, sortMode), [plantTravelers, sortMode]);
 
   return (
     <div style={pageStyle}>
@@ -61,22 +63,22 @@ export default function OrdersPage({ theme = 'dark', onGoToTab }: OrdersPageProp
           <div style={eyebrowStyle}>ORDER BRAIN</div>
           <h2 style={titleStyle(theme)}>Production Orders</h2>
           <p style={subTextStyle(theme)}>
-            First pass at the plant-wide traveler: order, material status, product family, blocker, QA signal, and route.
+            Dynamic plant travelers now drive order status, route progress, current instruction, blockers, and next handoff.
           </p>
         </div>
       </div>
 
       <div style={summaryGridStyle}>
-        <SummaryTile label="Total Orders" value={liveOrders.length} theme={theme} />
-        <SummaryTile label="Blocked" value={blockedCount} tone="bad" theme={theme} />
-        <SummaryTile label="Ready" value={readyCount} tone="good" theme={theme} />
+        <SummaryTile label="Travelers" value={plantTravelers.length} theme={theme} />
+        <SummaryTile label="Blocked / Hold" value={blockedCount} tone="bad" theme={theme} />
+        <SummaryTile label="Ready / Active" value={readyCount} tone="good" theme={theme} />
         <SummaryTile label="Engineered" value={engineeredCount} tone="watch" theme={theme} />
       </div>
 
       <section style={sectionStyle(theme)}>
         <div style={orderHeaderRowStyle}>
           <div>
-            <div style={sectionTitleStyle(theme)}>Current Sample Orders</div>
+            <div style={sectionTitleStyle(theme)}>Current Plant Travelers</div>
             <div style={tapHintStyle(theme)}>Tap an order to open the traveler detail card.</div>
           </div>
           <label style={sortLabelStyle(theme)}>
@@ -84,16 +86,16 @@ export default function OrdersPage({ theme = 'dark', onGoToTab }: OrdersPageProp
             <select value={sortMode} onChange={(event) => setSortMode(event.target.value as OrderSortMode)} style={sortSelectStyle(theme)}>
               <option value="priority">Priority</option>
               <option value="shipDate">Ship Date</option>
-              <option value="status">Status</option>
+              <option value="status">Traveler Status</option>
               <option value="orderNumber">Order #</option>
             </select>
           </label>
         </div>
         <div style={{ display: 'grid', gap: 12 }}>
-          {sortedOrders.length === 0 ? (
-            <div style={emptyStateStyle(theme)}>No orders match the current filter. All orders may be complete or cleared.</div>
-          ) : sortedOrders.map((order) => (
-            <OrderCard key={order.orderNumber} order={order} theme={theme} onOpen={() => setSelectedOrder(order)} onGoToTab={onGoToTab} />
+          {sortedTravelers.length === 0 ? (
+            <div style={emptyStateStyle(theme)}>No travelers match the current filter. All orders may be complete or cleared.</div>
+          ) : sortedTravelers.map((traveler) => (
+            <OrderCard key={traveler.order.orderNumber} traveler={traveler} theme={theme} onOpen={() => setSelectedTraveler(traveler)} onGoToTab={onGoToTab} />
           ))}
         </div>
       </section>
@@ -116,18 +118,20 @@ export default function OrdersPage({ theme = 'dark', onGoToTab }: OrdersPageProp
         </div>
       </section>
 
-      {selectedOrder ? <OrderDetailModal order={selectedOrder} theme={theme} onClose={() => setSelectedOrder(null)} /> : null}
+      {selectedTraveler ? <OrderDetailModal traveler={selectedTraveler} theme={theme} onClose={() => setSelectedTraveler(null)} /> : null}
     </div>
   );
 }
 
-function OrderCard({ order, theme, onOpen, onGoToTab }: { order: ProductionOrder; theme: 'dark' | 'light'; onOpen: () => void; onGoToTab?: (tab: AppTab) => void }) {
+function OrderCard({ traveler, theme, onOpen, onGoToTab }: { traveler: PlantTraveler; theme: 'dark' | 'light'; onOpen: () => void; onGoToTab?: (tab: AppTab) => void }) {
+  const order = traveler.order;
   const blockReason = getOrderBlockReason(order);
   const flow = getProductFlow(order);
-  const isBlocked = Boolean(blockReason);
+  const isBlocked = traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD' || Boolean(blockReason);
   const lastTouchedHours = isBlocked ? getOrderLastTouchedHours(order.orderNumber) : null;
-  const urgency = getPriorityScore(order);
-  const deptTab = DEPT_TAB_MAP[order.currentDepartment as Department];
+  const urgency = getTravelerPriorityScore(traveler);
+  const deptTab = traveler.activeDepartment ? DEPT_TAB_MAP[traveler.activeDepartment] : DEPT_TAB_MAP[order.currentDepartment as Department];
+  const route = traveler.route.length > 0 ? traveler.route : flow?.departments ?? order.requiredDepartments ?? [];
 
   return (
     <button type="button" style={cardStyle(theme, isBlocked)} onClick={onOpen}>
@@ -137,9 +141,9 @@ function OrderCard({ order, theme, onOpen, onGoToTab }: { order: ProductionOrder
           <div style={miniTextStyle(theme)}>{order.customer}</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          <div style={statusBadgeStyle(order.status, isBlocked)}>{getOrderStatusLabel(order)}</div>
+          <div style={statusBadgeStyle(traveler.overallStatus, isBlocked)}>{traveler.overallStatus}</div>
           {urgency > 0 && (
-            <div style={urgencyBadgeStyle(urgency)}>URGENCY {urgency}</div>
+            <div style={urgencyBadgeStyle(urgency)}>TRAVELER {urgency}</div>
           )}
           {isBlocked && lastTouchedHours !== null && (() => {
             const tone = getBlockerAgeTone(lastTouchedHours);
@@ -153,19 +157,23 @@ function OrderCard({ order, theme, onOpen, onGoToTab }: { order: ProductionOrder
         <div style={inlineBlockerStyle(theme)}>{formatStatus(blockReason)}</div>
       )}
 
+      <div style={instructionLineStyle(theme)}>{traveler.currentInstruction}</div>
+
       <div style={detailGridStyle}>
         <Info label="Type" value={order.orderType ?? 'STANDARD'} theme={theme} />
         <Info label="Family" value={formatStatus(order.productFamily)} theme={theme} />
         <Info label="Lane" value={formatStatus(getOrderLane(order))} theme={theme} />
-        <Info label="Assembly Part" value={order.assemblyPartNumber ?? 'Not assigned'} theme={theme} />
+        <Info label="Active Area" value={traveler.activeDepartment ?? order.currentDepartment} theme={theme} />
+        <Info label="Progress" value={`${traveler.completedStepCount}/${traveler.totalStepCount} (${traveler.completionPercent}%)`} theme={theme} />
+        <Info label="Next" value={traveler.nextDepartment ? String(traveler.nextDepartment) : 'TBD'} theme={theme} />
         <Info label="Qty" value={String(order.quantity ?? 'TBD')} theme={theme} />
         <Info label="Ship Date" value={order.projectedShipDate ?? 'TBD'} theme={theme} />
       </div>
 
-      {(flow?.departments.length ?? order.requiredDepartments?.length ?? 0) > 0 && (
+      {route.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div style={smallLabelStyle(theme)}>ROUTE</div>
-          <div style={routeStyle(theme)}>{(flow?.departments ?? order.requiredDepartments ?? []).join('  ->  ')}</div>
+          <div style={smallLabelStyle(theme)}>TRAVELER ROUTE</div>
+          <div style={routeStyle(theme)}>{route.join('  ->  ')}</div>
         </div>
       )}
 
@@ -177,7 +185,7 @@ function OrderCard({ order, theme, onOpen, onGoToTab }: { order: ProductionOrder
             style={deptLinkStyle(theme)}
             onClick={(e) => { e.stopPropagation(); onGoToTab(deptTab); }}
           >
-            {order.currentDepartment} {'->'}
+            {traveler.activeDepartment ?? order.currentDepartment} {'->'}
           </button>
         )}
       </div>
@@ -185,10 +193,11 @@ function OrderCard({ order, theme, onOpen, onGoToTab }: { order: ProductionOrder
   );
 }
 
-function OrderDetailModal({ order, theme, onClose }: { order: ProductionOrder; theme: 'dark' | 'light'; onClose: () => void }) {
+function OrderDetailModal({ traveler, theme, onClose }: { traveler: PlantTraveler; theme: 'dark' | 'light'; onClose: () => void }) {
+  const order = traveler.order;
   const blockReason = getOrderBlockReason(order);
   const flow = getProductFlow(order);
-  const route = flow?.departments ?? order.requiredDepartments ?? [];
+  const route = traveler.route.length > 0 ? traveler.route : flow?.departments ?? order.requiredDepartments ?? [];
 
   return (
     <div style={modalOverlayStyle} onClick={onClose}>
@@ -202,8 +211,10 @@ function OrderDetailModal({ order, theme, onClose }: { order: ProductionOrder; t
           <button type="button" style={closeButtonStyle(theme)} onClick={onClose}>CLOSE</button>
         </div>
 
+        <div style={travelerInstructionBoxStyle(theme)}>{traveler.currentInstruction}</div>
+
         <div style={detailGridStyle}>
-          <Info label="Status" value={getOrderStatusLabel(order)} theme={theme} />
+          <Info label="Traveler Status" value={traveler.overallStatus} theme={theme} />
           <Info label="Priority" value={formatPriority(order)} theme={theme} />
           <Info label="Type" value={order.orderType ?? 'STANDARD'} theme={theme} />
           <Info label="Family" value={formatStatus(order.productFamily)} theme={theme} />
@@ -212,7 +223,9 @@ function OrderDetailModal({ order, theme, onClose }: { order: ProductionOrder; t
           <Info label="Qty" value={String(order.quantity ?? 'TBD')} theme={theme} />
           <Info label="Ship Date" value={order.projectedShipDate ?? 'TBD'} theme={theme} />
           <Info label="Material" value={formatMaterialStatus(order.materialStatus ?? 'UNKNOWN')} theme={theme} />
-          <Info label="Current Area" value={order.currentDepartment} theme={theme} />
+          <Info label="Active Area" value={traveler.activeDepartment ?? order.currentDepartment} theme={theme} />
+          <Info label="Next Handoff" value={traveler.nextDepartment ? String(traveler.nextDepartment) : 'TBD'} theme={theme} />
+          <Info label="Progress" value={`${traveler.completedStepCount}/${traveler.totalStepCount} (${traveler.completionPercent}%)`} theme={theme} />
           <Info label="QA" value={formatStatus(order.qaStatus ?? 'UNKNOWN')} theme={theme} />
         </div>
 
@@ -222,6 +235,21 @@ function OrderDetailModal({ order, theme, onClose }: { order: ProductionOrder; t
           <div style={{ marginTop: 14 }}>
             <div style={smallLabelStyle(theme)}>ROUTE</div>
             <div style={routeStyle(theme)}>{route.join('  ->  ')}</div>
+          </div>
+        ) : null}
+
+        {traveler.departmentSteps.length > 0 ? (
+          <div style={{ marginTop: 14 }}>
+            <div style={smallLabelStyle(theme)}>ROUTE STEPS</div>
+            <div style={stepStackStyle}>
+              {traveler.departmentSteps.map((step) => (
+                <div key={`${order.orderNumber}-${step.department}`} style={stepRowStyle(theme, step.stepStatus)}>
+                  <strong>{step.department}</strong>
+                  <span>{step.stepStatus}</span>
+                  {step.bestResource ? <span>{step.bestResource.label}</span> : <span>No mapped resource</span>}
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
 
@@ -257,26 +285,22 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
   );
 }
 
-function sortOrders(orders: ProductionOrder[], sortMode: OrderSortMode): ProductionOrder[] {
-  return [...orders].sort((a, b) => {
-    if (sortMode === 'priority') return getPriorityScore(b) - getPriorityScore(a) || compareShipDate(a, b);
-    if (sortMode === 'shipDate') return compareShipDate(a, b);
-    if (sortMode === 'status') return getOrderStatusLabel(a).localeCompare(getOrderStatusLabel(b));
-    return a.orderNumber.localeCompare(b.orderNumber);
+function sortTravelers(travelers: PlantTraveler[], sortMode: OrderSortMode): PlantTraveler[] {
+  return [...travelers].sort((a, b) => {
+    if (sortMode === 'priority') return getTravelerPriorityScore(b) - getTravelerPriorityScore(a) || compareShipDate(a.order, b.order);
+    if (sortMode === 'shipDate') return compareShipDate(a.order, b.order);
+    if (sortMode === 'status') return a.overallStatus.localeCompare(b.overallStatus);
+    return a.order.orderNumber.localeCompare(b.order.orderNumber);
   });
 }
 
-function getPriorityScore(order: ProductionOrder): number {
+function getTravelerPriorityScore(traveler: PlantTraveler): number {
   let score = 0;
-  const qaStatus = normalizeToken(order.qaStatus);
-  const materialStatus = normalizeToken(order.materialStatus);
-  const priority = normalizeToken(order.priority);
-
-  if (getOrderBlockReason(order)) score += 100;
-  if (qaStatus === 'HOLD' || qaStatus === 'FAILED') score += 80;
-  if (materialStatus !== '' && materialStatus !== 'RECEIVED' && materialStatus !== 'STAGED' && materialStatus !== 'UNKNOWN') score += 40;
-  if (priority === 'CRITICAL') score += 30;
-  if (priority === 'HOT') score += 20;
+  if (traveler.overallStatus === 'BLOCKED' || traveler.overallStatus === 'HOLD') score += 120;
+  if (traveler.overallStatus === 'READY' || traveler.overallStatus === 'ACTIVE') score += 60;
+  score += Math.max(0, 100 - traveler.completionPercent) / 10;
+  if (traveler.qaRequired) score += 10;
+  if (traveler.classificationReviewReasons.length > 0) score += 10;
   return score;
 }
 
@@ -289,13 +313,6 @@ function formatPriority(order: ProductionOrder): string {
   if (priority === 'CRITICAL') return 'Critical';
   if (priority === 'HOT') return 'Hot';
   return 'Normal';
-}
-
-function isReadyForOrdersPage(order: ProductionOrder): boolean {
-  if (getOrderBlockReason(order)) return false;
-  const status = normalizeToken(order.status);
-  const flowStatus = normalizeToken(order.flowStatus);
-  return status === 'READY' || status === 'IN_PROGRESS' || status === 'RUNNING' || flowStatus === 'RUNNABLE';
 }
 
 function normalizeToken(value: unknown): string {
@@ -311,6 +328,7 @@ const eyebrowStyle: CSSProperties = { color: '#f97316', fontSize: 11, fontWeight
 const orderHeaderRowStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 12 };
 const modalHeaderStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 };
 const modalOverlayStyle: CSSProperties = { position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(2, 6, 23, 0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 };
+const stepStackStyle: CSSProperties = { display: 'grid', gap: 6 };
 
 function heroStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 18, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', borderLeft: '4px solid #f97316' }; }
 function titleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: '4px 0', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', letterSpacing: '0.5px' }; }
@@ -321,6 +339,8 @@ function sectionTitleStyle(theme: 'dark' | 'light'): CSSProperties { return { ma
 function summaryTileStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function cardStyle(theme: 'dark' | 'light', blocked: boolean): CSSProperties { return { width: '100%', textAlign: 'left', padding: 14, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: blocked ? '1px solid #ef4444' : theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', borderLeft: blocked ? '4px solid #ef4444' : '4px solid #10b981', cursor: 'pointer' }; }
 function inlineBlockerStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 8, marginBottom: 4, padding: '5px 9px', borderRadius: 4, background: theme === 'dark' ? 'rgba(127,29,29,0.28)' : '#fee2e2', border: '1px solid rgba(239,68,68,0.45)', color: theme === 'dark' ? '#fca5a5' : '#991b1b', fontSize: 11, fontWeight: 800 }; }
+function instructionLineStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 10, padding: '8px 10px', borderRadius: 6, background: theme === 'dark' ? 'rgba(15,23,42,0.65)' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 700, lineHeight: 1.35 }; }
+function travelerInstructionBoxStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 13, fontWeight: 800, lineHeight: 1.4 }; }
 function urgencyBadgeStyle(score: number): CSSProperties { const color = score >= 100 ? '#ef4444' : score >= 40 ? '#f59e0b' : '#64748b'; return { fontSize: 9, fontWeight: 900, color, letterSpacing: '0.5px' }; }
 function deptLinkStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: '3px 8px', borderRadius: 4, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: 'transparent', color: theme === 'dark' ? '#93c5fd' : '#2563eb', fontSize: 10, fontWeight: 900, cursor: 'pointer', letterSpacing: '0.3px' }; }
 function familyCardStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
@@ -332,10 +352,11 @@ function smallLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { font
 function routeStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 800, lineHeight: 1.5 }; }
 function noteStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 10, borderRadius: 6, background: theme === 'dark' ? 'rgba(15,23,42,0.8)' : '#f8fafc', color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', marginTop: 8 }; }
 function chipStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: '4px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800, color: theme === 'dark' ? '#fdba74' : '#9a3412', background: theme === 'dark' ? 'rgba(249,115,22,0.12)' : '#ffedd5', border: theme === 'dark' ? '1px solid rgba(249,115,22,0.3)' : '1px solid #fed7aa' }; }
-function statusBadgeStyle(status: string, blocked: boolean): CSSProperties { const normalizedStatus = normalizeToken(status); return { padding: '6px 9px', borderRadius: 999, fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: blocked ? '#fecaca' : normalizedStatus === 'READY' ? '#bbf7d0' : '#bfdbfe', background: blocked ? '#7f1d1d' : normalizedStatus === 'READY' ? '#064e3b' : '#1e3a8a', whiteSpace: 'nowrap' }; }
+function statusBadgeStyle(status: string, blocked: boolean): CSSProperties { return { padding: '6px 9px', borderRadius: 999, fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: blocked ? '#fecaca' : status === 'READY' || status === 'ACTIVE' ? '#bbf7d0' : '#bfdbfe', background: blocked ? '#7f1d1d' : status === 'READY' || status === 'ACTIVE' ? '#064e3b' : '#1e3a8a', whiteSpace: 'nowrap' }; }
 function sortLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { display: 'grid', gap: 4, color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 10, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' }; }
 function sortSelectStyle(theme: 'dark' | 'light'): CSSProperties { return { minHeight: 38, borderRadius: 6, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: theme === 'dark' ? '#1e293b' : '#ffffff', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', padding: '8px 10px', fontWeight: 800 }; }
 function modalCardStyle(theme: 'dark' | 'light'): CSSProperties { return { width: 'min(720px, 100%)', maxHeight: '88vh', overflow: 'auto', padding: 16, borderRadius: 10, background: theme === 'dark' ? '#0f172a' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 20px 60px rgba(0,0,0,0.45)' }; }
 function closeButtonStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: '9px 11px', borderRadius: 6, border: '1px solid #f97316', background: 'rgba(249,115,22,0.12)', color: '#f97316', fontSize: 11, fontWeight: 900, cursor: 'pointer' }; }
 function blockerStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 14, padding: 10, borderRadius: 6, background: theme === 'dark' ? 'rgba(127,29,29,0.35)' : '#fee2e2', border: '1px solid #ef4444', color: theme === 'dark' ? '#fecaca' : '#991b1b', fontSize: 12, fontWeight: 800 }; }
+function stepRowStyle(theme: 'dark' | 'light', status: string): CSSProperties { const color = status === 'BLOCKED' || status === 'HOLD' ? '#ef4444' : status === 'DONE' ? '#10b981' : status === 'ACTIVE' || status === 'READY' ? '#38bdf8' : '#64748b'; return { display: 'grid', gridTemplateColumns: '1fr auto 1.2fr', gap: 8, alignItems: 'center', padding: '7px 9px', borderRadius: 6, background: theme === 'dark' ? '#1e293b' : '#f8fafc', border: `1px solid ${color}55`, color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12 }; }
 function emptyStateStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 20, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px dashed #334155' : '1px dashed #cbd5e1', color: '#64748b', fontSize: 13, fontWeight: 700, textAlign: 'center' }; }

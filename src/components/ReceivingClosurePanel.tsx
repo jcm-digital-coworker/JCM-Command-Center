@@ -1,7 +1,9 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { productionOrders } from '../data/productionOrders';
 import { getRuntimeProductionOrders, applyWorkflowRuntimeAction, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
+import { generatePlantTravelers } from '../logic/dynamicTraveler';
 import { isClosedProductionStatus, isMaterialIssueStatus } from '../logic/orderStatusTruth';
+import type { PlantTraveler } from '../types/dynamicTraveler';
 import type { AppTab } from '../types/app';
 
 type Props = {
@@ -23,18 +25,24 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
   }, []);
 
   const runtimeOrders = getRuntimeProductionOrders(productionOrders);
-  void tick;
-
-  const materialOrders = runtimeOrders.filter((order) => {
+  const materialTravelers = generatePlantTravelers(runtimeOrders).filter((traveler) => {
+    const order = traveler.order;
     if (isClosedProductionStatus(order.status)) return false;
     const hasMaterialBlocker = (order.blockers ?? []).some((blocker) => blocker.type === 'material');
     return isMaterialIssueStatus(order.materialStatus) || hasMaterialBlocker;
   });
+  void tick;
 
-  function handleMarkStaged(orderNumber: string) {
-    const confirmed = confirm('Confirm material is physically verified, staged, and ready for the destination department?');
+  function handleMarkStaged(traveler: PlantTraveler) {
+    const order = traveler.order;
+    const destination = traveler.nextDepartment ?? traveler.activeDepartment ?? order.nextDepartment ?? order.currentDepartment;
+    const confirmed = confirm(`Confirm material for #${order.orderNumber} is physically verified, staged, and ready for ${destination}?`);
     if (!confirmed) return;
-    applyWorkflowRuntimeAction(orderNumber, 'MARK_MATERIAL_STAGED', 'Material physically verified and staged from Receiving closure panel.');
+    applyWorkflowRuntimeAction(
+      order.orderNumber,
+      'MARK_MATERIAL_STAGED',
+      `Material physically verified and staged from Receiving closure panel. Traveler destination: ${destination}.`,
+    );
   }
 
   return (
@@ -43,19 +51,21 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
         <div>
           <div style={eyebrowStyle}>RECEIVING LOOP</div>
           <h3 style={getTitleStyle(theme)}>Material closure</h3>
-          <p style={subTextStyle(theme)}>Orders waiting on material from Receiving. Mark staged only after material is physically verified and ready for delivery.</p>
+          <p style={subTextStyle(theme)}>Orders waiting on material from Receiving. Traveler route, destination, and next handoff are shown before staging.</p>
         </div>
-        <span style={countBadgeStyle(materialOrders.length)}>{materialOrders.length} OPEN</span>
+        <span style={countBadgeStyle(materialTravelers.length)}>{materialTravelers.length} OPEN</span>
       </div>
 
-      {materialOrders.length === 0 ? (
+      {materialTravelers.length === 0 ? (
         <div style={getEmptyStyle(theme)}>No open material blockers — all orders have material staged or received.</div>
       ) : (
         <div style={stackStyle}>
-          {materialOrders.map((order) => {
+          {materialTravelers.map((traveler) => {
+            const order = traveler.order;
             const materialBlockers = (order.blockers ?? []).filter((blocker) => blocker.type === 'material');
             const materialStatus = order.materialStatus ?? 'UNKNOWN';
             const isPartial = String(materialStatus).toUpperCase() === 'PARTIAL';
+            const destination = traveler.nextDepartment ?? traveler.activeDepartment ?? order.nextDepartment ?? order.currentDepartment;
             return (
               <div key={order.id} style={getCardStyle(theme, isPartial)}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -64,6 +74,7 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
                     {order.priority && (
                       <span style={getPriorityChip(order.priority)}>{String(order.priority).toUpperCase()}</span>
                     )}
+                    <span style={travelerStatusChip(traveler.overallStatus)}>{traveler.overallStatus}</span>
                   </div>
                   {order.customer && (
                     <div style={customerStyle(theme)}>{order.customer}</div>
@@ -72,12 +83,15 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
                     <div style={partStyle(theme)}>Part: {order.partNumber}{order.quantity ? ` · Qty: ${order.quantity}` : ''}</div>
                   )}
                   <div style={metaRowStyle}>
-                    <span style={deptStyle(theme)}>{order.currentDepartment}</span>
+                    <span style={deptStyle(theme)}>ACTIVE: {traveler.activeDepartment ?? order.currentDepartment}</span>
+                    <span style={handoffStyle(theme)}>NEXT: {String(destination)}</span>
+                    <span style={progressStyle(theme)}>{traveler.completedStepCount}/{traveler.totalStepCount} ROUTE</span>
                     <span style={getMaterialChip(materialStatus)}>{String(materialStatus).replace(/_/g, ' ')}</span>
                     {order.projectedShipDate && (
                       <span style={dateStyle(theme)}>DUE {order.projectedShipDate}</span>
                     )}
                   </div>
+                  <div style={instructionStyle(theme)}>{traveler.currentInstruction}</div>
                   {materialBlockers.map((blocker, i) => (
                     <div key={i} style={blockerStyle(theme)}>⚠ {blocker.message}</div>
                   ))}
@@ -86,7 +100,7 @@ export default function ReceivingClosurePanel({ theme = 'dark', onGoToTab }: Pro
                   <button
                     type="button"
                     style={stagedButtonStyle}
-                    onClick={() => handleMarkStaged(order.orderNumber)}
+                    onClick={() => handleMarkStaged(traveler)}
                   >
                     VERIFY + STAGE
                   </button>
@@ -121,6 +135,11 @@ function getMaterialChip(status: string): CSSProperties {
   return { fontSize: 10, fontWeight: 900, color, background: `${color}22`, border: `1px solid ${color}55`, borderRadius: 3, padding: '2px 6px' };
 }
 
+function travelerStatusChip(status: string): CSSProperties {
+  const color = status === 'BLOCKED' || status === 'HOLD' ? '#ef4444' : status === 'READY' || status === 'ACTIVE' ? '#10b981' : '#64748b';
+  return { fontSize: 9, fontWeight: 900, color, background: `${color}22`, border: `1px solid ${color}55`, borderRadius: 3, padding: '2px 6px', letterSpacing: '0.5px' };
+}
+
 const headerStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14 };
 const eyebrowStyle: CSSProperties = { color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 6 };
 const stackStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 10 };
@@ -144,5 +163,8 @@ function getOrderStyle(theme: 'dark' | 'light'): CSSProperties { return { color:
 function customerStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12, marginTop: 3, fontWeight: 700 }; }
 function partStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#7dd3fc' : '#0369a1', fontSize: 11, marginTop: 2, fontWeight: 800 }; }
 function deptStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 11, fontWeight: 700 }; }
+function handoffStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#fbbf24' : '#92400e', fontSize: 11, fontWeight: 900 }; }
+function progressStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 800 }; }
+function instructionStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 7, padding: '6px 8px', borderRadius: 4, background: theme === 'dark' ? 'rgba(15,23,42,0.65)' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 11, fontWeight: 700, lineHeight: 1.35 }; }
 function dateStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 700 }; }
 function blockerStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 6, padding: '5px 8px', borderRadius: 4, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)', color: theme === 'dark' ? '#fcd34d' : '#92400e', fontSize: 11, fontWeight: 700 }; }

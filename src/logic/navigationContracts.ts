@@ -3,6 +3,7 @@ import type { AppTab } from '../types/app';
 export type NavigationIntent =
   | 'OPEN_WORKFLOW'
   | 'OPEN_DASHBOARD'
+  | 'OPEN_KANBAN'
   | 'OPEN_EQUIPMENT'
   | 'OPEN_EQUIPMENT_ALERTS'
   | 'OPEN_MAINTENANCE'
@@ -24,6 +25,7 @@ export type NavigationContract = {
 export const navigationContracts: Record<NavigationIntent, NavigationContract> = {
   OPEN_WORKFLOW: { tab: 'workflow', label: 'Workflow' },
   OPEN_DASHBOARD: { tab: 'dashboard', label: 'Command Center' },
+  OPEN_KANBAN: { tab: 'kanban', label: 'War Board' },
   OPEN_EQUIPMENT: { tab: 'machines', label: 'Equipment' },
   OPEN_EQUIPMENT_ALERTS: { tab: 'alerts', label: 'Equipment Alerts' },
   OPEN_MAINTENANCE: { tab: 'maintenance', label: 'Maintenance' },

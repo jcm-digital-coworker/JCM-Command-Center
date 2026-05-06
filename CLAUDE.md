@@ -408,15 +408,21 @@ accent: '#f97316' (safety orange)
 
 ## Phase Status
 
+---
+
 ### Phase 1 — Complete
+**Goal:** Prove value to plant management with maintenance tracking.
+
 - Maintenance request submission + tracking
 - Analytics to show value
 - CSV export for management review
 - Mobile-friendly interface
 
-### Phase 2 — Complete
+---
 
-**Done:**
+### Phase 2 — Complete
+**Goal:** Full plant-wide workflow visibility — orders, crew, blockers, departments, command.
+
 - Role-based WorkflowPage (Operator / Lead / Manager)
 - Back navigation (tabHistory stack)
 - Dev Tools in drawer (role/dept switchers, War Room)
@@ -480,32 +486,41 @@ accent: '#f97316' (safety orange)
 - DeptEnhancements — single component in DepartmentPageTools exported to all 9 dept pages; renders escalation + handoff + kanban based on active flags; threads onGoToTab to all three
 - `deptSubStage` added to ProductionOrder type and RuntimeOrderOverride Pick; persists via existing runtime storage
 
-**Queued for Phase 3:**
-- Supabase backend (replace localStorage)
-- Multi-user real-time sync
-- Email / push notifications
-- Login / authenticated role assignment
-
-**Dead code / known gaps:**
+**Known gaps / dead code (carry into Phase 3 cleanup):**
 - `DepartmentCards.tsx` in `components/shell/` is not imported anywhere. Safe to delete.
 - Skill systems are split: `workers.ts` has typed `skills: WorkerSkill[]`, but `skillGapAlerts.ts` reads `coverage.ts` free-text `skillTags`. Not unified — fuzzy keyword matching bridges them for now.
 - No Office department page — 1 order with `currentDepartment: 'Office'` exists but it's admin-only, no dept page needed.
 - Workflow button copy should always come from typed `WorkflowButtonAction` IDs — never infer behavior from display labels.
 
-**Kanban card interaction boundary rule (established issue #32):**
-- Card tap = inline read-only `OrderDetailModal` — preserves board context, filters, scroll
-- Full Orders navigation = explicit "OPEN FULL ORDERS" button inside the modal
+**Established rules (must not regress):**
+- Kanban card tap = inline read-only `OrderDetailModal` — preserves board context, filters, scroll (issue #32)
+- Full Orders navigation = explicit "OPEN FULL ORDERS" button inside the modal only
 - Workflow mutations must stay in controlled action surfaces (TravelerDetailModal, WorkCenterWorkflowPanelV2) — never inside the passive kanban modal
+- Orders use lowercase/mixed status values in seed data: `'ready'`, `'blocked'`, `'hold'`. Runtime overrides may write uppercase. Always normalize via `orderStatusTruth.ts` helpers — never compare raw strings.
 
-**Important: production order status values in seed data**
-Orders use lowercase/mixed values: `'ready'`, `'blocked'`, `'hold'` — NOT `'IN_PROGRESS'`, `'DONE'`, `'COMPLETE'`.
-Runtime overrides may write uppercase (e.g., `'DONE'`). Always normalize when filtering.
+---
 
-### Phase 3 (Future)
-- ERP/MES integration
-- Historical trend analysis
-- Login / authenticated role assignment (see Queued above)
-- Supabase backend + multi-user real-time sync
+### Phase 3 — Planned
+**Goal:** Multi-user real data — replace localStorage with a real backend, add auth, enable live push.
+
+- Supabase backend (replace all localStorage keys with DB tables)
+- Multi-user real-time sync (Supabase Realtime channels)
+- Authenticated login + persistent role assignment (replace dev tools role switcher)
+- Email / push notifications for blocker escalation and shift handoff
+- ERP/MES integration — read live order state from Epicor; write back action completions
+- Historical trend analysis — pressure score history, blocker frequency, throughput per dept
+- Skill system unification — reconcile `workers.ts` `WorkerSkill[]` with `coverage.ts` `skillTags`
+
+---
+
+### Phase 4 — Future
+**Goal:** Predictive operations and external integrations.
+
+- Predictive maintenance scheduling based on repeat-offender + asset-age data
+- Customer-facing shipment status portal
+- Supplier portal integration (receiving orders, PO confirmations)
+- Mobile native app (React Native or PWA offline mode)
+- Advanced analytics dashboard (OEE, cycle time trends, scrap rate)
 
 ---
 
@@ -543,5 +558,5 @@ git push -u origin <your-branch>
 ---
 
 **Last Updated:** May 5, 2026
-**Version:** v1.8 (Feature flags + DevToolkit flyout, War Board kanban traveler-driven via generatePlantTravelers, dept sub-stage kanban, urgency score, next handoff banner, dept escalation panel, onGoToTab threading completed, inline OrderDetailModal on kanban cards)
+**Version:** v1.9 (Phase log restructured: Phases 1–4 defined with goals, Phase 2 done-list preserved, Phase 3 planned items consolidated, Phase 4 future scope added, established rules section added)
 **Developer:** Manufacturing Engineering Technician, JCM Industries, Nash, Texas

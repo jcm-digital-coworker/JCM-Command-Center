@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { AppTab } from '../../types/app';
+import type { AppTab, RoleView } from '../../types/app';
 import type { Department } from '../../types/machine';
 import type { CoveragePerson } from '../../types/coverage';
 import { getRuntimeProductionOrders } from '../../logic/workflowRuntimeState';
 import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../../logic/workflowRuntimeState';
+import { isBlockedProductionOrder, isClosedProductionStatus } from '../../logic/orderStatusTruth';
 import { seedCoverage } from '../../data/coverage';
 import { COVERAGE_STORAGE_KEY } from '../../logic/coverage';
 
@@ -13,6 +14,7 @@ type DashboardTheme = 'dark' | 'light';
 interface DeptHealthTilesPanelProps {
   onNavigate: (tab: AppTab) => void;
   theme: DashboardTheme;
+  roleView: RoleView;
 }
 
 type DeptTileConfig = {
@@ -44,7 +46,7 @@ function loadCoverage(): CoveragePerson[] {
   }
 }
 
-export default function DeptHealthTilesPanel({ onNavigate, theme }: DeptHealthTilesPanelProps) {
+export default function DeptHealthTilesPanel({ onNavigate, theme, roleView }: DeptHealthTilesPanelProps) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -61,6 +63,9 @@ export default function DeptHealthTilesPanel({ onNavigate, theme }: DeptHealthTi
 
   const orders = getRuntimeProductionOrders();
   const coverage = loadCoverage().filter((p) => p.status !== 'OFFLINE');
+  const isLeadership = roleView === 'Department Lead' || roleView === 'Department Supervisor' || roleView === 'Management';
+  const totalBlocked = orders.filter(isBlockedProductionOrder).length;
+  const totalActive = orders.filter((o) => !isClosedProductionStatus(o.status)).length;
 
   return (
     <section style={sectionStyle}>
@@ -71,11 +76,7 @@ export default function DeptHealthTilesPanel({ onNavigate, theme }: DeptHealthTi
       <div style={gridStyle}>
         {DEPT_TILES.map((tile) => {
           const deptOrders = orders.filter((o) => o.currentDepartment === tile.dept);
-          const blockedCount = deptOrders.filter(
-            (o) =>
-              String(o.flowStatus).toLowerCase() === 'blocked' ||
-              (o.blockers ?? []).length > 0,
-          ).length;
+          const blockedCount = deptOrders.filter(isBlockedProductionOrder).length;
           const crewCount = coverage.filter((p) => p.department === tile.dept).length;
 
           return (
@@ -99,6 +100,25 @@ export default function DeptHealthTilesPanel({ onNavigate, theme }: DeptHealthTi
           );
         })}
       </div>
+      {isLeadership && (
+        <button
+          type="button"
+          style={warBoardButtonStyle(theme, totalBlocked > 0)}
+          onClick={() => onNavigate('kanban')}
+        >
+          <div style={warBoardInnerStyle}>
+            <div>
+              <span style={warBoardLabelStyle}>WAR BOARD</span>
+              <span style={warBoardSubStyle}>Full plant kanban · all departments · urgency-sorted</span>
+            </div>
+            <div style={warBoardMetricsStyle}>
+              <Metric value={totalActive} label="active" color="#94a3b8" />
+              {totalBlocked > 0 && <Metric value={totalBlocked} label="blocked" color="#ef4444" />}
+              <span style={warBoardArrowStyle}>→</span>
+            </div>
+          </div>
+        </button>
+      )}
     </section>
   );
 }
@@ -193,4 +213,57 @@ const blockedBadgeStyle: CSSProperties = {
   borderRadius: 3,
   padding: '2px 4px',
   whiteSpace: 'nowrap',
+};
+
+function warBoardButtonStyle(theme: DashboardTheme, hasBlockers: boolean): CSSProperties {
+  return {
+    marginTop: 8,
+    width: '100%',
+    padding: '12px 16px',
+    borderRadius: 8,
+    background: theme === 'dark' ? '#1e293b' : '#ffffff',
+    border: hasBlockers ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(249,115,22,0.3)',
+    borderLeft: `4px solid ${hasBlockers ? '#ef4444' : '#f97316'}`,
+    cursor: 'pointer',
+    textAlign: 'left',
+    transition: 'border-color 0.15s',
+    boxSizing: 'border-box',
+  };
+}
+
+const warBoardInnerStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 12,
+};
+
+const warBoardLabelStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 900,
+  letterSpacing: '1px',
+  textTransform: 'uppercase',
+  color: '#f97316',
+  marginRight: 10,
+};
+
+const warBoardSubStyle: CSSProperties = {
+  fontSize: 10,
+  color: '#64748b',
+  letterSpacing: '0.4px',
+  textTransform: 'uppercase',
+};
+
+const warBoardMetricsStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 14,
+  flexShrink: 0,
+};
+
+const warBoardArrowStyle: CSSProperties = {
+  fontSize: 20,
+  color: '#f97316',
+  fontWeight: 900,
+  lineHeight: 1,
 };

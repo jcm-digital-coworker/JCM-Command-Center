@@ -63,9 +63,10 @@ export default function CommandNavigationBar({
 
 function getGroupShortDescription(groupId: NavigationGroupId): string {
   if (groupId === 'command') return 'status + decisions';
-  if (groupId === 'production') return 'orders + departments';
+  if (groupId === 'production') return 'orders + equipment';
+  if (groupId === 'departments') return 'dept focus + lanes';
   if (groupId === 'workflow') return 'movement + crew';
-  return 'clears problems';
+  return 'tools + references';
 }
 
 function getBarStyle(theme: 'dark' | 'light'): CSSProperties {
@@ -162,6 +163,7 @@ const groupDetailStyle: CSSProperties = {
 function getGroupColor(groupId: NavigationGroupId): string {
   if (groupId === 'command') return '#f97316';
   if (groupId === 'production') return '#3b82f6';
+  if (groupId === 'departments') return '#14b8a6';
   if (groupId === 'workflow') return '#10b981';
   return '#8b5cf6';
 }

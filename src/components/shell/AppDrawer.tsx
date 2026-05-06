@@ -7,15 +7,12 @@ import {
   getHomeTabForRole,
   getVisibleNavigationGroups,
 } from '../../logic/navigationAccess';
-import { getAllFeatureFlags, setFeatureFlag, FLAG_LABELS } from '../../logic/featureFlags';
-import type { FeatureFlag } from '../../logic/featureFlags';
 
 interface AppDrawerProps {
   open: boolean;
   tab: AppTab;
   setTab: (tab: AppTab) => void;
   roleView: RoleView;
-  setRoleView: (view: RoleView) => void;
   departmentFilter: DepartmentFilter;
   setDepartmentFilter: (filter: DepartmentFilter) => void;
   onClose: () => void;
@@ -24,21 +21,11 @@ interface AppDrawerProps {
   onToggleTheme: () => void;
 }
 
-const roleOptions: RoleView[] = [
-  'Production',
-  'Department Lead',
-  'Department Supervisor',
-  'Management',
-  'Maintenance',
-  'Support',
-];
-
 export default function AppDrawer({
   open,
   tab,
   setTab,
   roleView,
-  setRoleView,
   departmentFilter,
   setDepartmentFilter,
   onClose,
@@ -51,12 +38,6 @@ export default function AppDrawer({
   const activeGroupId = getActiveGroupId(tab, visibleGroups);
   const [openGroupId, setOpenGroupId] = useState<NavigationGroupId | null>(activeGroupId);
   const [workCentersOpen, setWorkCentersOpen] = useState(departmentFilter !== 'All');
-  const [flags, setFlags] = useState(() => getAllFeatureFlags());
-
-  function toggleFlag(flag: FeatureFlag) {
-    setFeatureFlag(flag, !flags[flag]);
-    setFlags(getAllFeatureFlags());
-  }
 
   useEffect(() => {
     if (!open) return;
@@ -95,14 +76,7 @@ export default function AppDrawer({
             <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '1px' }}>
               JCM
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                letterSpacing: '2px',
-                opacity: 0.8,
-                marginTop: 2,
-              }}
-            >
+            <div style={{ fontSize: 11, letterSpacing: '2px', opacity: 0.8, marginTop: 2 }}>
               DIGITAL CO-WORKER
             </div>
           </div>
@@ -201,74 +175,14 @@ export default function AppDrawer({
 
           <div style={settingsSectionStyle}>
             <div style={settingsHeaderStyle}>SETTINGS</div>
-
             <div style={settingItemStyle}>
-              <span
-                style={{
-                  fontSize: 13,
-                  color: '#94a3b8',
-                  fontWeight: 700,
-                  letterSpacing: '0.5px',
-                }}
-              >
+              <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 700, letterSpacing: '0.5px' }}>
                 THEME
               </span>
               <button onClick={onToggleTheme} style={themeToggleStyle}>
                 {theme === 'dark' ? 'DARK' : 'LIGHT'}
               </button>
             </div>
-          </div>
-
-          <div style={devToolsSectionStyle}>
-          <div style={devToolsHeaderStyle}>CO-WORKER VIEW</div>
-          <button
-            onClick={() => goToTab('warRoomContext')}
-            style={tab === 'warRoomContext' ? devTabActiveStyle : devTabStyle}
-          >
-            WAR ROOM CONTEXT
-          </button>
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ ...devToolsLabelStyle, marginBottom: 6 }}>FEATURE FLAGS</div>
-            {(Object.keys(FLAG_LABELS) as FeatureFlag[]).map((flag) => (
-              <div key={flag} style={flagRowStyle}>
-                <span style={flagLabelStyle}>{FLAG_LABELS[flag]}</span>
-                <button
-                  type="button"
-                  onClick={() => toggleFlag(flag)}
-                  style={flags[flag] ? flagOnStyle : flagOffStyle}
-                >
-                  {flags[flag] ? 'ON' : 'OFF'}
-                </button>
-              </div>
-            ))}
-          </div>
-          <div style={devToolsItemStyle}>
-            <span style={devToolsLabelStyle}>ROLE</span>
-            <select
-              value={roleView}
-              onChange={(e) => setRoleView(e.target.value as RoleView)}
-              style={devSelectStyle}
-            >
-              {roleOptions.map((role) => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
-          </div>
-          <div style={devToolsItemStyle}>
-            <span style={devToolsLabelStyle}>DEPT</span>
-            <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value as DepartmentFilter)}
-              style={devSelectStyle}
-            >
-              <option value="All">All</option>
-              {workCenters.map((center) => (
-                <option key={center.id} value={center.department}>
-                  {center.name}
-                </option>
-              ))}
-            </select>
-          </div>
           </div>
         </div>
 
@@ -517,103 +431,4 @@ const footerStyle: CSSProperties = {
   borderTop: '1px solid #334155',
   textAlign: 'center',
   flexShrink: 0,
-};
-
-const devToolsSectionStyle: CSSProperties = {
-  borderTop: '1px dashed #334155',
-  padding: '12px 20px',
-  flexShrink: 0,
-};
-
-const devToolsHeaderStyle: CSSProperties = {
-  fontSize: 10,
-  fontWeight: 800,
-  color: '#475569',
-  letterSpacing: '1.5px',
-  marginBottom: 10,
-};
-
-const devToolsItemStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 8,
-};
-
-const devToolsLabelStyle: CSSProperties = {
-  fontSize: 11,
-  color: '#475569',
-  fontWeight: 700,
-  letterSpacing: '0.5px',
-};
-
-const devTabStyle: CSSProperties = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left',
-  background: 'transparent',
-  border: '1px solid #334155',
-  color: '#475569',
-  padding: '7px 10px',
-  borderRadius: 4,
-  fontSize: 11,
-  fontWeight: 700,
-  cursor: 'pointer',
-  letterSpacing: '0.5px',
-  marginBottom: 8,
-};
-
-const devTabActiveStyle: CSSProperties = {
-  ...devTabStyle,
-  border: '1px solid #f97316',
-  color: '#f97316',
-  background: 'rgba(249,115,22,0.1)',
-};
-
-const devSelectStyle: CSSProperties = {
-  background: '#0f172a',
-  border: '1px solid #334155',
-  color: '#64748b',
-  padding: '4px 8px',
-  borderRadius: 4,
-  fontSize: 11,
-  fontWeight: 600,
-  cursor: 'pointer',
-  outline: 'none',
-  maxWidth: 160,
-};
-
-const flagRowStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 5,
-};
-
-const flagLabelStyle: CSSProperties = {
-  fontSize: 10,
-  color: '#475569',
-  fontWeight: 700,
-  letterSpacing: '0.3px',
-  flex: 1,
-  paddingRight: 8,
-};
-
-const flagOnStyle: CSSProperties = {
-  fontSize: 9,
-  fontWeight: 900,
-  padding: '3px 8px',
-  borderRadius: 3,
-  border: '1px solid #10b981',
-  background: 'rgba(16,185,129,0.15)',
-  color: '#10b981',
-  cursor: 'pointer',
-  letterSpacing: '0.5px',
-};
-
-const flagOffStyle: CSSProperties = {
-  ...flagOnStyle,
-  border: '1px solid #334155',
-  background: 'transparent',
-  color: '#475569',
 };
