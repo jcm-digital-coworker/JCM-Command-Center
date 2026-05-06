@@ -4,6 +4,14 @@ import type { AppTab, DepartmentFilter, RoleView } from '../../types/app';
 import type { WorkCenter } from '../../types/plant';
 import { FLAG_LABELS, getAllFeatureFlags, setFeatureFlag } from '../../logic/featureFlags';
 import type { FeatureFlag } from '../../logic/featureFlags';
+import {
+  PLANT_SIMULATION_UPDATED_EVENT,
+  advancePlantSimulationStep,
+  getPlantSimulationSnapshot,
+  resetPlantSimulation,
+  startPlantSimulation,
+  type PlantSimulationSnapshot,
+} from '../../simulation/plantSimulation';
 
 type DevToolkitFlyoutProps = {
   theme: 'dark' | 'light';
@@ -25,6 +33,7 @@ const roleOptions: RoleView[] = [
 ];
 
 const JCM_NAVIGATE_EVENT = 'jcm:navigate';
+const WORKFLOW_RUNTIME_UPDATED_EVENT = 'jcm-workflow-runtime-state-updated';
 
 export default function DevToolkitFlyout({
   theme,
@@ -37,11 +46,24 @@ export default function DevToolkitFlyout({
 }: DevToolkitFlyoutProps) {
   const [open, setOpen] = useState(false);
   const [flags, setFlags] = useState(() => getAllFeatureFlags());
+  const [simulation, setSimulation] = useState<PlantSimulationSnapshot>(() => getPlantSimulationSnapshot());
 
   useEffect(() => {
     const syncFlags = () => setFlags(getAllFeatureFlags());
     window.addEventListener('storage', syncFlags);
     return () => window.removeEventListener('storage', syncFlags);
+  }, []);
+
+  useEffect(() => {
+    const syncSimulation = () => setSimulation(getPlantSimulationSnapshot());
+    window.addEventListener(PLANT_SIMULATION_UPDATED_EVENT, syncSimulation);
+    window.addEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, syncSimulation);
+    window.addEventListener('storage', syncSimulation);
+    return () => {
+      window.removeEventListener(PLANT_SIMULATION_UPDATED_EVENT, syncSimulation);
+      window.removeEventListener(WORKFLOW_RUNTIME_UPDATED_EVENT, syncSimulation);
+      window.removeEventListener('storage', syncSimulation);
+    };
   }, []);
 
   function toggleFlag(flag: FeatureFlag) {
@@ -53,6 +75,23 @@ export default function DevToolkitFlyout({
   function goToWarRoomContext() {
     window.dispatchEvent(new CustomEvent(JCM_NAVIGATE_EVENT, { detail: { tab: 'warRoomContext' } }));
     setOpen(false);
+  }
+
+  function goToDiagnosticOrder() {
+    const orderNumber = simulation.activeOrder?.orderNumber;
+    window.dispatchEvent(new CustomEvent(JCM_NAVIGATE_EVENT, { detail: { tab: 'orders', orderNumber } }));
+  }
+
+  function runSimulationStart() {
+    setSimulation(startPlantSimulation());
+  }
+
+  function runSimulationStep() {
+    setSimulation(advancePlantSimulationStep());
+  }
+
+  function runSimulationReset() {
+    setSimulation(resetPlantSimulation());
   }
 
   return (
@@ -72,7 +111,7 @@ export default function DevToolkitFlyout({
           </div>
 
           <p style={descriptionStyle}>
-            Floating dev-only controls for feature flags, role/dept simulation, and war room context.
+            Floating dev-only controls for feature flags, role/dept simulation, live plant simulation, and war room context.
           </p>
 
           <button
@@ -82,6 +121,33 @@ export default function DevToolkitFlyout({
           >
             WAR ROOM CONTEXT
           </button>
+
+          <div style={sectionStyle(theme)}>
+            <div style={sectionLabelStyle}>PLANT SIMULATION</div>
+            <div style={simulationCardStyle(theme)}>
+              <div style={simulationTitleStyle(theme)}>{simulation.scenario?.name ?? 'No scenario available'}</div>
+              <p style={simulationTextStyle(theme)}>{simulation.scenario?.description ?? 'Add production orders before running simulation.'}</p>
+              <div style={simulationMetaGridStyle}>
+                <Metric label="Order" value={simulation.activeOrder?.orderNumber ?? 'None'} theme={theme} />
+                <Metric label="Step" value={`${simulation.completedSteps}/${simulation.totalSteps}`} theme={theme} />
+                <Metric label="Dept" value={simulation.activeOrder?.currentDepartment ?? 'N/A'} theme={theme} />
+                <Metric label="State" value={simulation.activeOrder?.status ?? 'N/A'} theme={theme} />
+              </div>
+              <div style={simulationStepStyle(theme)}>
+                <span style={fieldLabelStyle(theme)}>NEXT EVENT</span>
+                <strong>{simulation.nextStep?.title ?? 'Scenario complete'}</strong>
+                <small>{simulation.nextStep?.description ?? simulation.session?.lastStepTitle ?? 'Reset to run it again.'}</small>
+              </div>
+              <div style={buttonGridStyle}>
+                <button type="button" onClick={runSimulationStart} style={devTabStyle(theme)} disabled={!simulation.scenario}>START</button>
+                <button type="button" onClick={runSimulationStep} style={devTabStyle(theme)} disabled={!simulation.scenario}>STEP</button>
+                <button type="button" onClick={runSimulationReset} style={dangerButtonStyle(theme)}>RESET</button>
+              </div>
+              <button type="button" onClick={goToDiagnosticOrder} style={devTabStyle(theme)} disabled={!simulation.activeOrder}>
+                OPEN DIAGNOSTIC ORDER
+              </button>
+            </div>
+          </div>
 
           <div style={sectionStyle(theme)}>
             <div style={sectionLabelStyle}>FEATURE FLAGS</div>
@@ -133,10 +199,19 @@ export default function DevToolkitFlyout({
           </div>
 
           <div style={hintStyle(theme)}>
-            Flags are stored locally in this browser. Role and department controls simulate views for development.
+            Simulation writes local runtime overrides only. Use Start/Step, then open the diagnostic order or relevant department screen to inspect changes. Reset clears local simulation state.
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+function Metric({ label, value, theme }: { label: string; value: string | number; theme: 'dark' | 'light' }) {
+  return (
+    <div>
+      <span style={fieldLabelStyle(theme)}>{label}</span>
+      <strong style={metricValueStyle(theme)}>{value}</strong>
     </div>
   );
 }
@@ -314,6 +389,15 @@ function devTabActiveStyle(theme: 'dark' | 'light'): CSSProperties {
   };
 }
 
+function dangerButtonStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    ...devTabStyle(theme),
+    border: '1px solid #ef4444',
+    color: '#ef4444',
+    background: 'rgba(239,68,68,0.1)',
+  };
+}
+
 const fieldStyle: CSSProperties = {
   display: 'grid',
   gap: 5,
@@ -322,10 +406,12 @@ const fieldStyle: CSSProperties = {
 
 function fieldLabelStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
+    display: 'block',
     color: theme === 'dark' ? '#64748b' : '#64748b',
     fontSize: 10,
     fontWeight: 900,
     letterSpacing: '0.8px',
+    marginBottom: 4,
   };
 }
 
@@ -354,3 +440,66 @@ function hintStyle(theme: 'dark' | 'light'): CSSProperties {
     lineHeight: 1.35,
   };
 }
+
+function simulationCardStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'grid',
+    gap: 10,
+    padding: 10,
+    borderRadius: 8,
+    background: theme === 'dark' ? '#020617' : '#f8fafc',
+    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+  };
+}
+
+function simulationTitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+    fontSize: 13,
+    fontWeight: 900,
+  };
+}
+
+function simulationTextStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    margin: 0,
+    color: theme === 'dark' ? '#94a3b8' : '#64748b',
+    fontSize: 11,
+    lineHeight: 1.4,
+  };
+}
+
+const simulationMetaGridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: 8,
+};
+
+function metricValueStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'block',
+    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+    fontSize: 12,
+    fontWeight: 900,
+    lineHeight: 1.2,
+  };
+}
+
+function simulationStepStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'grid',
+    gap: 2,
+    padding: 9,
+    borderRadius: 7,
+    background: theme === 'dark' ? '#1e293b' : '#ffffff',
+    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    color: theme === 'dark' ? '#cbd5e1' : '#334155',
+    fontSize: 11,
+  };
+}
+
+const buttonGridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 1fr',
+  gap: 8,
+};
