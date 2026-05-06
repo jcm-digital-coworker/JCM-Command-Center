@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { ProductionOrder } from '../../types/productionOrder';
+import { getOperatorSafeStatusLabel } from '../../logic/orderStatusTruth';
 
 type OrderDetailModalProps = {
   order: ProductionOrder;
@@ -26,12 +27,12 @@ export default function OrderDetailModal({ order, theme, onClose, onOpenOrders }
 
         <div style={infoGridStyle}>
           <Info label="Priority" value={formatPriority(order.priority)} theme={theme} />
-          <Info label="Flow" value={formatStatus(order.flowStatus)} theme={theme} />
-          <Info label="Status" value={formatStatus(order.status)} theme={theme} />
+          <Info label="Flow" value={getOperatorSafeStatusLabel(order.flowStatus)} theme={theme} />
+          <Info label="Status" value={getOperatorSafeStatusLabel(order.status)} theme={theme} />
           <Info label="Current" value={order.currentDepartment} theme={theme} />
           <Info label="Next" value={order.nextDepartment ?? 'Not assigned'} theme={theme} />
-          <Info label="Material" value={formatStatus(order.materialStatus ?? 'UNKNOWN')} theme={theme} />
-          <Info label="QA" value={formatStatus(order.qaStatus ?? 'UNKNOWN')} theme={theme} />
+          <Info label="Material" value={getOperatorSafeStatusLabel(order.materialStatus)} theme={theme} />
+          <Info label="QA" value={getOperatorSafeStatusLabel(order.qaStatus)} theme={theme} />
           <Info label="Ship Date" value={order.projectedShipDate ?? 'TBD'} theme={theme} />
           <Info label="Qty" value={String(order.quantity ?? 'TBD')} theme={theme} />
           <Info label="Part" value={order.assemblyPartNumber ?? order.partNumber ?? 'Not assigned'} theme={theme} />
@@ -42,7 +43,7 @@ export default function OrderDetailModal({ order, theme, onClose, onOpenOrders }
             <div style={smallLabelStyle(theme)}>Blockers</div>
             {blockers.map((blocker, index) => (
               <div key={`${blocker.type}-${index}`} style={blockerStyle(theme)}>
-                {formatStatus(blocker.type)}: {blocker.message}
+                {getOperatorSafeStatusLabel(blocker.type)}: {blocker.message}
               </div>
             ))}
           </div>
@@ -85,10 +86,6 @@ function formatPriority(priority: ProductionOrder['priority']) {
   if (priority === 'critical' || priority === 'CRITICAL') return 'Critical';
   if (priority === 'hot' || priority === 'HOT') return 'Hot';
   return 'Normal';
-}
-
-function formatStatus(value: string) {
-  return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 const modalOverlayStyle: CSSProperties = {
