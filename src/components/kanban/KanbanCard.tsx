@@ -3,7 +3,7 @@ import type { ProductionOrder } from '../../types/productionOrder';
 import type { PlantTravelerStatus } from '../../types/dynamicTraveler';
 import { getUrgencyScore, getUrgencyColor } from '../../logic/urgencyScore';
 import { isFeatureEnabled } from '../../logic/featureFlags';
-import { isBlockedProductionOrder, isRunnableProductionOrder } from '../../logic/orderStatusTruth';
+import { getOperatorSafeStatusLabel, isBlockedProductionOrder, isRunnableProductionOrder } from '../../logic/orderStatusTruth';
 
 type Props = {
   order: ProductionOrder;
@@ -51,7 +51,7 @@ export default function KanbanCard({
       <div style={cardTopStyle}>
         <span style={orderNumStyle(theme)}>#{order.orderNumber}</span>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          {travelerStatus && <span style={statusBadgeStyle(travelerStatus)}>{travelerStatus}</span>}
+          {travelerStatus && <span style={statusBadgeStyle(travelerStatus)}>{getOperatorSafeStatusLabel(travelerStatus)}</span>}
           {score !== null && (
             <span style={scoreBadge(scoreColor)}>{score}</span>
           )}
