@@ -94,6 +94,9 @@ export default function DevToolkitFlyout({
     setSimulation(resetPlantSimulation());
   }
 
+  const lastEvent = simulation.lastEvent;
+  const timeline = simulation.eventLog.slice(0, 5);
+
   return (
     <div style={containerStyle}>
       <button type="button" onClick={() => setOpen((value) => !value)} style={buttonStyle(open)}>
@@ -146,6 +149,52 @@ export default function DevToolkitFlyout({
               <button type="button" onClick={goToDiagnosticOrder} style={devTabStyle(theme)} disabled={!simulation.activeOrder}>
                 OPEN DIAGNOSTIC ORDER
               </button>
+
+              <div style={recorderStyle(theme)}>
+                <div style={fieldLabelStyle(theme)}>LAST EVENT DIFF</div>
+                {lastEvent ? (
+                  <>
+                    <strong style={simulationTitleStyle(theme)}>{lastEvent.title}</strong>
+                    <div style={simulationTextStyle(theme)}>{lastEvent.note}</div>
+                    {lastEvent.changes.length > 0 ? (
+                      <div style={diffListStyle}>
+                        {lastEvent.changes.slice(0, 8).map((change) => (
+                          <div key={change.field} style={diffRowStyle(theme)}>
+                            <span>{String(change.field)}</span>
+                            <code>{String(change.before)}</code>
+                            <span>to</span>
+                            <code>{String(change.after)}</code>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={simulationTextStyle(theme)}>No tracked fields changed.</div>
+                    )}
+                    {lastEvent.expectedEffects.length > 0 ? (
+                      <div style={expectedListStyle(theme)}>
+                        <span style={fieldLabelStyle(theme)}>EXPECTED CHECKS</span>
+                        {lastEvent.expectedEffects.slice(0, 4).map((effect) => (
+                          <div key={effect} style={expectedItemStyle(theme)}>{effect}</div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div style={simulationTextStyle(theme)}>Start the scenario to record before/after changes.</div>
+                )}
+              </div>
+
+              {timeline.length > 0 ? (
+                <div style={timelineStyle(theme)}>
+                  <span style={fieldLabelStyle(theme)}>EVENT TIMELINE</span>
+                  {timeline.map((event) => (
+                    <div key={event.id} style={timelineItemStyle(theme)}>
+                      <strong>{event.stepIndex}. {event.title}</strong>
+                      <small>{event.changes.length} tracked change{event.changes.length === 1 ? '' : 's'} | {event.after.status} | {event.after.currentDepartment}</small>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -199,7 +248,7 @@ export default function DevToolkitFlyout({
           </div>
 
           <div style={hintStyle(theme)}>
-            Simulation writes local runtime overrides only. Use Start/Step, then open the diagnostic order or relevant department screen to inspect changes. Reset clears local simulation state.
+            Simulation writes local runtime overrides only. Use Start/Step, then compare the event diff against dashboard, traveler, workflow, and order-detail screens.
           </div>
         </section>
       )}
@@ -244,7 +293,7 @@ function panelStyle(theme: 'dark' | 'light'): CSSProperties {
     position: 'absolute',
     right: 0,
     bottom: 58,
-    width: 330,
+    width: 360,
     maxWidth: 'calc(100vw - 28px)',
     maxHeight: 'calc(100vh - 90px)',
     overflowY: 'auto',
@@ -503,3 +552,68 @@ const buttonGridStyle: CSSProperties = {
   gridTemplateColumns: '1fr 1fr 1fr',
   gap: 8,
 };
+
+const diffListStyle: CSSProperties = {
+  display: 'grid',
+  gap: 5,
+};
+
+function recorderStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'grid',
+    gap: 8,
+    padding: 9,
+    borderRadius: 7,
+    background: theme === 'dark' ? 'rgba(15,23,42,0.95)' : '#ffffff',
+    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+  };
+}
+
+function diffRowStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr auto 1fr',
+    gap: 5,
+    alignItems: 'center',
+    color: theme === 'dark' ? '#cbd5e1' : '#334155',
+    fontSize: 10,
+  };
+}
+
+function expectedListStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'grid',
+    gap: 5,
+    paddingTop: 7,
+    borderTop: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+  };
+}
+
+function expectedItemStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    color: theme === 'dark' ? '#94a3b8' : '#64748b',
+    fontSize: 10,
+    lineHeight: 1.35,
+  };
+}
+
+function timelineStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'grid',
+    gap: 6,
+    padding: 9,
+    borderRadius: 7,
+    background: theme === 'dark' ? '#1e293b' : '#ffffff',
+    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+  };
+}
+
+function timelineItemStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    display: 'grid',
+    gap: 2,
+    color: theme === 'dark' ? '#cbd5e1' : '#334155',
+    fontSize: 10,
+    lineHeight: 1.25,
+  };
+}
