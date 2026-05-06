@@ -424,6 +424,32 @@ export function CardGrid({ children }: { children: ReactNode }) {
   return <div style={gridStyle}>{children}</div>;
 }
 
+export type KpiDef = { label: string; value: number | string; color?: string };
+
+export function KpiStrip({ items, theme = 'dark' }: { items: KpiDef[]; theme?: 'dark' | 'light' }) {
+  return (
+    <div style={kpiStripStyle}>
+      {items.map((item) => (
+        <div key={item.label} style={kpiItemStyle(theme)}>
+          <div style={kpiValueStyle(item.color ?? (theme === 'dark' ? '#e2e8f0' : '#0f172a'))}>{item.value}</div>
+          <div style={kpiLabelStyle}>{item.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function getHandoffReadyOrders(orders: ProductionOrder[]): ProductionOrder[] {
+  return orders.filter((o) => {
+    const s = String(o.status).toLowerCase();
+    return (s === 'done' || s === 'complete' || s === 'completed') && !!o.nextDepartment;
+  });
+}
+
+export function getUpstreamWaitingOrders(orders: ProductionOrder[], reasons: string[]): ProductionOrder[] {
+  return orders.filter((o) => reasons.includes(o.blockedReason ?? ''));
+}
+
 function shellStyle(): CSSProperties {
   return { display: 'flex', flexDirection: 'column', gap: 18 };
 }
@@ -778,6 +804,18 @@ const overdueChipStyle: CSSProperties = {
   border: '1px solid #ef4444', color: '#ef4444', background: 'rgba(239,68,68,0.12)',
   padding: '4px 8px', borderRadius: 4, fontSize: 11, fontWeight: 900,
 };
+
+const kpiStripStyle: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' };
+
+function kpiItemStyle(theme: 'dark' | 'light'): CSSProperties {
+  return { background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0', borderRadius: 6, padding: '8px 14px', minWidth: 72, textAlign: 'center' };
+}
+
+function kpiValueStyle(color: string): CSSProperties {
+  return { fontSize: 24, fontWeight: 900, color, lineHeight: 1 };
+}
+
+const kpiLabelStyle: CSSProperties = { fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 4 };
 
 function incomingBannerStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
