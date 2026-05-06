@@ -21,6 +21,7 @@ export type RuntimeOrderOverride = Partial<Pick<
   | 'status'
   | 'flowStatus'
   | 'blockers'
+  | 'blockedReason'
   | 'currentDepartment'
   | 'nextDepartment'
   | 'deptSubStage'
