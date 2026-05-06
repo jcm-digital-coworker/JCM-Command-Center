@@ -300,8 +300,8 @@ function WorkflowCard({ card, theme, onAction }: { card: any; theme: 'dark' | 'l
       {signal.watchers.length > 0 ? <SignalList title="Watchers" items={signal.watchers} theme={theme} /> : null}
 
       <div style={wrapRowStyle}>
-        <button type="button" style={buttonStyle(card.urgency.color)} onClick={() => onAction(card.buttons.primaryAction, card.buttons.primary, order.orderNumber)}>{safeButtonLabel(card.buttons.primary)}</button>
-        <button type="button" style={buttonStyle('#64748b')} onClick={() => onAction(card.buttons.secondaryAction, card.buttons.secondary, order.orderNumber)}>{safeButtonLabel(card.buttons.secondary)}</button>
+        <button type="button" style={buttonStyle(card.urgency.color)} onClick={() => onAction(card.buttons.primaryAction, card.buttons.primary, order.orderNumber)}>{card.buttons.primary}</button>
+        <button type="button" style={buttonStyle('#64748b')} onClick={() => onAction(card.buttons.secondaryAction, card.buttons.secondary, order.orderNumber)}>{card.buttons.secondary}</button>
       </div>
     </article>
   );
@@ -440,11 +440,6 @@ function act(actionId: WorkflowButtonAction, label: string, orderNumber: string,
   }
 }
 
-function safeButtonLabel(label: string): string {
-  if (label.includes('Resolve Blocker')) return 'Review blocker';
-  if (label.includes('Blocker')) return label.replace('Blocker', 'blocker');
-  return label;
-}
 
 function loadCoverage(): CoveragePerson[] {
   try {
