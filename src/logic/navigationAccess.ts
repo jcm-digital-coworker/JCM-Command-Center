@@ -74,6 +74,7 @@ export const navigationGroups: NavigationGroup[] = [
       { id: 'coating', label: 'Coating', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Coating department view.' },
       { id: 'assembly', label: 'Assembly', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Assembly department view.' },
       { id: 'saddles', label: 'Saddles', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Saddles cell - LV4500 service saddle production.' },
+      { id: 'machineShop', label: 'Machine Shop', roles: [...plantLeadershipRoles, ...productionRoles], description: 'CNC turning and machining — coupling bores, adapter flanges, engineered specs.' },
       { id: 'qa', label: 'QA', roles: [...plantLeadershipRoles, ...supportRoles], description: 'QA department focus.' },
       { id: 'shipping', label: 'Shipping', roles: [...plantLeadershipRoles, ...productionRoles, ...supportRoles], description: 'Outbound readiness and shipping focus.' },
     ],

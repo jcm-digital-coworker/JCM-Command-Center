@@ -31,6 +31,8 @@ const DEPT_TILES: DeptTileConfig[] = [
   { label: 'Shipping', dept: 'Shipping', tab: 'shipping', color: '#10b981' },
   { label: 'QA', dept: 'QA', tab: 'qa', color: '#f59e0b' },
   { label: 'Saddles', dept: 'Saddles Dept', tab: 'saddles', color: '#fb7185' },
+  { label: 'Machine Shop', dept: 'Machine Shop', tab: 'machineShop', color: '#fbbf24' },
+  { label: 'Mat. Handling', dept: 'Material Handling', tab: 'materialHandling', color: '#f97316' },
   { label: 'Engineering', dept: 'Engineering', tab: 'engineering', color: '#818cf8' },
   { label: 'Receiving', dept: 'Receiving', tab: 'receiving', color: '#34d399' },
 ];
