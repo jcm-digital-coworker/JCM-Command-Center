@@ -15,6 +15,8 @@ export type RuntimeOrderOverride = Partial<Pick<
   ProductionOrder,
   | 'materialStatus'
   | 'engineeringStatus'
+  | 'qaStatus'
+  | 'salesReleasedAt'
   | 'productionSupervisorAcknowledged'
   | 'status'
   | 'flowStatus'

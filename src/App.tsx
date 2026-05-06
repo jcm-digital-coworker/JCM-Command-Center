@@ -43,6 +43,7 @@ import QADepartmentPage from './pages/departments/QADepartmentPage';
 import SalesDepartmentPage from './pages/departments/SalesDepartmentPage';
 import EngineeringDepartmentPage from './pages/departments/EngineeringDepartmentPage';
 import SaddlesDepartmentPage from './pages/departments/SaddlesDepartmentPage';
+import MachineShopDepartmentPage from './pages/departments/MachineShopDepartmentPage';
 import ShiftHandoffPage from './pages/ShiftHandoffPage';
 import KanbanPage from './pages/KanbanPage';
 import WarRoomContextPage from './pages/WarRoomContextPage';
@@ -475,6 +476,7 @@ export default function App() {
     if (tab === 'sales') return <SalesDepartmentPage theme={theme} onGoToTab={navigateTo} />;
     if (tab === 'engineering') return <EngineeringDepartmentPage theme={theme} onGoToTab={navigateTo} />;
     if (tab === 'saddles') return <SaddlesDepartmentPage theme={theme} onGoToTab={navigateTo} />;
+    if (tab === 'machineShop') return <MachineShopDepartmentPage theme={theme} onGoToTab={navigateTo} />;
     if (tab === 'materialHandling') return <MaterialHandlingDepartmentPage theme={theme} onGoToTab={navigateTo} />;
     if (tab === 'fab') return <FabDepartmentPage theme={theme} onGoToTab={navigateTo} />;
     if (tab === 'coating') return <CoatingDepartmentPage theme={theme} onGoToTab={navigateTo} />;
@@ -540,6 +542,7 @@ function getCommandLabel(tab: AppTab): string {
     documents: 'Documents',
     risk: 'QA / Safety',
     saddles: 'Saddles Dept',
+    machineShop: 'Machine Shop',
     shiftHandoff: 'Shift Handoff',
     kanban: 'War Board',
     warRoomContext: 'War Room Context',

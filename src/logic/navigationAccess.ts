@@ -74,6 +74,7 @@ export const navigationGroups: NavigationGroup[] = [
       { id: 'coating', label: 'Coating', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Coating department view.' },
       { id: 'assembly', label: 'Assembly', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Assembly department view.' },
       { id: 'saddles', label: 'Saddles', roles: [...plantLeadershipRoles, ...productionRoles], description: 'Saddles cell - LV4500 service saddle production.' },
+      { id: 'machineShop', label: 'Machine Shop', roles: [...plantLeadershipRoles, ...productionRoles], description: 'CNC turning and machining — coupling bores, adapter flanges, engineered specs.' },
       { id: 'qa', label: 'QA', roles: [...plantLeadershipRoles, ...supportRoles], description: 'QA department focus.' },
       { id: 'shipping', label: 'Shipping', roles: [...plantLeadershipRoles, ...productionRoles, ...supportRoles], description: 'Outbound readiness and shipping focus.' },
     ],
@@ -86,6 +87,7 @@ export const navigationGroups: NavigationGroup[] = [
       { id: 'workflow', label: 'My Workflow', roles: 'all', description: 'Role-specific work queue and current priorities.' },
       { id: 'coverage', label: 'Crew / Coverage', roles: [...plantLeadershipRoles, ...productionRoles, ...supportRoles], description: 'Crew availability and coverage gaps.' },
       { id: 'shiftHandoff', label: 'Shift Handoff', roles: [...plantLeadershipRoles], description: 'End-of-shift snapshot: crew, orders, maintenance. Copy as text for incoming lead.' },
+      { id: 'kanban', label: 'War Board', roles: [...plantLeadershipRoles], description: 'Plant-wide kanban: all orders across departments in one view. Sorted by urgency.' },
     ],
   },
   {
