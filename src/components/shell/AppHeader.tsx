@@ -1,4 +1,6 @@
 import type { CSSProperties } from 'react';
+import type { Language } from '../../i18n/language';
+import { t } from '../../i18n/translations';
 
 const JCM_NAVIGATE_EVENT = 'jcm:navigate';
 
@@ -8,6 +10,7 @@ interface AppHeaderProps {
   onHomeClick?: () => void;
   showBack?: boolean;
   theme?: 'dark' | 'light';
+  lang?: Language;
 }
 
 export default function AppHeader({
@@ -16,16 +19,17 @@ export default function AppHeader({
   onHomeClick,
   showBack,
   theme = 'dark',
+  lang = 'en',
 }: AppHeaderProps) {
   return (
     <div style={getHeaderStyle(theme)}>
       <div style={headerSideStyle}>
         <button onClick={onMenuClick} style={getMenuButtonStyle(theme)}>
-          MENU
+          {t('menu', lang).toUpperCase()}
         </button>
         {showBack && onBackClick ? (
           <button onClick={onBackClick} style={getBackButtonStyle(theme)}>
-            BACK
+            {t('back', lang).toUpperCase()}
           </button>
         ) : null}
       </div>
@@ -40,7 +44,7 @@ export default function AppHeader({
           onClick={onHomeClick ?? dispatchCommandHome}
           style={getHomeButtonStyle(theme)}
         >
-          HOME
+          {t('home', lang).toUpperCase()}
         </button>
       </div>
     </div>

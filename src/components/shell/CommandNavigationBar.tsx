@@ -2,6 +2,8 @@ import type { CSSProperties } from 'react';
 import type { AppTab, RoleView } from '../../types/app';
 import type { NavigationGroupId } from '../../logic/navigationAccess';
 import { getVisibleNavigationGroups } from '../../logic/navigationAccess';
+import type { Language } from '../../i18n/language';
+import { t, navGroupLabel, navGroupDesc } from '../../i18n/translations';
 
 type CommandNavigationBarProps = {
   tab: AppTab;
@@ -10,6 +12,7 @@ type CommandNavigationBarProps = {
   alertCount: number;
   theme: 'dark' | 'light';
   onNavigate: (tab: AppTab) => void;
+  lang?: Language;
 };
 
 export default function CommandNavigationBar({
@@ -19,13 +22,14 @@ export default function CommandNavigationBar({
   alertCount,
   theme,
   onNavigate,
+  lang = 'en',
 }: CommandNavigationBarProps) {
   const groups = getVisibleNavigationGroups(roleView);
 
   return (
     <section style={getBarStyle(theme)}>
       <div style={statusHeaderStyle}>
-        <span style={statusLabelStyle}>Command Navigation</span>
+        <span style={statusLabelStyle}>{t('commandNavigation', lang)}</span>
         <strong style={getCurrentLabelStyle(theme)}>{currentLabel}</strong>
       </div>
 
@@ -42,8 +46,8 @@ export default function CommandNavigationBar({
                 style={getGroupButtonStyle(active, theme, group.id)}
                 title={group.description}
               >
-                <span style={groupLabelStyle}>{group.label}</span>
-                <span style={groupDetailStyle}>{getGroupShortDescription(group.id)}</span>
+                <span style={groupLabelStyle}>{navGroupLabel(group.id, lang).toUpperCase()}</span>
+                <span style={groupDetailStyle}>{navGroupDesc(group.id, lang)}</span>
               </button>
             );
           })}
@@ -54,19 +58,11 @@ export default function CommandNavigationBar({
           onClick={() => onNavigate('alerts')}
           style={getAlertsButtonStyle(alertCount, theme)}
         >
-          {alertCount} {alertCount === 1 ? 'Alert' : 'Alerts'}
+          {alertCount} {alertCount === 1 ? t('alert', lang) : t('alerts', lang)}
         </button>
       </div>
     </section>
   );
-}
-
-function getGroupShortDescription(groupId: NavigationGroupId): string {
-  if (groupId === 'command') return 'status + decisions';
-  if (groupId === 'production') return 'orders + equipment';
-  if (groupId === 'departments') return 'dept focus + lanes';
-  if (groupId === 'workflow') return 'movement + crew';
-  return 'tools + references';
 }
 
 function getBarStyle(theme: 'dark' | 'light'): CSSProperties {

@@ -19,6 +19,9 @@ import AppDrawer from './components/shell/AppDrawer';
 import CommandNavigationBar from './components/shell/CommandNavigationBar';
 import DevToolkitFlyout from './components/shell/DevToolkitFlyout';
 import { getHomeTabForRole } from './logic/navigationAccess';
+import type { Language } from './i18n/language';
+import { getStoredLanguage, setStoredLanguage } from './i18n/language';
+import { tabLabel } from './i18n/translations';
 
 import WorkflowPage from './pages/WorkflowMobilePage';
 import DashboardPage from './pages/DashboardPage';
@@ -116,6 +119,8 @@ export default function App() {
     return (saved as 'dark' | 'light') || 'dark';
   });
 
+  const [language, setLanguage] = useState<Language>(getStoredLanguage);
+
   const currentTheme: ThemeColors = theme === 'dark' ? darkTheme : lightTheme;
 
   useEffect(() => {
@@ -141,6 +146,12 @@ export default function App() {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     localStorage.setItem('jcm_theme', newTheme);
+  }
+
+  function toggleLanguage() {
+    const next: Language = language === 'en' ? 'es' : 'en';
+    setStoredLanguage(next);
+    setLanguage(next);
   }
 
   function navigateTo(nextTab: AppTab) {
@@ -398,6 +409,8 @@ export default function App() {
         workCenters={workCenters}
         theme={theme}
         onToggleTheme={toggleTheme}
+        lang={language}
+        onToggleLang={toggleLanguage}
       />
 
       <AppHeader
@@ -406,15 +419,17 @@ export default function App() {
         onHomeClick={goHome}
         showBack={tabHistory.length > 0}
         theme={theme}
+        lang={language}
       />
 
       <CommandNavigationBar
         tab={tab}
         roleView={roleView}
-        currentLabel={getCommandLabel(tab)}
+        currentLabel={tabLabel(tab, language)}
         alertCount={filteredAlerts.length}
         theme={theme}
         onNavigate={navigateTo}
+        lang={language}
       />
 
       <DevToolkitFlyout
@@ -519,36 +534,6 @@ export default function App() {
   }
 }
 
-function getCommandLabel(tab: AppTab): string {
-  const labels: Record<AppTab, string> = {
-    workflow: 'My Workflow',
-    dashboard: 'Command Center',
-    machines: 'Equipment',
-    alerts: 'Equipment Alerts',
-    simulation: 'Simulation',
-    maintenance: 'Maintenance',
-    receiving: 'Receiving',
-    coverage: 'Crew / Coverage',
-    orders: 'Orders',
-    plantMap: 'Plant Map',
-    sales: 'Sales',
-    engineering: 'Engineering',
-    materialHandling: 'Material Handling',
-    fab: 'Fab',
-    coating: 'Coating',
-    assembly: 'Assembly',
-    shipping: 'Shipping',
-    qa: 'QA',
-    documents: 'Documents',
-    risk: 'QA / Safety',
-    saddles: 'Saddles Dept',
-    machineShop: 'Machine Shop',
-    shiftHandoff: 'Shift Handoff',
-    kanban: 'War Board',
-    warRoomContext: 'War Room Context',
-  };
-  return labels[tab];
-}
 
 function getSimulatorHeaderStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
