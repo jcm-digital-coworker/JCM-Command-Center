@@ -4,6 +4,7 @@ import type { AppTab, DepartmentFilter, RoleView } from '../../types/app';
 import type { WorkCenter } from '../../types/plant';
 import { FLAG_LABELS, getAllFeatureFlags, setFeatureFlag } from '../../logic/featureFlags';
 import type { FeatureFlag } from '../../logic/featureFlags';
+import { getThemeColors } from '../../theme/theme';
 import {
   PLANT_SIMULATION_UPDATED_EVENT,
   advancePlantSimulationStep,
@@ -99,7 +100,7 @@ export default function DevToolkitFlyout({
 
   return (
     <div style={containerStyle}>
-      <button type="button" onClick={() => setOpen((value) => !value)} style={buttonStyle(open)}>
+      <button type="button" onClick={() => setOpen((value) => !value)} style={buttonStyle(open, theme)}>
         DEV
       </button>
 
@@ -107,13 +108,13 @@ export default function DevToolkitFlyout({
         <section style={panelStyle(theme)}>
           <div style={panelHeaderStyle}>
             <div>
-              <div style={eyebrowStyle}>DEV TOOLKIT</div>
+              <div style={eyebrowStyle(theme)}>DEV TOOLKIT</div>
               <h3 style={titleStyle(theme)}>Experimental controls</h3>
             </div>
             <button type="button" onClick={() => setOpen(false)} style={closeStyle(theme)}>X</button>
           </div>
 
-          <p style={descriptionStyle}>
+          <p style={descriptionStyle(theme)}>
             Floating dev-only controls for feature flags, role/dept simulation, live plant simulation, and war room context.
           </p>
 
@@ -126,7 +127,7 @@ export default function DevToolkitFlyout({
           </button>
 
           <div style={sectionStyle(theme)}>
-            <div style={sectionLabelStyle}>PLANT SIMULATION</div>
+            <div style={sectionLabelStyle(theme)}>PLANT SIMULATION</div>
             <div style={simulationCardStyle(theme)}>
               <div style={simulationTitleStyle(theme)}>{simulation.scenario?.name ?? 'No scenario available'}</div>
               <p style={simulationTextStyle(theme)}>{simulation.scenario?.description ?? 'Add production orders before running simulation.'}</p>
@@ -199,7 +200,7 @@ export default function DevToolkitFlyout({
           </div>
 
           <div style={sectionStyle(theme)}>
-            <div style={sectionLabelStyle}>FEATURE FLAGS</div>
+            <div style={sectionLabelStyle(theme)}>FEATURE FLAGS</div>
             <div style={flagStackStyle}>
               {(Object.keys(FLAG_LABELS) as FeatureFlag[]).map((flag) => (
                 <div key={flag} style={flagRowStyle(theme)}>
@@ -207,7 +208,7 @@ export default function DevToolkitFlyout({
                   <button
                     type="button"
                     onClick={() => toggleFlag(flag)}
-                    style={flags[flag] ? flagOnStyle : flagOffStyle(theme)}
+                    style={flags[flag] ? flagOnStyle(theme) : flagOffStyle(theme)}
                   >
                     {flags[flag] ? 'ON' : 'OFF'}
                   </button>
@@ -217,7 +218,7 @@ export default function DevToolkitFlyout({
           </div>
 
           <div style={sectionStyle(theme)}>
-            <div style={sectionLabelStyle}>VIEW SIMULATION</div>
+            <div style={sectionLabelStyle(theme)}>VIEW SIMULATION</div>
             <label style={fieldStyle}>
               <span style={fieldLabelStyle(theme)}>ROLE</span>
               <select
@@ -272,14 +273,15 @@ const containerStyle: CSSProperties = {
   zIndex: 1200,
 };
 
-function buttonStyle(open: boolean): CSSProperties {
+function buttonStyle(open: boolean, theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     width: 48,
     height: 48,
     borderRadius: 999,
-    border: open ? '1px solid #f97316' : '1px solid rgba(249, 115, 22, 0.65)',
-    background: open ? '#f97316' : 'rgba(15, 23, 42, 0.92)',
-    color: open ? '#ffffff' : '#f97316',
+    border: `1px solid ${colors.accent}`,
+    background: open ? colors.accent : colors.panel,
+    color: open ? colors.textInverted : colors.accent,
     fontSize: 11,
     fontWeight: 900,
     letterSpacing: '0.8px',
@@ -289,6 +291,7 @@ function buttonStyle(open: boolean): CSSProperties {
 }
 
 function panelStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     position: 'absolute',
     right: 0,
@@ -299,8 +302,8 @@ function panelStyle(theme: 'dark' | 'light'): CSSProperties {
     overflowY: 'auto',
     padding: 14,
     borderRadius: 10,
-    background: theme === 'dark' ? '#0f172a' : '#ffffff',
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    background: colors.panel,
+    border: `1px solid ${colors.border}`,
     boxShadow: '0 18px 40px rgba(0,0,0,0.38)',
   };
 }
@@ -312,27 +315,32 @@ const panelHeaderStyle: CSSProperties = {
   alignItems: 'flex-start',
 };
 
-const eyebrowStyle: CSSProperties = {
-  color: '#f97316',
-  fontSize: 10,
-  fontWeight: 900,
-  letterSpacing: '1.1px',
-};
+function eyebrowStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    color: colors.accent,
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: '1.1px',
+  };
+}
 
 function titleStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     margin: '3px 0 0',
-    color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+    color: colors.text,
     fontSize: 15,
     fontWeight: 900,
   };
 }
 
 function closeStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1',
-    background: theme === 'dark' ? '#1e293b' : '#f8fafc',
-    color: theme === 'dark' ? '#cbd5e1' : '#475569',
+    border: `1px solid ${colors.border}`,
+    background: colors.button,
+    color: colors.textSecondary,
     borderRadius: 5,
     padding: '5px 8px',
     cursor: 'pointer',
@@ -341,28 +349,35 @@ function closeStyle(theme: 'dark' | 'light'): CSSProperties {
   };
 }
 
-const descriptionStyle: CSSProperties = {
-  margin: '10px 0 12px',
-  color: '#64748b',
-  fontSize: 12,
-  lineHeight: 1.45,
-};
-
-function sectionStyle(theme: 'dark' | 'light'): CSSProperties {
+function descriptionStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTop: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    margin: '10px 0 12px',
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 1.45,
   };
 }
 
-const sectionLabelStyle: CSSProperties = {
-  color: '#f97316',
-  fontSize: 10,
-  fontWeight: 900,
-  letterSpacing: '1px',
-  marginBottom: 8,
-};
+function sectionStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTop: `1px solid ${colors.border}`,
+  };
+}
+
+function sectionLabelStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    color: colors.accent,
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: '1px',
+    marginBottom: 8,
+  };
+}
 
 const flagStackStyle: CSSProperties = {
   display: 'grid',
@@ -370,6 +385,7 @@ const flagStackStyle: CSSProperties = {
 };
 
 function flagRowStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'flex',
     justifyContent: 'space-between',
@@ -377,49 +393,55 @@ function flagRowStyle(theme: 'dark' | 'light'): CSSProperties {
     gap: 12,
     padding: '9px 10px',
     borderRadius: 7,
-    background: theme === 'dark' ? '#1e293b' : '#f8fafc',
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    background: colors.button,
+    border: `1px solid ${colors.border}`,
   };
 }
 
 function flagLabelStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
-    color: theme === 'dark' ? '#cbd5e1' : '#334155',
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: 800,
     lineHeight: 1.25,
   };
 }
 
-const flagOnStyle: CSSProperties = {
-  minWidth: 48,
-  padding: '5px 9px',
-  borderRadius: 5,
-  border: '1px solid #10b981',
-  background: 'rgba(16,185,129,0.15)',
-  color: '#10b981',
-  cursor: 'pointer',
-  fontSize: 10,
-  fontWeight: 900,
-  letterSpacing: '0.5px',
-};
+function flagOnStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    minWidth: 48,
+    padding: '5px 9px',
+    borderRadius: 5,
+    border: `1px solid ${colors.success}`,
+    background: colors.successBg,
+    color: colors.success,
+    cursor: 'pointer',
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: '0.5px',
+  };
+}
 
 function flagOffStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
-    ...flagOnStyle,
-    border: theme === 'dark' ? '1px solid #475569' : '1px solid #cbd5e1',
+    ...flagOnStyle(theme),
+    border: `1px solid ${colors.borderLight}`,
     background: 'transparent',
-    color: '#64748b',
+    color: colors.textMuted,
   };
 }
 
 function devTabStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     width: '100%',
     textAlign: 'left',
-    background: theme === 'dark' ? '#1e293b' : '#f8fafc',
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
-    color: theme === 'dark' ? '#cbd5e1' : '#475569',
+    background: colors.button,
+    border: `1px solid ${colors.border}`,
+    color: colors.textSecondary,
     padding: '9px 10px',
     borderRadius: 7,
     fontSize: 11,
@@ -430,20 +452,22 @@ function devTabStyle(theme: 'dark' | 'light'): CSSProperties {
 }
 
 function devTabActiveStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     ...devTabStyle(theme),
-    border: '1px solid #f97316',
-    color: '#f97316',
-    background: 'rgba(249,115,22,0.1)',
+    border: `1px solid ${colors.accent}`,
+    color: colors.accent,
+    background: colors.accentBg,
   };
 }
 
 function dangerButtonStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     ...devTabStyle(theme),
-    border: '1px solid #ef4444',
-    color: '#ef4444',
-    background: 'rgba(239,68,68,0.1)',
+    border: `1px solid ${colors.danger}`,
+    color: colors.danger,
+    background: colors.dangerBg,
   };
 }
 
@@ -454,9 +478,10 @@ const fieldStyle: CSSProperties = {
 };
 
 function fieldLabelStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'block',
-    color: theme === 'dark' ? '#64748b' : '#64748b',
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: 900,
     letterSpacing: '0.8px',
@@ -465,10 +490,11 @@ function fieldLabelStyle(theme: 'dark' | 'light'): CSSProperties {
 }
 
 function selectStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
-    background: theme === 'dark' ? '#020617' : '#ffffff',
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1',
-    color: theme === 'dark' ? '#94a3b8' : '#334155',
+    background: colors.input,
+    border: `1px solid ${colors.border}`,
+    color: colors.textSecondary,
     padding: '8px 9px',
     borderRadius: 6,
     fontSize: 12,
@@ -480,39 +506,43 @@ function selectStyle(theme: 'dark' | 'light'): CSSProperties {
 }
 
 function hintStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     marginTop: 12,
     paddingTop: 10,
-    borderTop: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
-    color: '#64748b',
+    borderTop: `1px solid ${colors.border}`,
+    color: colors.textMuted,
     fontSize: 11,
     lineHeight: 1.35,
   };
 }
 
 function simulationCardStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'grid',
     gap: 10,
     padding: 10,
     borderRadius: 8,
-    background: theme === 'dark' ? '#020617' : '#f8fafc',
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    background: colors.panelAlt,
+    border: `1px solid ${colors.border}`,
   };
 }
 
 function simulationTitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
-    color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+    color: colors.text,
     fontSize: 13,
     fontWeight: 900,
   };
 }
 
 function simulationTextStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     margin: 0,
-    color: theme === 'dark' ? '#94a3b8' : '#64748b',
+    color: colors.textMuted,
     fontSize: 11,
     lineHeight: 1.4,
   };
@@ -525,9 +555,10 @@ const simulationMetaGridStyle: CSSProperties = {
 };
 
 function metricValueStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'block',
-    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+    color: colors.text,
     fontSize: 12,
     fontWeight: 900,
     lineHeight: 1.2,
@@ -535,14 +566,15 @@ function metricValueStyle(theme: 'dark' | 'light'): CSSProperties {
 }
 
 function simulationStepStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'grid',
     gap: 2,
     padding: 9,
     borderRadius: 7,
-    background: theme === 'dark' ? '#1e293b' : '#ffffff',
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
-    color: theme === 'dark' ? '#cbd5e1' : '#334155',
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
+    color: colors.textSecondary,
     fontSize: 11,
   };
 }
@@ -559,60 +591,66 @@ const diffListStyle: CSSProperties = {
 };
 
 function recorderStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'grid',
     gap: 8,
     padding: 9,
     borderRadius: 7,
-    background: theme === 'dark' ? 'rgba(15,23,42,0.95)' : '#ffffff',
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
   };
 }
 
 function diffRowStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr auto 1fr',
     gap: 5,
     alignItems: 'center',
-    color: theme === 'dark' ? '#cbd5e1' : '#334155',
+    color: colors.textSecondary,
     fontSize: 10,
   };
 }
 
 function expectedListStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'grid',
     gap: 5,
     paddingTop: 7,
-    borderTop: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    borderTop: `1px solid ${colors.border}`,
   };
 }
 
 function expectedItemStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
-    color: theme === 'dark' ? '#94a3b8' : '#64748b',
+    color: colors.textMuted,
     fontSize: 10,
     lineHeight: 1.35,
   };
 }
 
 function timelineStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'grid',
     gap: 6,
     padding: 9,
     borderRadius: 7,
-    background: theme === 'dark' ? '#1e293b' : '#ffffff',
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
   };
 }
 
 function timelineItemStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     display: 'grid',
     gap: 2,
-    color: theme === 'dark' ? '#cbd5e1' : '#334155',
+    color: colors.textSecondary,
     fontSize: 10,
     lineHeight: 1.25,
   };
