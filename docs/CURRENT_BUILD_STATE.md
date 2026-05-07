@@ -6,38 +6,33 @@ Last updated: 2026-05-07
 
 ## Current Build Status
 
-Latest verified PR build is GREEN.
+Main is GREEN and deployed.
 
 ```text
-PR: #49 Add route confidence to product families
-PR head commit: 69cdb62e14fec7057ac90b13b0ad292d2ae1df9e
-PR run: 25528062201
-Branch: war-room/product-family-seed
+Latest merged PR: #50 Wire route confidence display into plant traveler
+Main commit: 19b0f2e60265bee5d0ae3db23839a2e6efbf70f7
+Main run: 25528506152
+Branch: main
 Workflow: Build
 Status: GREEN
+GitHub Pages deploy: success
 ```
 
-Verified PR steps:
+Verified main steps:
 
 - Checkout
 - Setup Node
 - Install dependencies
 - Build
 - Upload demo build
-- Complete job
-
-Main merge is complete, but the post-merge main build for the merge commit was not visible at the time this file was updated.
-
-```text
-Merge commit: ee8c205a09b08d6f3a1cc973d06f973af769ac48
-Main build for merge commit: UNKNOWN / pending verification
-```
-
-Do not call main green for `ee8c205a09b08d6f3a1cc973d06f973af769ac48` until a main Action run is found and verified.
+- Upload Pages artifact
+- Record latest action run
+- Deploy GitHub Pages
+- Complete jobs
 
 ## Last Completed Mission
 
-Product-family route confidence install is complete and merged.
+Route-confidence display is complete and merged.
 
 What changed:
 
@@ -45,8 +40,10 @@ What changed:
 - Added route-confidence metadata to the existing product-family map.
 - Added `routeConfidence`, `sourceType`, `routeNote`, `likelyPlantArea`, and `needsConfirmation` fields.
 - Added `findProductFamilyBySeries()` and `getProductFamilyRouteConfidence()` helpers.
+- PR #50 added `routeConfidenceDisplay` and `getProductFamilyRouteConfidenceDisplay()`.
+- PR #50 surfaced Route Confidence, Likely Area, route review notice, route note, and confirmation items in the Full Plant Traveler Product Intelligence panel.
 - Kept product intelligence in one existing source instead of creating a duplicate map.
-- PR build passed.
+- Main build and Pages deploy passed.
 
 What did not change:
 
@@ -61,6 +58,8 @@ What did not change:
 Website/catalog/manual data can identify product families.
 Plant-confirmed route knowledge is required before dispatch.
 Unknown route = review prompt, not command.
+Shipping is always the final physical department.
+Ready for Shipping is still conditional on blockers, QA, paperwork, and order completion state.
 ```
 
 ## Guardrails Preserved
@@ -81,6 +80,7 @@ Unknown route = review prompt, not command.
 - Product route confidence is not dispatch authority.
 - RequiredDepartments still override classifier route hints.
 - No confidence increase without confirmed plant facts.
+- Shipping is always last; readiness to ship is not automatic.
 
 ## Durable Plant Truth Reminders
 
@@ -95,13 +95,12 @@ Unknown route = review prompt, not command.
 - Saddles route is Receiving -> Coating -> Saddles Dept.
 - LV4500s are in Saddles Dept, not Machine Shop.
 - QA is conditional, not universal.
-- Everything eventually funnels to Shipping.
+- Shipping is always the final physical department.
 - Maintenance is stand-alone.
 
 ## Active Risks / Next Audit Targets
 
-- Verify post-merge main build for `ee8c205a09b08d6f3a1cc973d06f973af769ac48`.
-- `docs/LATEST_ACTION_RUN.md` may remain stale until a main workflow records a newer run.
+- Smoke test the live demo after PR #50 deploy.
 - Coating sub-flow is still partly uncertain.
 - Couplings route relative to Coating is still uncertain.
 - Clamps and Patch Clamps need more detail.
@@ -120,10 +119,15 @@ Unknown route = review prompt, not command.
 
 ## Next Recommended Move
 
-First verify the main build for the merge commit when Actions posts it.
-
-Then continue with a display-only pass:
+Smoke test the live demo:
 
 ```text
-Surface route confidence to operators as review language, without changing runtime routing.
+Open a traveler.
+Open Full Plant Traveler.
+Confirm Route Confidence appears in Product Intelligence.
+Confirm Likely Area appears.
+Confirm review copy says confirm before dispatch or handoff.
+Confirm no route/action behavior changed.
 ```
+
+Then continue with the next display-only pass only if the source file can be patched safely.
