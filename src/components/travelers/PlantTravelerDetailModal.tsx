@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { DynamicTraveler, PlantTraveler } from '../../types/dynamicTraveler';
 import { getOperatorSafeStatusLabel } from '../../logic/orderStatusTruth';
+import { findProductFamilyBySeries, getProductFamilyRouteConfidenceDisplay } from '../../data/productFamilies';
 
 type PlantTravelerDetailModalProps = {
   plantTraveler: PlantTraveler;
@@ -87,9 +88,14 @@ function ProductIntelligencePanel({ plantTraveler, theme }: { plantTraveler: Pla
   const reviewReasons = plantTraveler.classificationReviewReasons;
   const matchedLabel = classification.matchedRule?.label ?? 'No matched model rule';
   const routeLabel = plantTraveler.suggestedRoute.length > 0 ? plantTraveler.suggestedRoute.join(' → ') : 'No suggested route';
+  const routeLookupValue = classification.modelSignal ?? plantTraveler.order.partNumber ?? plantTraveler.order.assemblyPartNumber ?? '';
+  const productFamily = findProductFamilyBySeries(routeLookupValue);
+  const routeConfidence = getProductFamilyRouteConfidenceDisplay(routeLookupValue);
+  const routeNeedsReview = productFamily?.routeConfidence === 'NEEDS_REVIEW';
+  const productIntelNeedsReview = reviewReasons.length > 0 || routeNeedsReview;
 
   return (
-    <section style={productIntelStyle(theme, reviewReasons.length > 0)}>
+    <section style={productIntelStyle(theme, productIntelNeedsReview)}>
       <div style={smallLabelStyle(theme)}>Product Intelligence</div>
       <div style={infoGridStyle}>
         <Info label="Model Signal" value={classification.modelSignal ?? 'Not found'} theme={theme} />
@@ -99,14 +105,24 @@ function ProductIntelligencePanel({ plantTraveler, theme }: { plantTraveler: Pla
         <Info label="Finish Hint" value={formatHintList(plantTraveler.finishHints)} theme={theme} />
         <Info label="QA Required" value={plantTraveler.qaRequired ? 'Yes' : 'No'} theme={theme} />
         <Info label="Confidence" value={formatToken(classification.confidence)} theme={theme} />
+        <Info label="Route Confidence" value={routeConfidence.label} theme={theme} />
+        <Info label="Likely Area" value={productFamily?.likelyPlantArea ?? 'Needs review'} theme={theme} />
         <Info label="Suggested Route" value={routeLabel} theme={theme} />
       </div>
 
-      {reviewReasons.length > 0 ? (
+      <div style={routeConfidenceNoticeStyle(theme, routeConfidence.badgeTone)}>
+        <strong>{routeConfidence.label}:</strong> {routeConfidence.operatorCopy}
+        {productFamily?.routeNote ? <div style={{ marginTop: 6 }}>{productFamily.routeNote}</div> : null}
+      </div>
+
+      {reviewReasons.length > 0 || productFamily?.needsConfirmation.length ? (
         <div style={reviewBoxStyle(theme)}>
           <strong>Needs review before automatic dispatch:</strong>
           <ul style={reviewListStyle}>
             {reviewReasons.slice(0, 5).map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+            {productFamily?.needsConfirmation.slice(0, 4).map((reason) => (
               <li key={reason}>{reason}</li>
             ))}
           </ul>
@@ -319,6 +335,21 @@ function productIntelStyle(theme: 'dark' | 'light', needsReview: boolean): CSSPr
     background: theme === 'dark' ? 'rgba(15,23,42,0.9)' : '#f8fafc',
     border: `1px solid ${color}66`,
     borderLeft: `4px solid ${color}`,
+  };
+}
+
+function routeConfidenceNoticeStyle(theme: 'dark' | 'light', tone: 'green' | 'blue' | 'orange'): CSSProperties {
+  const color = tone === 'green' ? '#10b981' : tone === 'blue' ? '#38bdf8' : '#f97316';
+  return {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 6,
+    background: theme === 'dark' ? `${color}22` : `${color}18`,
+    border: `1px solid ${color}`,
+    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+    fontSize: 12,
+    lineHeight: 1.45,
+    fontWeight: 750,
   };
 }
 
