@@ -230,7 +230,7 @@ function CrewChip({ person, theme }: { person: CoveragePerson; theme: 'dark' | '
       <span style={{ width: 8, height: 8, borderRadius: 999, background: color, marginTop: 4 }} />
       <div>
         <div style={strongTextStyle(theme)}>{person.name}</div>
-        <div style={tinyTextStyle}>{person.station}</div>
+        <div style={tinyTextStyle(theme)}>{person.station}</div>
       </div>
     </div>
   );
@@ -272,7 +272,7 @@ function WorkflowCard({ card, theme, onAction }: { card: any; theme: 'dark' | 'l
       <div style={headerRowStyle}>
         <div>
           <strong style={strongTextStyle(theme)}>Order {order.orderNumber} • {order.productFamily}</strong>
-          <div style={tinyTextStyle}>{order.partNumber ?? order.assemblyPartNumber ?? 'No part number'}</div>
+          <div style={tinyTextStyle(theme)}>{order.partNumber ?? order.assemblyPartNumber ?? 'No part number'}</div>
         </div>
         <div style={rightBadgeColumnStyle}>
           <span style={badge(card.urgency.color)}>{card.urgency.label}</span>
@@ -294,7 +294,7 @@ function WorkflowCard({ card, theme, onAction }: { card: any; theme: 'dark' | 'l
       <p style={bodyTextStyle(theme)}>{signal.message}</p>
       <p style={nextTextStyle(theme)}>Next: {signal.action}</p>
       {packet.operation ? <div style={bodyTextStyle(theme)}>Operation: {packet.operation}</div> : null}
-      {packet.blockers?.map((blocker: string) => <div key={blocker} style={blockerTextStyle}>Blocked: {blocker}</div>)}
+      {packet.blockers?.map((blocker: string) => <div key={blocker} style={blockerTextStyle(theme)}>Blocked: {blocker}</div>)}
       {order.lastAction ? <div style={mutedTextStyle(theme)}>Last action: {order.lastAction}</div> : null}
       {signal.parallelActions.length > 0 ? <SignalList title="Parallel actions" items={signal.parallelActions} theme={theme} /> : null}
       {signal.watchers.length > 0 ? <SignalList title="Watchers" items={signal.watchers} theme={theme} /> : null}
@@ -370,8 +370,8 @@ function ClassificationReviewSummary({
                 <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
               </div>
               <div style={bodyTextStyle(theme)}>{traveler.classificationReviewReasons[0] ?? 'Classification needs human review.'}</div>
-              <div style={tinyTextStyle}>{formatToken(traveler.productClassification.productFamily)} • {traveler.finishHints.length ? traveler.finishHints.map(formatToken).join(', ') : 'No finish hint'}</div>
-              {travelerConfirmations.length > 0 ? <div style={savedTextStyle}>{travelerConfirmations.length} structured confirmation{travelerConfirmations.length === 1 ? '' : 's'} saved</div> : null}
+              <div style={tinyTextStyle(theme)}>{formatToken(traveler.productClassification.productFamily)} • {traveler.finishHints.length ? traveler.finishHints.map(formatToken).join(', ') : 'No finish hint'}</div>
+              {travelerConfirmations.length > 0 ? <div style={savedTextStyle(theme)}>{travelerConfirmations.length} structured confirmation{travelerConfirmations.length === 1 ? '' : 's'} saved</div> : null}
             </button>
           );
         })}
@@ -393,7 +393,7 @@ function SignalList({ title, items, theme }: { title: string; items: Array<{ own
 function Info({ label, value, theme }: { label: string; value: string; theme: 'dark' | 'light' }) {
   return (
     <div style={infoBoxStyle(theme)}>
-      <div style={tinyLabelStyle}>{label}</div>
+      <div style={tinyLabelStyle(theme)}>{label}</div>
       <div style={strongTextStyle(theme)}>{value}</div>
     </div>
   );
@@ -524,7 +524,7 @@ const infoGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 're
 const rightBadgeColumnStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' };
 const eyebrowStyle: CSSProperties = { color: '#f97316', fontSize: 11, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase' };
 const visibleCountStyle: CSSProperties = { color: '#f97316', whiteSpace: 'nowrap' };
-const tinyTextStyle: CSSProperties = { color: '#64748b', fontSize: 11, fontWeight: 700, marginTop: 3 };
-const tinyLabelStyle: CSSProperties = { color: '#94a3b8', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' };
-const blockerTextStyle: CSSProperties = { color: '#fecaca', marginTop: 6, fontSize: 12, fontWeight: 800 };
-const savedTextStyle: CSSProperties = { color: '#86efac', fontSize: 11, fontWeight: 900, marginTop: 6 };
+function tinyTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#64748b' : '#475569', fontSize: 11, fontWeight: 700, marginTop: 3 }; }
+function tinyLabelStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }; }
+function blockerTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#fecaca' : '#dc2626', marginTop: 6, fontSize: 12, fontWeight: 800 }; }
+function savedTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#86efac' : '#059669', fontSize: 11, fontWeight: 900, marginTop: 6 }; }

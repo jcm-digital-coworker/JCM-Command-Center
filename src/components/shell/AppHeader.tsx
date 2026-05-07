@@ -94,8 +94,7 @@ const titleContainerStyle: CSSProperties = {
   minWidth: 86,
 };
 
-function getTitleStyle(theme: 'dark' | 'light'): CSSProperties {
-  void theme;
+function getTitleStyle(_theme: 'dark' | 'light'): CSSProperties {
   return {
     margin: 0,
     fontSize: 22,
@@ -106,8 +105,7 @@ function getTitleStyle(theme: 'dark' | 'light'): CSSProperties {
   };
 }
 
-function getSubtitleStyle(theme: 'dark' | 'light'): CSSProperties {
-  void theme;
+function getSubtitleStyle(_theme: 'dark' | 'light'): CSSProperties {
   return {
     fontSize: 9,
     letterSpacing: '2px',
@@ -119,8 +117,7 @@ function getSubtitleStyle(theme: 'dark' | 'light'): CSSProperties {
   };
 }
 
-function getMenuButtonStyle(theme: 'dark' | 'light'): CSSProperties {
-  void theme;
+function getMenuButtonStyle(_theme: 'dark' | 'light'): CSSProperties {
   return {
     background: 'rgba(249, 115, 22, 0.2)',
     border: '1px solid #f97316',
@@ -137,11 +134,10 @@ function getMenuButtonStyle(theme: 'dark' | 'light'): CSSProperties {
 }
 
 function getBackButtonStyle(theme: 'dark' | 'light'): CSSProperties {
-  void theme;
   return {
-    background: 'rgba(100, 116, 139, 0.2)',
+    background: theme === 'dark' ? 'rgba(100, 116, 139, 0.2)' : 'rgba(255, 255, 255, 0.15)',
     border: '1px solid #64748b',
-    color: '#cbd5e1',
+    color: 'white',
     padding: '10px 9px',
     borderRadius: 4,
     fontSize: 11,
@@ -153,8 +149,7 @@ function getBackButtonStyle(theme: 'dark' | 'light'): CSSProperties {
   };
 }
 
-function getHomeButtonStyle(theme: 'dark' | 'light'): CSSProperties {
-  void theme;
+function getHomeButtonStyle(_theme: 'dark' | 'light'): CSSProperties {
   return {
     background: 'rgba(16, 185, 129, 0.16)',
     border: '1px solid #10b981',
