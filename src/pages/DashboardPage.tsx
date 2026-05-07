@@ -7,6 +7,7 @@ import type { AppTab, RoleView } from '../types/app';
 import type { WorkCenter } from '../types/plant';
 import type { ProductionOrder } from '../types/productionOrder';
 import { getOrderStatusLabel, getOrderBlockReason, formatBlockedReason } from '../logic/orderReadiness';
+import { getOperatorSafeStatusLabel } from '../logic/orderStatusTruth';
 import { getDashboardRuntimeTruth } from '../logic/dashboardRuntimeSelectors';
 import { getQuickActionsForRole, formatRoleLabel, type QuickAction } from '../logic/dashboardQuickActions';
 import { getNavigationTab } from '../logic/navigationContracts';
@@ -188,12 +189,15 @@ export default function DashboardPage({
       <AccordionSection title="QA / SAFETY / MAINTENANCE SIGNALS" count={openRisks.length + activeTasks.length + qaHolds.length} color="#f59e0b" expanded={expandedSection === 'signals'} onToggle={() => toggleSection('signals')} onViewAll={() => onGoToTab('risk')} theme={theme}>
         {openRisks.length + activeTasks.length + qaHolds.length > 0 ? (
           <div style={dashboardListStyle}>
-            {qaHolds.slice(0, 2).map((order) => (
-              <div key={order.orderNumber} style={getDashboardItemStyle(theme)}>
-                <div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} quality hold</div><div style={dashboardMutedTextStyle}>{order.assemblyPartNumber} - {order.qaStatus}</div></div>
-                <span style={getPriorityBadge('CRITICAL')}>{order.qaStatus}</span>
-              </div>
-            ))}
+            {qaHolds.slice(0, 2).map((order) => {
+              const qaStatusLabel = getOperatorSafeStatusLabel(order.qaStatus);
+              return (
+                <div key={order.orderNumber} style={getDashboardItemStyle(theme)}>
+                  <div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} quality hold</div><div style={dashboardMutedTextStyle}>{order.assemblyPartNumber} - {qaStatusLabel}</div></div>
+                  <span style={getPriorityBadge(order.qaStatus ?? 'UNKNOWN')}>{qaStatusLabel}</span>
+                </div>
+              );
+            })}
             {openRisks.slice(0, 3).map((risk) => (
               <div key={risk.id} style={getDashboardItemStyle(theme)}>
                 <div><div style={getDashboardItemTitleStyle(theme)}>{risk.title}</div><div style={dashboardMutedTextStyle}>{risk.department} - {risk.category ?? risk.source}</div></div>

@@ -1,4 +1,5 @@
 import type { BlockedReason, MaterialStatus, OrderDependency, ProductionOrder } from '../types/productionOrder';
+import { getOperatorOrderStatusLabel, getOperatorSafeBlockedReasonLabel, getOperatorSafeStatusLabel } from './orderStatusTruth';
 
 function normalizeText(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
@@ -64,25 +65,17 @@ export function isOrderBlocked(order: ProductionOrder): boolean {
 }
 
 export function getOrderStatusLabel(order: ProductionOrder): string {
-  const blockReason = getOrderBlockReason(order);
-  if (isOrderBlocked(order)) {
-    return `Blocked: ${formatBlockedReason(blockReason ?? 'UNKNOWN')}`;
-  }
-
-  return formatStatus(order.status);
+  return getOperatorOrderStatusLabel(order);
 }
 
 export function formatStatus(status: string): string {
-  return String(status ?? 'UNKNOWN')
-    .replaceAll('_', ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return getOperatorSafeStatusLabel(status);
 }
 
 export function formatBlockedReason(reason: BlockedReason): string {
-  return formatStatus(reason);
+  return getOperatorSafeBlockedReasonLabel(reason);
 }
 
 export function formatMaterialStatus(status: MaterialStatus): string {
-  return formatStatus(status);
+  return getOperatorSafeStatusLabel(status);
 }

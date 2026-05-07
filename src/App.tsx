@@ -540,7 +540,6 @@ export default function App() {
   }
 }
 
-
 function getSimulatorHeaderStyle(theme: 'dark' | 'light'): CSSProperties {
   return {
     padding: 16,

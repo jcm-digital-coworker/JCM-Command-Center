@@ -4,7 +4,7 @@ import { plantAssets } from '../data/plantAssets';
 import { plantDepartmentOrder } from '../data/workCenters';
 import { getDepartmentOperatingProfile } from '../data/departmentOperatingProfiles';
 import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
-import type { PlantAsset } from '../types/plantAsset';
+import type { PlantAsset, PlantAssetStatus } from '../types/plantAsset';
 import type { Department } from '../types/machine';
 
 type PlantMapPageProps = {
@@ -39,7 +39,7 @@ export default function PlantMapPage({ theme = 'dark' }: PlantMapPageProps) {
 
   const downCount = plantAssets.filter((asset) => asset.status === 'DOWN').length;
   const watchCount = plantAssets.filter((asset) => asset.status === 'WATCH').length;
-  const unknownCount = plantAssets.filter((asset) => asset.status === 'UNKNOWN').length;
+  const needsStatusCheckCount = plantAssets.filter((asset) => asset.status === 'UNKNOWN').length;
 
   return (
     <div style={pageStyle}>
@@ -57,7 +57,7 @@ export default function PlantMapPage({ theme = 'dark' }: PlantMapPageProps) {
         <SummaryTile label="Mapped Assets" value={plantAssets.length} theme={theme} />
         <SummaryTile label="Down" value={downCount} tone="bad" theme={theme} />
         <SummaryTile label="Watch" value={watchCount} tone="watch" theme={theme} />
-        <SummaryTile label="Unknown" value={unknownCount} tone="unknown" theme={theme} />
+        <SummaryTile label="Needs Status Check" value={needsStatusCheckCount} tone="unknown" theme={theme} />
       </div>
 
       <div style={toolbarStyle(theme)}>
@@ -111,7 +111,7 @@ function AssetCard({ asset, theme, onOpen }: { asset: PlantAsset; theme: 'dark' 
           <div style={assetTitleStyle(theme)}>{asset.name}</div>
           <div style={assetSubStyle(theme)}>{asset.kind.replaceAll('_', ' ')} · {asset.physicalArea}</div>
         </div>
-        <span style={statusPillStyle(asset.status)}>{asset.status}</span>
+        <span style={statusPillStyle(asset.status)}>{formatAssetStatus(asset.status)}</span>
       </div>
 
       <p style={bodyTextStyle(theme)}>{asset.primaryFunction}</p>
@@ -140,7 +140,7 @@ function AssetDetailModal({ asset, theme, onClose }: { asset: PlantAsset; theme:
         </div>
 
         <div style={infoGridStyle}>
-          <Info label="Status" value={asset.status} theme={theme} />
+          <Info label="Status" value={formatAssetStatus(asset.status)} theme={theme} />
           <Info label="Owner" value={asset.ownerDepartment} theme={theme} />
           <Info label="Confidence" value={asset.confidence} theme={theme} />
           <Info label="Area" value={asset.physicalArea} theme={theme} />
@@ -194,6 +194,11 @@ function Info({ label, value, theme }: { label: string; value: string; theme: 'd
       <div style={{ fontSize: 12, fontWeight: 800, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }}>{value}</div>
     </div>
   );
+}
+
+function formatAssetStatus(status: PlantAssetStatus): string {
+  if (status === 'UNKNOWN') return 'Needs Status Check';
+  return status;
 }
 
 function computeBlockedByDept(): Record<string, number> {

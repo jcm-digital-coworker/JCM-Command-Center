@@ -31,7 +31,7 @@ const answerOptions: Array<{ value: ClassificationReviewAnswer; label: string }>
   { value: 'CONFIRMED', label: 'Confirmed' },
   { value: 'NOT_CONFIRMED', label: 'Not confirmed' },
   { value: 'NOT_APPLICABLE', label: 'Not applicable' },
-  { value: 'UNKNOWN', label: 'Unknown' },
+  { value: 'UNKNOWN', label: 'Needs confirmation' },
 ];
 
 const reviewerOptions: ClassificationReviewDraft['reviewedBy'][] = [
@@ -101,7 +101,7 @@ export default function ClassificationReviewCapture({ traveler, confirmations, d
           <div style={fieldLabelStyle}>Recent confirmations</div>
           {confirmations.slice(0, 3).map((confirmation) => (
             <div key={confirmation.id} style={{ display: 'grid', gap: 2, marginTop: 6, color: theme === 'dark' ? '#cbd5e1' : '#334155', fontSize: 11, fontWeight: 700 }}>
-              <strong>{formatToken(confirmation.question)}: {formatToken(confirmation.answer)}</strong>
+              <strong>{formatToken(confirmation.question)}: {formatReviewAnswer(confirmation.answer)}</strong>
               <span>{confirmation.reviewedBy} · {new Date(confirmation.createdAt).toLocaleString()}</span>
             </div>
           ))}
@@ -143,6 +143,11 @@ function pill(color: string) {
     fontSize: 10,
     fontWeight: 900,
   } as const;
+}
+
+function formatReviewAnswer(value: ClassificationReviewAnswer) {
+  if (value === 'UNKNOWN') return 'Needs confirmation';
+  return formatToken(value);
 }
 
 function formatToken(value: string) {
