@@ -8,6 +8,8 @@ import {
   getVisibleNavigationGroups,
 } from '../../logic/navigationAccess';
 import { getThemeColors } from '../../theme/theme';
+import type { Language } from '../../i18n/language';
+import { t, tabLabel, navGroupLabel } from '../../i18n/translations';
 
 interface AppDrawerProps {
   open: boolean;
@@ -20,6 +22,8 @@ interface AppDrawerProps {
   workCenters: WorkCenter[];
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
+  lang?: Language;
+  onToggleLang?: () => void;
 }
 
 export default function AppDrawer({
@@ -33,6 +37,8 @@ export default function AppDrawer({
   workCenters,
   theme,
   onToggleTheme,
+  lang = 'en',
+  onToggleLang,
 }: AppDrawerProps) {
   const visibleGroups = getVisibleNavigationGroups(roleView);
   const homeTab = getHomeTabForRole(roleView);
@@ -82,7 +88,7 @@ export default function AppDrawer({
             </div>
           </div>
           <button onClick={onClose} style={closeButtonStyle(theme)}>
-            X
+            {t('close', lang).toUpperCase()}
           </button>
         </div>
 
@@ -92,7 +98,7 @@ export default function AppDrawer({
             style={tab === homeTab ? homeButtonActiveStyle(theme) : homeButtonStyle(theme)}
           >
             <div style={indicatorStyle(tab === homeTab, theme)} />
-            HOME / {getHomeLabel(homeTab)}
+            {t('home', lang).toUpperCase()} / {getHomeLabel(homeTab, lang)}
           </button>
         </div>
 
@@ -108,9 +114,9 @@ export default function AppDrawer({
                     onClick={() => toggleGroup(group.id)}
                     style={groupActive ? activeAccordionHeaderStyle(theme) : accordionHeaderStyle(theme)}
                   >
-                    <span>{group.label.toUpperCase()}</span>
+                    <span>{navGroupLabel(group.id, lang).toUpperCase()}</span>
                     <span style={accordionMetaStyle(theme)}>
-                      {group.items.length} {group.items.length === 1 ? 'PAGE' : 'PAGES'} {groupOpen ? '-' : '+'}
+                      {group.items.length} {t('pagesSuffix', lang).toUpperCase()} {groupOpen ? '-' : '+'}
                     </span>
                   </button>
                   {groupOpen && (
@@ -124,7 +130,7 @@ export default function AppDrawer({
                           title={item.description}
                         >
                           <div style={indicatorStyle(tab === item.id, theme)} />
-                          <span>{item.label.toUpperCase()}</span>
+                          <span>{tabLabel(item.id, lang).toUpperCase()}</span>
                         </button>
                       ))}
                     </div>
@@ -139,9 +145,9 @@ export default function AppDrawer({
                 onClick={() => setWorkCentersOpen((current) => !current)}
                 style={departmentFilter !== 'All' ? activeAccordionHeaderStyle(theme) : accordionHeaderStyle(theme)}
               >
-                <span>WORK CENTERS</span>
+                <span>{t('workCenters', lang).toUpperCase()}</span>
                 <span style={accordionMetaStyle(theme)}>
-                  {workCenters.length + 1} ITEMS {workCentersOpen ? '-' : '+'}
+                  {workCenters.length + 1} {t('itemsSuffix', lang).toUpperCase()} {workCentersOpen ? '-' : '+'}
                 </span>
               </button>
               {workCentersOpen && (
@@ -154,7 +160,7 @@ export default function AppDrawer({
                     style={departmentFilter === 'All' ? activeWorkCenterStyle(theme) : workCenterStyle(theme)}
                   >
                     <div style={indicatorStyle(departmentFilter === 'All', theme)} />
-                    ALL DEPARTMENTS
+                    {t('allDepartments', lang).toUpperCase()}
                   </button>
                   {workCenters.map((center) => (
                     <button
@@ -175,20 +181,30 @@ export default function AppDrawer({
           </div>
 
           <div style={settingsSectionStyle(theme)}>
-            <div style={settingsHeaderStyle(theme)}>SETTINGS</div>
+            <div style={settingsHeaderStyle(theme)}>{t('settings', lang).toUpperCase()}</div>
             <div style={settingItemStyle}>
               <span style={settingLabelStyle(theme)}>
-                THEME
+                {t('theme', lang).toUpperCase()}
               </span>
               <button onClick={onToggleTheme} style={themeToggleStyle(theme)}>
-                {theme === 'dark' ? 'DARK' : 'LIGHT'}
+                {theme === 'dark' ? t('dark', lang).toUpperCase() : t('light', lang).toUpperCase()}
               </button>
             </div>
+            {onToggleLang && (
+              <div style={settingItemStyle}>
+                <span style={settingLabelStyle(theme)}>
+                  {t('language', lang).toUpperCase()}
+                </span>
+                <button onClick={onToggleLang} style={themeToggleStyle(theme)}>
+                  {lang === 'en' ? t('english', lang).toUpperCase() : t('spanish', lang).toUpperCase()}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         <div style={footerStyle(theme)}>
-          <div style={footerTextStyle(theme)}>Nash, Texas</div>
+          <div style={footerTextStyle(theme)}>{t('nashTexas', lang)}</div>
         </div>
       </div>
     </>
@@ -199,12 +215,12 @@ function getActiveGroupId(tab: AppTab, groups: ReturnType<typeof getVisibleNavig
   return groups.find((group) => group.items.some((item) => item.id === tab))?.id ?? null;
 }
 
-function getHomeLabel(homeTab: AppTab) {
-  if (homeTab === 'workflow') return 'WORKFLOW';
-  if (homeTab === 'maintenance') return 'MAINTENANCE';
-  if (homeTab === 'receiving') return 'RECEIVING';
-  if (homeTab === 'risk') return 'QA / SAFETY';
-  return 'COMMAND';
+function getHomeLabel(homeTab: AppTab, lang: Language) {
+  if (homeTab === 'workflow') return t('homeWorkflow', lang).toUpperCase();
+  if (homeTab === 'maintenance') return t('homeMaintenance', lang).toUpperCase();
+  if (homeTab === 'receiving') return t('homeReceiving', lang).toUpperCase();
+  if (homeTab === 'risk') return t('homeQASafety', lang).toUpperCase();
+  return t('homeCommand', lang).toUpperCase();
 }
 
 function indicatorStyle(active: boolean, theme: 'dark' | 'light'): CSSProperties {
@@ -291,12 +307,13 @@ function closeButtonStyle(theme: 'dark' | 'light'): CSSProperties {
     width: 36,
     height: 36,
     borderRadius: 4,
-    fontSize: 18,
+    fontSize: 11,
     cursor: 'pointer',
-    fontWeight: 700,
+    fontWeight: 800,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    letterSpacing: '0.5px',
   };
 }
 
