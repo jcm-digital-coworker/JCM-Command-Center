@@ -8,6 +8,12 @@ export type ProductFamilySourceType =
   | 'uploaded_manual'
   | 'plant_confirmed';
 
+export type RouteConfidenceDisplay = {
+  label: string;
+  operatorCopy: string;
+  badgeTone: 'green' | 'blue' | 'orange';
+};
+
 export type ProductFamilyInfo = {
   id: ProductFamily;
   label: string;
@@ -151,6 +157,24 @@ export const productFamilies: ProductFamilyInfo[] = [
   },
 ];
 
+export const routeConfidenceDisplay: Record<RouteConfidence, RouteConfidenceDisplay> = {
+  CONFIRMED: {
+    label: 'Route Confirmed',
+    operatorCopy: 'Plant route is confirmed for this product family. Follow the traveler and required departments.',
+    badgeTone: 'green',
+  },
+  LIKELY: {
+    label: 'Likely Route',
+    operatorCopy: 'Product family points to a likely route. Confirm model exceptions before changing department state.',
+    badgeTone: 'blue',
+  },
+  NEEDS_REVIEW: {
+    label: 'Route Review Needed',
+    operatorCopy: 'Use this as product intelligence only. Confirm the owning department before dispatch or handoff.',
+    badgeTone: 'orange',
+  },
+};
+
 export function findProductFamilyBySeries(seriesOrPartNumber: string): ProductFamilyInfo | undefined {
   const normalized = seriesOrPartNumber.trim();
 
@@ -161,4 +185,8 @@ export function findProductFamilyBySeries(seriesOrPartNumber: string): ProductFa
 
 export function getProductFamilyRouteConfidence(seriesOrPartNumber: string): RouteConfidence {
   return findProductFamilyBySeries(seriesOrPartNumber)?.routeConfidence ?? 'NEEDS_REVIEW';
+}
+
+export function getProductFamilyRouteConfidenceDisplay(seriesOrPartNumber: string): RouteConfidenceDisplay {
+  return routeConfidenceDisplay[getProductFamilyRouteConfidence(seriesOrPartNumber)];
 }
