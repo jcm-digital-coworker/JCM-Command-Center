@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { implementedCastings, tapCodeTable } from '../data/lv4500JcmSuite';
 import { estimateLv4500CycleTime } from '../logic/lv4500JcmCycleTime';
 import { runLv4500Geometry, runLv4500Logic } from '../logic/lv4500JcmSimulator';
@@ -208,14 +208,49 @@ function statusTint(
 
 type LvTab = 'setup' | 'results' | 'audit' | 'geometry' | 'docs';
 
+type RunRecord = {
+  ts: string;
+  castingDisplay: string;
+  tapCode: string;
+  tapLabel: string;
+  batchTarget: number;
+  logicStatus: 'PASS' | 'CAUTION' | 'FAIL';
+  geometryStatus: 'PASS' | 'CAUTION' | 'FAIL';
+  overallStatus: 'PASS' | 'CAUTION' | 'FAIL';
+};
+
+// ─── Runtime reflection helpers ───────────────────────────────────────────────
+
+function getActiveSaddlesCount(): number {
+  try {
+    const stored = localStorage.getItem('jcm_workflow_runtime_state');
+    const overrides: Record<string, { currentDepartment?: string; flowStatus?: string }> =
+      stored ? (JSON.parse(stored) as Record<string, { currentDepartment?: string; flowStatus?: string }>) : {};
+    const overrideDepts = new Set(
+      Object.values(overrides)
+        .filter((o) => o.flowStatus !== 'DONE' && o.flowStatus !== 'done' && o.flowStatus !== 'complete')
+        .map((o) => o.currentDepartment)
+        .filter(Boolean),
+    );
+    const overriddenCount = [...overrideDepts].filter(
+      (d) => d === 'Saddles Dept' || d === 'Machine Shop',
+    ).length;
+    return Math.max(overriddenCount, 0);
+  } catch {
+    return 0;
+  }
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface Lv4500JcmSimulatorProps {
   theme?: Theme;
+  onGoToSaddles?: () => void;
 }
 
 export default function Lv4500JcmSimulator({
   theme = 'light',
+  onGoToSaddles,
 }: Lv4500JcmSimulatorProps) {
   const t = getThemeTokens(theme);
 
@@ -227,40 +262,65 @@ export default function Lv4500JcmSimulator({
   const [batchTarget, setBatchTarget] = useState(50);
 
   const [logicResult, setLogicResult] = useState<LogicResult | null>(null);
-  const [geometryResult, setGeometryResult] = useState<GeometryResult | null>(
-    null
-  );
-  const [cycleTime, setCycleTime] = useState<ReturnType<
-    typeof estimateLv4500CycleTime
-  > | null>(null);
+  const [geometryResult, setGeometryResult] = useState<GeometryResult | null>(null);
+  const [cycleTime, setCycleTime] = useState<ReturnType<typeof estimateLv4500CycleTime> | null>(null);
   const [hasRun, setHasRun] = useState(false);
+  const [runHistory, setRunHistory] = useState<RunRecord[]>([]);
 
-  const selectedCasting = implementedCastings.find(
-    (c) => c.castingNumber === castingNumber
-  );
-  const selectedTap = tapCodeTable.find((t) => t.code === tapCode);
+  const selectedCasting = implementedCastings.find((c) => c.castingNumber === castingNumber);
+  const selectedTap = tapCodeTable.find((tc) => tc.code === tapCode);
 
-  function runSimulation() {
+  function runWith(casting: string, tap: string, batch: number) {
+    const castingData = implementedCastings.find((c) => c.castingNumber === casting);
+    const tapData = tapCodeTable.find((tc) => tc.code === tap);
+
     const logic = runLv4500Logic({
-      castingNumber,
-      tapCode,
-      batchTarget,
+      castingNumber: casting,
+      tapCode: tap,
+      batchTarget: batch,
       actualCount: 0,
       gaugeCount: 0,
       interruptFlag: false,
       warmupDone: true,
       proveOutMode: false,
-      bossType: selectedCasting?.bossType ?? 'large',
+      bossType: castingData?.bossType ?? 'large',
     });
 
-    const geometry = runLv4500Geometry(castingNumber, tapCode);
-    const time = estimateLv4500CycleTime(tapCode);
+    const geometry = runLv4500Geometry(casting, tap);
+    const time = estimateLv4500CycleTime(tap);
+
+    const overallStatus: RunRecord['overallStatus'] =
+      logic.status === 'FAIL' || geometry.status === 'FAIL' ? 'FAIL' :
+      logic.status === 'CAUTION' || geometry.status === 'CAUTION' ? 'CAUTION' : 'PASS';
+
+    const record: RunRecord = {
+      ts: new Date().toISOString(),
+      castingDisplay: castingData?.lastThree ?? casting,
+      tapCode: tap,
+      tapLabel: tapData?.label ?? tap,
+      batchTarget: batch,
+      logicStatus: logic.status,
+      geometryStatus: geometry.status,
+      overallStatus,
+    };
 
     setLogicResult(logic);
     setGeometryResult(geometry);
     setCycleTime(time);
     setHasRun(true);
+    setRunHistory((prev) => [record, ...prev].slice(0, 12));
     setActiveTab('results');
+  }
+
+  function runSimulation() {
+    runWith(castingNumber, tapCode, batchTarget);
+  }
+
+  function stepToNext() {
+    const currentIndex = tapCodeTable.findIndex((tc) => tc.code === tapCode);
+    const nextTap = tapCodeTable[(currentIndex + 1) % tapCodeTable.length];
+    setTapCode(nextTap.code);
+    runWith(castingNumber, nextTap.code, batchTarget);
   }
 
   function clearResults() {
@@ -268,8 +328,35 @@ export default function Lv4500JcmSimulator({
     setGeometryResult(null);
     setCycleTime(null);
     setHasRun(false);
+    setRunHistory([]);
     setActiveTab('setup');
   }
+
+  const lastDiff: string | null = (() => {
+    if (runHistory.length < 2) return null;
+    const [latest, prev] = runHistory;
+    const parts: string[] = [];
+    if (latest.castingDisplay !== prev.castingDisplay) parts.push(`casting ${prev.castingDisplay}→${latest.castingDisplay}`);
+    if (latest.tapCode !== prev.tapCode) parts.push(`tap ${prev.tapCode}→${latest.tapCode}`);
+    if (latest.overallStatus !== prev.overallStatus) parts.push(`status ${prev.overallStatus}→${latest.overallStatus}`);
+    if (parts.length === 0) return 'No change from prior run';
+    return parts.join(' · ');
+  })();
+
+  const activeSaddlesCount = getActiveSaddlesCount();
+  const [autoRun, setAutoRun] = useState(false);
+  const autoTapIndexRef = useRef(0);
+
+  useEffect(() => {
+    if (!autoRun) return;
+    const id = setInterval(() => {
+      autoTapIndexRef.current = (autoTapIndexRef.current + 1) % tapCodeTable.length;
+      const nextTap = tapCodeTable[autoTapIndexRef.current];
+      setTapCode(nextTap.code);
+      runWith(castingNumber, nextTap.code, batchTarget);
+    }, 1400);
+    return () => clearInterval(id);
+  }, [autoRun, castingNumber, batchTarget]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const auditRows = buildAuditRows();
 
@@ -377,6 +464,11 @@ export default function Lv4500JcmSimulator({
                 label="Tap"
                 value={selectedTap?.label ?? 'Unknown'}
               />
+              <InfoTile
+                theme={theme}
+                label="Active at Saddles"
+                value={activeSaddlesCount > 0 ? `${activeSaddlesCount} runtime order${activeSaddlesCount === 1 ? '' : 's'}` : 'None in runtime'}
+              />
             </InfoGrid>
 
             <div
@@ -390,9 +482,39 @@ export default function Lv4500JcmSimulator({
               <button onClick={runSimulation} style={runButtonStyle(t)}>
                 Run / Validate
               </button>
+              <button onClick={stepToNext} style={resetButtonStyle(t)}>
+                Step → Next Tap
+              </button>
               <button onClick={clearResults} style={resetButtonStyle(t)}>
                 Clear Results
               </button>
+            </div>
+
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                onClick={() => {
+                  autoTapIndexRef.current = tapCodeTable.findIndex((tc) => tc.code === tapCode);
+                  setAutoRun((v) => !v);
+                }}
+                style={{
+                  padding: '9px 14px',
+                  borderRadius: 10,
+                  border: autoRun ? '1px solid #ef4444' : '1px solid #3b82f6',
+                  background: autoRun ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
+                  color: autoRun ? '#ef4444' : '#3b82f6',
+                  fontWeight: 900,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                {autoRun ? '■ STOP AUTO-SWEEP' : '▶ AUTO-SWEEP TAPS'}
+              </button>
+              {autoRun && (
+                <span style={{ fontSize: 11, color: t.textMuted }}>
+                  Cycling through all tap codes · 1.4 s/step
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -406,6 +528,17 @@ export default function Lv4500JcmSimulator({
                   Go to Setup, choose casting/tap/batch, then run validation.
                 </p>
               </div>
+            )}
+
+            {lastDiff && (
+              <div style={{ ...cardStyle(t), background: t.noteBg, marginTop: 8 }}>
+                <strong style={{ fontSize: 12 }}>LAST RUN DIFF:</strong>{' '}
+                <span style={{ fontSize: 12, color: t.textSubtle }}>{lastDiff}</span>
+              </div>
+            )}
+
+            {runHistory.length > 0 && (
+              <EventTimeline records={runHistory} theme={theme} />
             )}
 
             {logicResult && (
@@ -560,6 +693,20 @@ export default function Lv4500JcmSimulator({
                     • {note}
                   </p>
                 ))}
+              </div>
+            )}
+
+            {hasRun && onGoToSaddles && (
+              <div style={{ ...cardStyle(t), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <strong style={{ fontSize: 13, color: t.text }}>Open Diagnostic Order</strong>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: t.textMuted }}>
+                    Navigate to the Saddles department to review active LV4500 production orders.
+                  </p>
+                </div>
+                <button onClick={onGoToSaddles} style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #f97316', background: 'rgba(249,115,22,0.12)', color: '#f97316', fontWeight: 900, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  → SADDLES
+                </button>
               </div>
             )}
           </>
@@ -768,6 +915,34 @@ export default function Lv4500JcmSimulator({
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Event Timeline component ─────────────────────────────────────────────────
+
+function EventTimeline({ records, theme }: { records: RunRecord[]; theme: Theme }) {
+  const t = getThemeTokens(theme);
+  const pillColor = (s: RunRecord['overallStatus']) =>
+    s === 'PASS' ? '#166534' : s === 'CAUTION' ? '#92400e' : '#b91c1c';
+  const pillBg = (s: RunRecord['overallStatus']) =>
+    s === 'PASS' ? '#dcfce7' : s === 'CAUTION' ? '#fef3c7' : '#fee2e2';
+
+  return (
+    <div style={{ ...cardStyle(t), marginTop: 8 }}>
+      <h4 style={{ margin: '0 0 10px', fontSize: 13, color: t.text }}>RUN TIMELINE ({records.length})</h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {records.map((rec, i) => (
+          <div key={`${rec.ts}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, padding: '6px 8px', borderRadius: 6, background: i === 0 ? (theme === 'dark' ? '#1e293b' : '#f8fafc') : 'transparent', border: i === 0 ? `1px solid ${t.border}` : 'none' }}>
+            <span style={{ padding: '2px 7px', borderRadius: 999, fontWeight: 900, background: pillBg(rec.overallStatus), color: pillColor(rec.overallStatus), fontSize: 10 }}>{rec.overallStatus}</span>
+            <span style={{ color: t.text, fontWeight: 700 }}>Casting {rec.castingDisplay}</span>
+            <span style={{ color: t.textMuted }}>Tap {rec.tapCode} — {rec.tapLabel}</span>
+            <span style={{ color: t.textSubtle, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+              {new Date(rec.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

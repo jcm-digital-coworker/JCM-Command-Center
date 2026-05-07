@@ -324,7 +324,13 @@ export default function App() {
           <h3 style={getSimulatorTitleStyle(theme)}>{simulatorMachine.name}</h3>
           <p style={simulatorSubtitleStyle}>READ-ONLY EQUIPMENT SIMULATOR</p>
         </div>
-        <Lv4500JcmSimulator theme={theme} />
+        <Lv4500JcmSimulator
+          theme={theme}
+          onGoToSaddles={() => {
+            setSimulatorMachine(null);
+            navigateTo('saddles');
+          }}
+        />
       </div>
     );
   }
