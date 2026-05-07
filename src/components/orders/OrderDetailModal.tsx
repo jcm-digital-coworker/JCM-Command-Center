@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { ProductionOrder } from '../../types/productionOrder';
 import { getOperatorSafeStatusLabel } from '../../logic/orderStatusTruth';
+import { getThemeColors } from '../../theme/theme';
 
 type OrderDetailModalProps = {
   order: ProductionOrder;
@@ -14,15 +15,15 @@ export default function OrderDetailModal({ order, theme, onClose, onOpenOrders }
   const blockers = order.blockers ?? [];
 
   return (
-    <div style={modalOverlayStyle} onClick={onClose}>
+    <div style={modalOverlayStyle(theme)} onClick={onClose}>
       <div style={modalCardStyle(theme, blockers.length > 0)} onClick={(event) => event.stopPropagation()}>
         <div style={modalHeaderStyle}>
           <div>
-            <div style={eyebrowStyle}>ORDER DETAIL</div>
+            <div style={eyebrowStyle(theme)}>ORDER DETAIL</div>
             <h3 style={modalTitleStyle(theme)}>{order.orderNumber}</h3>
             <div style={subTextStyle(theme)}>{order.customer ?? 'Customer not listed'}</div>
           </div>
-          <button type="button" style={closeButtonStyle} onClick={onClose}>CLOSE</button>
+          <button type="button" style={closeButtonStyle(theme)} onClick={onClose}>CLOSE</button>
         </div>
 
         <div style={infoGridStyle}>
@@ -66,7 +67,7 @@ export default function OrderDetailModal({ order, theme, onClose, onOpenOrders }
         ) : null}
 
         {onOpenOrders ? (
-          <button type="button" style={openOrdersButtonStyle} onClick={onOpenOrders}>OPEN FULL ORDERS</button>
+          <button type="button" style={openOrdersButtonStyle(theme)} onClick={onOpenOrders}>OPEN FULL ORDERS</button>
         ) : null}
       </div>
     </div>
@@ -88,16 +89,19 @@ function formatPriority(priority: ProductionOrder['priority']) {
   return 'Normal';
 }
 
-const modalOverlayStyle: CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: 60,
-  background: 'rgba(2, 6, 23, 0.78)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 16,
-};
+function modalOverlayStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 60,
+    background: colors.overlay,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  };
+}
 
 const modalHeaderStyle: CSSProperties = {
   display: 'flex',
@@ -114,97 +118,112 @@ const infoGridStyle: CSSProperties = {
   marginTop: 12,
 };
 
-const eyebrowStyle: CSSProperties = {
-  color: '#f97316',
-  fontSize: 11,
-  fontWeight: 900,
-  letterSpacing: '1.5px',
-  textTransform: 'uppercase',
-};
+function eyebrowStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: '1.5px',
+    textTransform: 'uppercase',
+  };
+}
 
-const closeButtonStyle: CSSProperties = {
-  padding: '9px 11px',
-  borderRadius: 6,
-  border: '1px solid #f97316',
-  background: 'rgba(249,115,22,0.12)',
-  color: '#f97316',
-  fontSize: 11,
-  fontWeight: 900,
-  cursor: 'pointer',
-};
+function closeButtonStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    padding: '9px 11px',
+    borderRadius: 6,
+    border: `1px solid ${colors.accent}`,
+    background: colors.accentBg,
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: 900,
+    cursor: 'pointer',
+  };
+}
 
-const openOrdersButtonStyle: CSSProperties = {
-  width: '100%',
-  marginTop: 16,
-  padding: '11px 12px',
-  borderRadius: 6,
-  border: '1px solid #3b82f6',
-  background: 'rgba(59,130,246,0.12)',
-  color: '#93c5fd',
-  fontSize: 12,
-  fontWeight: 900,
-  cursor: 'pointer',
-  letterSpacing: '0.7px',
-};
+function openOrdersButtonStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    width: '100%',
+    marginTop: 16,
+    padding: '11px 12px',
+    borderRadius: 6,
+    border: `1px solid ${colors.info}`,
+    background: colors.infoBg,
+    color: colors.info,
+    fontSize: 12,
+    fontWeight: 900,
+    cursor: 'pointer',
+    letterSpacing: '0.7px',
+  };
+}
 
 function modalCardStyle(theme: 'dark' | 'light', blocked: boolean): CSSProperties {
-  const color = blocked ? '#ef4444' : '#10b981';
+  const colors = getThemeColors(theme);
+  const statusColor = blocked ? colors.danger : colors.success;
   return {
     width: 'min(720px, 100%)',
     maxHeight: '88vh',
     overflow: 'auto',
     padding: 16,
     borderRadius: 10,
-    background: theme === 'dark' ? '#0f172a' : '#ffffff',
-    border: `1px solid ${color}66`,
-    borderLeft: `4px solid ${color}`,
+    background: colors.panel,
+    border: `1px solid ${statusColor}`,
+    borderLeft: `4px solid ${statusColor}`,
     boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
   };
 }
 
 function modalTitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     margin: '4px 0',
-    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+    color: colors.text,
     letterSpacing: '0.5px',
   };
 }
 
 function subTextStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
-    color: theme === 'dark' ? '#94a3b8' : '#64748b',
+    color: colors.textMuted,
     fontSize: 12,
     lineHeight: 1.4,
   };
 }
 
 function smallLabelStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     fontSize: 10,
     fontWeight: 900,
     letterSpacing: '1px',
-    color: theme === 'dark' ? '#64748b' : '#64748b',
+    color: colors.textMuted,
     textTransform: 'uppercase',
     marginBottom: 4,
   };
 }
 
 function infoValueStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     fontSize: 13,
     fontWeight: 800,
-    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+    color: colors.text,
     lineHeight: 1.35,
   };
 }
 
 function blockerStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     padding: 10,
     borderRadius: 6,
-    background: theme === 'dark' ? 'rgba(127,29,29,0.35)' : '#fee2e2',
-    border: '1px solid #ef4444',
-    color: theme === 'dark' ? '#fecaca' : '#991b1b',
+    background: colors.dangerBg,
+    border: `1px solid ${colors.danger}`,
+    color: colors.danger,
     fontSize: 12,
     fontWeight: 800,
     marginTop: 8,
@@ -212,21 +231,23 @@ function blockerStyle(theme: 'dark' | 'light'): CSSProperties {
 }
 
 function readyNoticeStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     marginTop: 14,
     padding: 10,
     borderRadius: 6,
-    background: theme === 'dark' ? 'rgba(6,78,59,0.32)' : '#dcfce7',
-    border: '1px solid #10b981',
-    color: theme === 'dark' ? '#bbf7d0' : '#166534',
+    background: colors.successBg,
+    border: `1px solid ${colors.success}`,
+    color: colors.success,
     fontSize: 12,
     fontWeight: 800,
   };
 }
 
 function routeStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
-    color: theme === 'dark' ? '#cbd5e1' : '#475569',
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: 800,
     lineHeight: 1.5,
@@ -234,13 +255,14 @@ function routeStyle(theme: 'dark' | 'light'): CSSProperties {
 }
 
 function noteStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     padding: 10,
     borderRadius: 6,
-    background: theme === 'dark' ? 'rgba(15,23,42,0.8)' : '#f8fafc',
-    color: theme === 'dark' ? '#cbd5e1' : '#475569',
+    background: colors.cardAlt,
+    color: colors.textSecondary,
     fontSize: 12,
-    border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+    border: `1px solid ${colors.border}`,
     marginTop: 8,
   };
 }
