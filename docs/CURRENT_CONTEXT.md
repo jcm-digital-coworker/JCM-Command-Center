@@ -7,81 +7,104 @@ Build: npm run build
 
 ## Current Build State
 
-- Latest recorded Action is GREEN.
-- Run ID: 25410617302
-- Source commit: d2e2058765e63dd3fe4a0022198c1c61a17cc85d
-- Branch: main
-- Workflow: Build
-- Updated: 2026-05-06T00:53:55Z
-- Verified job: Typecheck and build succeeded.
+Latest verified PR build is GREEN.
+
+```text
+PR: #49 Add route confidence to product families
+PR head commit: 69cdb62e14fec7057ac90b13b0ad292d2ae1df9e
+PR run: 25528062201
+Workflow: Build
+Typecheck and build: success
+Demo build artifact: success
+```
+
+Main merge is complete but the post-merge main run was not visible at the time this context was updated.
+
+```text
+Merge commit: ee8c205a09b08d6f3a1cc973d06f973af769ac48
+Main build for merge: unknown / pending verification
+Last recorded main breadcrumb in docs/LATEST_ACTION_RUN.md may still be stale until Actions records a newer main run.
+```
 
 ## Last Completed Mission
 
-Action-handler cleanup around workflow tablet buttons is complete.
+Product-family route confidence seed is merged.
 
 Completed work:
 
-- PR #39 kept `BLOCKED_HERE` workflow tablet cards review-only at the selector contract.
-- `src/logic/workflowPanelSelectors.ts` now prevents blocked-at-this-station cards from falling through to `START_WORK` when packet status text is not exactly `BLOCKED`.
-- PR #40 removed dead `safeButtonLabel()` display-layer guards from `src/components/WorkCenterWorkflowPanelV2.tsx`.
-- Workflow panel button labels now render directly from typed selector contracts.
-- No runtime behavior changed in PR #40.
-- Latest Action run confirms the PR #40 merge commit is green on main.
+- PR #49 extended the existing `src/data/productFamilies.ts` map.
+- Added `routeConfidence`, `sourceType`, `routeNote`, `likelyPlantArea`, and `needsConfirmation` fields.
+- Added `findProductFamilyBySeries()` and `getProductFamilyRouteConfidence()` helpers.
+- Kept product intelligence in one source instead of adding a duplicate map.
+- No runtime routing changed.
+- No `requiredDepartments` changed.
+- No action behavior changed.
 
 ## Current Mission
 
-Move forward from the now-green action-handler cleanup.
+Keep product information useful without letting public catalog data become dispatch authority.
 
-Recommended next target:
-
-```text
-Continue the action-handler audit across dashboard, traveler, operator-lane, receiving, engineering, maintenance, and Plant Signals actions.
-```
-
-Primary next audit target:
+Current decision:
 
 ```text
-Find and remove remaining behavior inferred from visible labels, stale route assumptions, accidental runtime mutation, and copy that implies automatic resolution.
+Website/catalog/manual data can classify product families.
+Plant-confirmed knowledge is still required before route dispatch.
+Unknown route = review prompt, not command.
 ```
 
 ## Stable Completed Work
 
+- PR #48 landed Machine Shop department page, English/Spanish MVP, shell i18n, theme cohesion, and LV4500 simulation Level 2.
+- PR #49 landed route confidence metadata for product families.
 - DEV toolkit is one bottom-right floating DEV button.
-- DEV floater includes feature flags, role selector, department selector, and context/status access if present.
-- Receiving gate page is active through a shim.
-- `src/pages/ReceivingPage.ts` exports `./ReceivingGatePage`.
-- `src/pages/ReceivingGatePage.tsx` contains the real gate-driven Receiving page.
-- Active plant traveler action projection is explicit and green on main.
-- Department order cards use the plant traveler material-action selector instead of reaching directly into the projection.
 - Work Center workflow buttons use typed action contracts, not visible-label parsing.
 - `BLOCKED_HERE` workflow cards are review-only.
-- `WorkCenterWorkflowPanelV2.tsx` no longer carries the dead `safeButtonLabel()` text-transform shim.
+- Product Intelligence appears in traveler modals and workflow cards.
+- Classification review visibility exists in workflow and dashboard surfaces.
+- Department order cards use the plant traveler material-action selector.
 
-## Important Architecture Decisions
+## Product Route Confidence Rules
 
-Actions belong to department traveler steps.
+Product-family data may support:
 
-`PlantTraveler.actions` exists only as an active-step compatibility projection. New UI code should prefer selectors from:
+- product category display;
+- model-family grouping;
+- likely area hints;
+- review prompts;
+- route-confidence badges.
 
-```text
-src/logic/plantTravelerSelectors.ts
-```
+Product-family data must not:
 
-Use:
+- override `requiredDepartments`;
+- silently change current or next department;
+- mark QA universal;
+- mark Coating required without confirmation;
+- dispatch work from public catalog category alone.
 
-```text
-getActivePlantTravelerStep
-getActivePlantTravelerActions
-getPlantTravelerMaterialAction
-```
+## Known Route Confidence Areas
 
-Workflow tablet button behavior belongs to typed selector contracts from:
+Confirmed / stronger:
 
-```text
-src/logic/workflowPanelSelectors.ts
-```
+- Receiving stands alone and feeds other departments.
+- Machine Shop is fed by Receiving and makes components.
+- Material Handling is production, not support.
+- Saddles route is Receiving -> Coating -> Saddles Dept.
+- LV4500s are in Saddles Dept, not Machine Shop.
+- Maintenance is stand-alone.
+- Everything eventually funnels to Shipping.
 
-Visible button text should render the contract, not decide runtime behavior.
+Needs review before dispatch:
+
+- Coating sub-flow.
+- Couplings route relative to Coating.
+- Clamps ownership and variants.
+- Patch Clamps ownership and variants.
+- 412 Fab ownership and exceptions.
+- 432 Fab ownership and exceptions.
+- What 452 means internally.
+- Assembly lane ownership.
+- QA conditions.
+- Shipping readiness rules.
 
 ## Protected Shared Files
 
@@ -92,14 +115,29 @@ Visible button text should render the contract, not decide runtime behavior.
 
 ## Core Rules
 
-- App.tsx mostly routes.
+- Guidance > Control.
+- Structured selections > free text.
+- Selections drive logic; notes explain exceptions.
+- Global command = mission visibility.
+- Department views = local action.
+- App.tsx routes only.
 - Pages compose.
-- Logic modules think.
+- Modules think.
 - Components display.
-- Prefer focused changes over giant rewrites.
-- Verify builds after source changes.
-- Pull current repo state before coding.
-- Do not update large files from truncated connector output.
-- Do not use compatibility projections as hidden new architecture.
-- Do not infer runtime action behavior from display copy.
+- Runtime behavior must come from typed contracts or selectors, not display text.
 - Review-only actions must not clear blockers or mutate production state.
+- Product classification is a mapmaker, not dispatch authority.
+- RequiredDepartments override classifier route hints.
+- No route-confidence increase without confirmed plant facts.
+
+## Next Recommended Move
+
+Verify the post-merge main build for `ee8c205a09b08d6f3a1cc973d06f973af769ac48` when Actions posts it.
+
+Then continue small:
+
+```text
+Surface route confidence in UI as review language, not dispatch behavior.
+```
+
+First target should be read-only display language, not runtime route changes.
