@@ -7,6 +7,7 @@ import {
   getHomeTabForRole,
   getVisibleNavigationGroups,
 } from '../../logic/navigationAccess';
+import { getThemeColors } from '../../theme/theme';
 
 interface AppDrawerProps {
   open: boolean;
@@ -69,28 +70,28 @@ export default function AppDrawer({
           }
         `}
       </style>
-      <div style={overlayStyle} onClick={onClose} />
-      <div style={drawerStyle}>
-        <div style={headerStyle}>
+      <div style={overlayStyle(theme)} onClick={onClose} />
+      <div style={drawerStyle(theme)}>
+        <div style={headerStyle(theme)}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '1px' }}>
+            <div style={brandTitleStyle(theme)}>
               JCM
             </div>
-            <div style={{ fontSize: 11, letterSpacing: '2px', opacity: 0.8, marginTop: 2 }}>
+            <div style={brandSubtitleStyle(theme)}>
               DIGITAL CO-WORKER
             </div>
           </div>
-          <button onClick={onClose} style={closeButtonStyle}>
+          <button onClick={onClose} style={closeButtonStyle(theme)}>
             X
           </button>
         </div>
 
-        <div style={homeSectionStyle}>
+        <div style={homeSectionStyle(theme)}>
           <button
             onClick={() => goToTab(homeTab)}
-            style={tab === homeTab ? homeButtonActiveStyle : homeButtonStyle}
+            style={tab === homeTab ? homeButtonActiveStyle(theme) : homeButtonStyle(theme)}
           >
-            <div style={indicatorStyle(tab === homeTab)} />
+            <div style={indicatorStyle(tab === homeTab, theme)} />
             HOME / {getHomeLabel(homeTab)}
           </button>
         </div>
@@ -101,28 +102,28 @@ export default function AppDrawer({
               const groupOpen = openGroupId === group.id;
               const groupActive = group.id === activeGroupId;
               return (
-                <div key={group.id} style={accordionGroupStyle}>
+                <div key={group.id} style={accordionGroupStyle(theme)}>
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.id)}
-                    style={groupActive ? activeAccordionHeaderStyle : accordionHeaderStyle}
+                    style={groupActive ? activeAccordionHeaderStyle(theme) : accordionHeaderStyle(theme)}
                   >
                     <span>{group.label.toUpperCase()}</span>
-                    <span style={accordionMetaStyle}>
+                    <span style={accordionMetaStyle(theme)}>
                       {group.items.length} {group.items.length === 1 ? 'PAGE' : 'PAGES'} {groupOpen ? '-' : '+'}
                     </span>
                   </button>
                   {groupOpen && (
-                    <div style={accordionBodyStyle}>
-                      <div style={groupDescriptionStyle}>{group.description}</div>
+                    <div style={accordionBodyStyle(theme)}>
+                      <div style={groupDescriptionStyle(theme)}>{group.description}</div>
                       {group.items.map((item) => (
                         <button
                           key={item.id}
                           onClick={() => goToTab(item.id)}
-                          style={tab === item.id ? activeTabStyle : tabStyle}
+                          style={tab === item.id ? activeTabStyle(theme) : tabStyle(theme)}
                           title={item.description}
                         >
-                          <div style={indicatorStyle(tab === item.id)} />
+                          <div style={indicatorStyle(tab === item.id, theme)} />
                           <span>{item.label.toUpperCase()}</span>
                         </button>
                       ))}
@@ -132,27 +133,27 @@ export default function AppDrawer({
               );
             })}
 
-            <div style={accordionGroupStyle}>
+            <div style={accordionGroupStyle(theme)}>
               <button
                 type="button"
                 onClick={() => setWorkCentersOpen((current) => !current)}
-                style={departmentFilter !== 'All' ? activeAccordionHeaderStyle : accordionHeaderStyle}
+                style={departmentFilter !== 'All' ? activeAccordionHeaderStyle(theme) : accordionHeaderStyle(theme)}
               >
                 <span>WORK CENTERS</span>
-                <span style={accordionMetaStyle}>
+                <span style={accordionMetaStyle(theme)}>
                   {workCenters.length + 1} ITEMS {workCentersOpen ? '-' : '+'}
                 </span>
               </button>
               {workCentersOpen && (
-                <div style={accordionBodyStyle}>
+                <div style={accordionBodyStyle(theme)}>
                   <button
                     onClick={() => {
                       setDepartmentFilter('All');
                       onClose();
                     }}
-                    style={departmentFilter === 'All' ? activeWorkCenterStyle : workCenterStyle}
+                    style={departmentFilter === 'All' ? activeWorkCenterStyle(theme) : workCenterStyle(theme)}
                   >
-                    <div style={indicatorStyle(departmentFilter === 'All')} />
+                    <div style={indicatorStyle(departmentFilter === 'All', theme)} />
                     ALL DEPARTMENTS
                   </button>
                   {workCenters.map((center) => (
@@ -162,9 +163,9 @@ export default function AppDrawer({
                         setDepartmentFilter(center.department);
                         onClose();
                       }}
-                      style={departmentFilter === center.department ? activeWorkCenterStyle : workCenterStyle}
+                      style={departmentFilter === center.department ? activeWorkCenterStyle(theme) : workCenterStyle(theme)}
                     >
-                      <div style={indicatorStyle(departmentFilter === center.department)} />
+                      <div style={indicatorStyle(departmentFilter === center.department, theme)} />
                       {center.name.toUpperCase()}
                     </button>
                   ))}
@@ -173,21 +174,21 @@ export default function AppDrawer({
             </div>
           </div>
 
-          <div style={settingsSectionStyle}>
-            <div style={settingsHeaderStyle}>SETTINGS</div>
+          <div style={settingsSectionStyle(theme)}>
+            <div style={settingsHeaderStyle(theme)}>SETTINGS</div>
             <div style={settingItemStyle}>
-              <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 700, letterSpacing: '0.5px' }}>
+              <span style={settingLabelStyle(theme)}>
                 THEME
               </span>
-              <button onClick={onToggleTheme} style={themeToggleStyle}>
+              <button onClick={onToggleTheme} style={themeToggleStyle(theme)}>
                 {theme === 'dark' ? 'DARK' : 'LIGHT'}
               </button>
             </div>
           </div>
         </div>
 
-        <div style={footerStyle}>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>Nash, Texas</div>
+        <div style={footerStyle(theme)}>
+          <div style={footerTextStyle(theme)}>Nash, Texas</div>
         </div>
       </div>
     </>
@@ -206,93 +207,136 @@ function getHomeLabel(homeTab: AppTab) {
   return 'COMMAND';
 }
 
-function indicatorStyle(active: boolean): CSSProperties {
+function indicatorStyle(active: boolean, theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
   return {
     width: 4,
     height: 24,
-    background: active ? '#f97316' : 'transparent',
+    background: active ? colors.accent : 'transparent',
     borderRadius: 2,
     marginRight: 12,
   };
 }
 
-const overlayStyle: CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: 'rgba(0,0,0,0.7)',
-  zIndex: 999,
-};
+function overlayStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: colors.overlay,
+    zIndex: 999,
+  };
+}
 
-const drawerStyle: CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  bottom: 0,
-  width: 280,
-  background: '#1e293b',
-  zIndex: 1000,
-  boxShadow: '4px 0 20px rgba(0,0,0,0.5)',
-  display: 'flex',
-  flexDirection: 'column',
-};
+function drawerStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 280,
+    background: colors.panel,
+    zIndex: 1000,
+    boxShadow: '4px 0 20px rgba(0,0,0,0.32)',
+    display: 'flex',
+    flexDirection: 'column',
+  };
+}
 
-const headerStyle: CSSProperties = {
-  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-  padding: '24px 20px',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderBottom: '1px solid #334155',
-  color: 'white',
-  flexShrink: 0,
-};
+function headerStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    background: colors.header,
+    padding: '24px 20px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: `1px solid ${colors.border}`,
+    color: colors.textInverted,
+    flexShrink: 0,
+  };
+}
 
-const closeButtonStyle: CSSProperties = {
-  background: 'rgba(255,255,255,0.1)',
-  border: '1px solid rgba(255,255,255,0.2)',
-  color: 'white',
-  width: 36,
-  height: 36,
-  borderRadius: 4,
-  fontSize: 18,
-  cursor: 'pointer',
-  fontWeight: 700,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
+function brandTitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    fontSize: 18,
+    fontWeight: 800,
+    letterSpacing: '1px',
+    color: colors.textInverted,
+  };
+}
 
-const homeSectionStyle: CSSProperties = {
-  padding: '12px 12px',
-  borderBottom: '1px solid #334155',
-  flexShrink: 0,
-};
+function brandSubtitleStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    fontSize: 11,
+    letterSpacing: '2px',
+    opacity: 0.82,
+    marginTop: 2,
+    color: colors.textInverted,
+  };
+}
 
-const homeButtonStyle: CSSProperties = {
-  width: '100%',
-  background: 'rgba(15, 23, 42, 0.8)',
-  border: '1px solid #334155',
-  padding: '13px 14px',
-  borderRadius: 4,
-  textAlign: 'left',
-  cursor: 'pointer',
-  fontSize: 13,
-  fontWeight: 900,
-  color: '#e2e8f0',
-  display: 'flex',
-  alignItems: 'center',
-  letterSpacing: '0.6px',
-};
+function closeButtonStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    background: colors.accentBg,
+    border: `1px solid ${colors.accent}`,
+    color: colors.accent,
+    width: 36,
+    height: 36,
+    borderRadius: 4,
+    fontSize: 18,
+    cursor: 'pointer',
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  };
+}
 
-const homeButtonActiveStyle: CSSProperties = {
-  ...homeButtonStyle,
-  background: 'rgba(249, 115, 22, 0.15)',
-  border: '1px solid #f97316',
-  color: '#f97316',
-};
+function homeSectionStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    padding: '12px 12px',
+    borderBottom: `1px solid ${colors.border}`,
+    flexShrink: 0,
+  };
+}
+
+function homeButtonStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    width: '100%',
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
+    padding: '13px 14px',
+    borderRadius: 4,
+    textAlign: 'left',
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 900,
+    color: colors.text,
+    display: 'flex',
+    alignItems: 'center',
+    letterSpacing: '0.6px',
+  };
+}
+
+function homeButtonActiveStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    ...homeButtonStyle(theme),
+    background: colors.accentBg,
+    border: `1px solid ${colors.accent}`,
+    color: colors.accent,
+  };
+}
 
 const menuContainerStyle: CSSProperties = {
   flex: 1,
@@ -308,103 +352,138 @@ const menuStyle: CSSProperties = {
   gap: 8,
 };
 
-const accordionGroupStyle: CSSProperties = {
-  border: '1px solid #334155',
-  borderRadius: 5,
-  overflow: 'hidden',
-  background: 'rgba(15, 23, 42, 0.45)',
-};
+function accordionGroupStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    border: `1px solid ${colors.border}`,
+    borderRadius: 5,
+    overflow: 'hidden',
+    background: colors.cardAlt,
+  };
+}
 
-const accordionHeaderStyle: CSSProperties = {
-  width: '100%',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: 10,
-  padding: '11px 12px',
-  background: 'transparent',
-  border: 'none',
-  color: '#94a3b8',
-  cursor: 'pointer',
-  fontSize: 11,
-  fontWeight: 900,
-  letterSpacing: '1px',
-  textAlign: 'left',
-};
+function accordionHeaderStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+    padding: '11px 12px',
+    background: 'transparent',
+    border: 'none',
+    color: colors.textSecondary,
+    cursor: 'pointer',
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: '1px',
+    textAlign: 'left',
+  };
+}
 
-const activeAccordionHeaderStyle: CSSProperties = {
-  ...accordionHeaderStyle,
-  background: 'rgba(249, 115, 22, 0.15)',
-  color: '#f97316',
-};
+function activeAccordionHeaderStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    ...accordionHeaderStyle(theme),
+    background: colors.accentBg,
+    color: colors.accent,
+  };
+}
 
-const accordionMetaStyle: CSSProperties = {
-  color: '#64748b',
-  fontSize: 9,
-  fontWeight: 900,
-  whiteSpace: 'nowrap',
-};
+function accordionMetaStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: 900,
+    whiteSpace: 'nowrap',
+  };
+}
 
-const accordionBodyStyle: CSSProperties = {
-  padding: '4px 4px 8px',
-  borderTop: '1px solid #334155',
-};
+function accordionBodyStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    padding: '4px 4px 8px',
+    borderTop: `1px solid ${colors.border}`,
+  };
+}
 
-const groupDescriptionStyle: CSSProperties = {
-  color: '#64748b',
-  fontSize: 10,
-  lineHeight: 1.35,
-  margin: '6px 10px 6px 12px',
-};
+function groupDescriptionStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    color: colors.textMuted,
+    fontSize: 10,
+    lineHeight: 1.35,
+    margin: '6px 10px 6px 12px',
+  };
+}
 
-const tabStyle: CSSProperties = {
-  width: '100%',
-  background: 'transparent',
-  border: 'none',
-  padding: '11px 12px',
-  borderRadius: 4,
-  textAlign: 'left',
-  cursor: 'pointer',
-  fontSize: 12,
-  fontWeight: 700,
-  color: '#94a3b8',
-  display: 'flex',
-  alignItems: 'center',
-  transition: 'all 0.2s',
-  letterSpacing: '0.5px',
-};
+function tabStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    width: '100%',
+    background: 'transparent',
+    border: 'none',
+    padding: '11px 12px',
+    borderRadius: 4,
+    textAlign: 'left',
+    cursor: 'pointer',
+    fontSize: 12,
+    fontWeight: 700,
+    color: colors.textSecondary,
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'all 0.2s',
+    letterSpacing: '0.5px',
+  };
+}
 
-const activeTabStyle: CSSProperties = {
-  ...tabStyle,
-  background: 'rgba(249, 115, 22, 0.15)',
-  color: '#f97316',
-};
+function activeTabStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    ...tabStyle(theme),
+    background: colors.accentBg,
+    color: colors.accent,
+  };
+}
 
-const workCenterStyle: CSSProperties = {
-  ...tabStyle,
-  padding: '9px 12px',
-  fontSize: 11,
-};
+function workCenterStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    ...tabStyle(theme),
+    padding: '9px 12px',
+    fontSize: 11,
+  };
+}
 
-const activeWorkCenterStyle: CSSProperties = {
-  ...workCenterStyle,
-  background: 'rgba(249, 115, 22, 0.15)',
-  color: '#f97316',
-};
+function activeWorkCenterStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    ...workCenterStyle(theme),
+    background: colors.accentBg,
+    color: colors.accent,
+  };
+}
 
-const settingsSectionStyle: CSSProperties = {
-  borderTop: '1px solid #334155',
-  padding: '16px 20px',
-  flexShrink: 0,
-};
+function settingsSectionStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    borderTop: `1px solid ${colors.border}`,
+    padding: '16px 20px',
+    flexShrink: 0,
+  };
+}
 
-const settingsHeaderStyle: CSSProperties = {
-  fontSize: 11,
-  fontWeight: 800,
-  color: '#64748b',
-  letterSpacing: '1px',
-  marginBottom: 12,
-};
+function settingsHeaderStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    fontSize: 11,
+    fontWeight: 800,
+    color: colors.textMuted,
+    letterSpacing: '1px',
+    marginBottom: 12,
+  };
+}
 
 const settingItemStyle: CSSProperties = {
   display: 'flex',
@@ -413,22 +492,46 @@ const settingItemStyle: CSSProperties = {
   marginBottom: 12,
 };
 
-const themeToggleStyle: CSSProperties = {
-  background: 'rgba(249, 115, 22, 0.2)',
-  border: '1px solid #f97316',
-  color: '#f97316',
-  padding: '6px 12px',
-  borderRadius: 4,
-  fontSize: 11,
-  fontWeight: 800,
-  cursor: 'pointer',
-  letterSpacing: '0.5px',
-  transition: 'all 0.2s',
-};
+function settingLabelStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: 700,
+    letterSpacing: '0.5px',
+  };
+}
 
-const footerStyle: CSSProperties = {
-  padding: '16px 20px',
-  borderTop: '1px solid #334155',
-  textAlign: 'center',
-  flexShrink: 0,
-};
+function themeToggleStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    background: colors.accentBg,
+    border: `1px solid ${colors.accent}`,
+    color: colors.accent,
+    padding: '6px 12px',
+    borderRadius: 4,
+    fontSize: 11,
+    fontWeight: 800,
+    cursor: 'pointer',
+    letterSpacing: '0.5px',
+    transition: 'all 0.2s',
+  };
+}
+
+function footerStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    padding: '16px 20px',
+    borderTop: `1px solid ${colors.border}`,
+    textAlign: 'center',
+    flexShrink: 0,
+  };
+}
+
+function footerTextStyle(theme: 'dark' | 'light'): CSSProperties {
+  const colors = getThemeColors(theme);
+  return {
+    fontSize: 11,
+    color: colors.textMuted,
+  };
+}
