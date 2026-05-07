@@ -7,34 +7,29 @@ Build: npm run build
 
 ## Current Build State
 
-Latest verified PR build is GREEN.
+Main is GREEN and deployed.
 
 ```text
-PR: #49 Add route confidence to product families
-PR head commit: 69cdb62e14fec7057ac90b13b0ad292d2ae1df9e
-PR run: 25528062201
+Latest merged PR: #50 Wire route confidence display into plant traveler
+Main commit: 19b0f2e60265bee5d0ae3db23839a2e6efbf70f7
+Main run: 25528506152
 Workflow: Build
 Typecheck and build: success
-Demo build artifact: success
-```
-
-Main merge is complete but the post-merge main run was not visible at the time this context was updated.
-
-```text
-Merge commit: ee8c205a09b08d6f3a1cc973d06f973af769ac48
-Main build for merge: unknown / pending verification
-Last recorded main breadcrumb in docs/LATEST_ACTION_RUN.md may still be stale until Actions records a newer main run.
+GitHub Pages deploy: success
+Updated: 2026-05-07T23:53:25Z
 ```
 
 ## Last Completed Mission
 
-Product-family route confidence seed is merged.
+Route-confidence display is installed and visible in the Full Plant Traveler Product Intelligence panel.
 
 Completed work:
 
 - PR #49 extended the existing `src/data/productFamilies.ts` map.
 - Added `routeConfidence`, `sourceType`, `routeNote`, `likelyPlantArea`, and `needsConfirmation` fields.
 - Added `findProductFamilyBySeries()` and `getProductFamilyRouteConfidence()` helpers.
+- PR #50 added operator-safe route confidence display copy helpers.
+- PR #50 wired Route Confidence, Likely Area, route review notice, route note, and confirmation items into the Full Plant Traveler Product Intelligence panel.
 - Kept product intelligence in one source instead of adding a duplicate map.
 - No runtime routing changed.
 - No `requiredDepartments` changed.
@@ -50,12 +45,15 @@ Current decision:
 Website/catalog/manual data can classify product families.
 Plant-confirmed knowledge is still required before route dispatch.
 Unknown route = review prompt, not command.
+Shipping is always the final physical department.
+Ready for Shipping is still conditional on blockers, QA, paperwork, and order completion state.
 ```
 
 ## Stable Completed Work
 
 - PR #48 landed Machine Shop department page, English/Spanish MVP, shell i18n, theme cohesion, and LV4500 simulation Level 2.
 - PR #49 landed route confidence metadata for product families.
+- PR #50 landed route confidence display in Full Plant Traveler.
 - DEV toolkit is one bottom-right floating DEV button.
 - Work Center workflow buttons use typed action contracts, not visible-label parsing.
 - `BLOCKED_HERE` workflow cards are review-only.
@@ -79,7 +77,8 @@ Product-family data must not:
 - silently change current or next department;
 - mark QA universal;
 - mark Coating required without confirmation;
-- dispatch work from public catalog category alone.
+- dispatch work from public catalog category alone;
+- mark an order ready for Shipping just because Shipping is the final department.
 
 ## Known Route Confidence Areas
 
@@ -90,8 +89,8 @@ Confirmed / stronger:
 - Material Handling is production, not support.
 - Saddles route is Receiving -> Coating -> Saddles Dept.
 - LV4500s are in Saddles Dept, not Machine Shop.
+- Shipping is always the final physical department.
 - Maintenance is stand-alone.
-- Everything eventually funnels to Shipping.
 
 Needs review before dispatch:
 
@@ -129,15 +128,23 @@ Needs review before dispatch:
 - Product classification is a mapmaker, not dispatch authority.
 - RequiredDepartments override classifier route hints.
 - No route-confidence increase without confirmed plant facts.
+- Shipping is always last; readiness to ship is not automatic.
 
 ## Next Recommended Move
 
-Verify the post-merge main build for `ee8c205a09b08d6f3a1cc973d06f973af769ac48` when Actions posts it.
+Manual smoke test the live demo:
+
+```text
+Open a traveler.
+Open Full Plant Traveler.
+Confirm Route Confidence appears in Product Intelligence.
+Confirm Likely Area appears.
+Confirm review copy says confirm before dispatch or handoff.
+Confirm no route/action behavior changed.
+```
 
 Then continue small:
 
 ```text
-Surface route confidence in UI as review language, not dispatch behavior.
+Wire route confidence into the Department Traveler modal only when TravelerDetailModal.tsx can be patched safely without full-file truncation risk.
 ```
-
-First target should be read-only display language, not runtime route changes.
