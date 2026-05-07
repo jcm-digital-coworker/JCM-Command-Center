@@ -175,6 +175,10 @@ export function OrderCard({
   const urgencyColor = getUrgencyColor(urgencyScore);
   const materialAction = getPlantTravelerMaterialAction(traveler);
   const hasMaterialIssue = Boolean(materialAction?.enabled);
+  const primaryBlocker = isBlocked
+    ? (traveler.blockers ?? []).find((b) => b.type !== 'unknown') ?? (traveler.blockers ?? [])[0] ?? null
+    : null;
+  const hasEngineeringHold = order.engineeringRequired && order.engineeringStatus === 'PENDING';
   const activeDepartment = traveler.activeDepartment ?? order.currentDepartment;
   const nextDepartment = traveler.nextDepartment ?? order.nextDepartment;
   const progressLabel = `${traveler.completedStepCount}/${traveler.totalStepCount} (${traveler.completionPercent}%)`;
@@ -224,14 +228,34 @@ export function OrderCard({
           <div style={travelerRouteStyle(theme)}>{traveler.route.join(' → ')}</div>
         </div>
       )}
-      {hasMaterialIssue && onGoToTab && (
-        <button
-          type="button"
-          style={requestMaterialButtonStyle}
-          onClick={() => onGoToTab('receiving')}
-        >
-          → RECEIVING
-        </button>
+      {onGoToTab && (
+        <>
+          {hasMaterialIssue && (
+            <button type="button" style={resolutionButtonStyle('#38bdf8')} onClick={() => onGoToTab('receiving')}>
+              → RECEIVING
+            </button>
+          )}
+          {!hasMaterialIssue && (hasEngineeringHold || primaryBlocker?.type === 'process') && (
+            <button type="button" style={resolutionButtonStyle('#818cf8')} onClick={() => onGoToTab('engineering')}>
+              → ENGINEERING
+            </button>
+          )}
+          {!hasMaterialIssue && primaryBlocker?.type === 'quality' && (
+            <button type="button" style={resolutionButtonStyle('#f59e0b')} onClick={() => onGoToTab('qa')}>
+              → QA
+            </button>
+          )}
+          {!hasMaterialIssue && primaryBlocker?.type === 'machine' && (
+            <button type="button" style={resolutionButtonStyle('#ef4444')} onClick={() => onGoToTab('alerts')}>
+              → ALERTS
+            </button>
+          )}
+          {!hasMaterialIssue && primaryBlocker?.type === 'labor' && (
+            <button type="button" style={resolutionButtonStyle('#10b981')} onClick={() => onGoToTab('coverage')}>
+              → COVERAGE
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -788,18 +812,21 @@ function urgencyBadgeStyle(color: string): CSSProperties {
   return { fontSize: 10, fontWeight: 900, color, background: `${color}22`, border: `1px solid ${color}55`, borderRadius: 3, padding: '2px 6px', letterSpacing: '0.3px' };
 }
 
-const requestMaterialButtonStyle: CSSProperties = {
-  marginTop: 8,
-  padding: '6px 10px',
-  borderRadius: 4,
-  border: '1px solid #38bdf8',
-  background: 'rgba(56,189,248,0.12)',
-  color: '#38bdf8',
-  fontSize: 11,
-  fontWeight: 900,
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
+function resolutionButtonStyle(color: string): CSSProperties {
+  return {
+    marginTop: 8,
+    padding: '6px 10px',
+    borderRadius: 4,
+    border: `1px solid ${color}`,
+    background: 'transparent',
+    color,
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: '0.04em',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  };
+}
 
 const crewGapActionButtonStyle: CSSProperties = {
   padding: '4px 10px',
