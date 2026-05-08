@@ -13,7 +13,7 @@ import type { WorkCenter } from './types/plant';
 import type { AppTab, DepartmentFilter, RoleView } from './types/app';
 
 import MachineDetail from './components/MachineDetail';
-import Lv4500JcmSimulator from './components/Lv4500JcmSimulator';
+import Lv4500JcmSimulator from './components/Lv4500JcmSimulatorV2';
 import AppHeader from './components/shell/AppHeader';
 import AppDrawer from './components/shell/AppDrawer';
 import CommandNavigationBar from './components/shell/CommandNavigationBar';
