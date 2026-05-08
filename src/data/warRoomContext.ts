@@ -22,19 +22,20 @@ export const warRoomContextSections: WarRoomContextSection[] = [
   {
     title: 'Current Stable State',
     items: [
-      'DEV toolkit is one bottom-right floating DEV button.',
-      'Receiving gate page is active through the stable ReceivingPage.ts shim.',
-      'Receiving entrypoint cleanup is parked until intentionally requested.',
-      'Codespaces is configured with .devcontainer/devcontainer.json.',
+      'Main is green and deployed at ba7b9b21 with run 25584980666.',
+      'LV4500 simulator is now a selected-cycle estimator, not an auto tap demo.',
+      'LV4500 selected cycle uses casting/body, outlet/tap, batch target, and optional Z-depth override.',
+      'LV4500 cycle-time results should show single-cycle and batch-time estimates.',
+      'DEV toolkit is one bottom-right floating DEV button and is available on work-center detail pages.',
     ],
   },
   {
     title: 'Next Mission',
     items: [
-      'Dynamic traveler integration and department card consistency.',
-      'Start with src/pages/departments/DepartmentPageTools.tsx.',
-      'Audit before coding: GREEN traveler-driven, YELLOW partial, RED local status logic.',
-      'Patch the smallest safe bundle after the audit is clear.',
+      'Smoke test the live LV4500 selected-cycle flow.',
+      'Confirm AUTO-SWEEP TAPS and Step -> Next Tap are gone from selected-cycle flow.',
+      'Confirm RUN SELECTED CYCLE only runs current casting/tap/Z-depth/batch.',
+      'Confirm batch total, batch hours, geometry, and G76 values update for the selected setup only.',
     ],
   },
   {
@@ -47,6 +48,7 @@ export const warRoomContextSections: WarRoomContextSection[] = [
       'Pages compose',
       'Logic modules think',
       'Components display',
+      'LV4500 simulator is read-only and must not create real machine command behavior',
     ],
   },
 ];
@@ -70,17 +72,19 @@ Then inspect the specific target file for the current task. Do not rely on memor
 - src/App.tsx
 - src/components/shell/AppDrawer.tsx
 - src/components/shell/AppHeader.tsx
-- src/components/shell/DevToolkitFlyout.tsx`,
+- src/components/shell/DevToolkitFlyout.tsx
+- src/components/Lv4500JcmSimulator.tsx`,
   },
   {
     id: 'current-target',
     title: 'Current Target',
-    body: `Dynamic traveler integration should begin with an audit of:
+    body: `Smoke test the LV4500 selected-cycle estimator:
 
-- src/pages/departments/DepartmentPageTools.tsx
-- src/logic/dynamicTraveler.ts
-- src/logic/orderStatusTruth.ts
-
-Return GREEN / YELLOW / RED findings before making code changes.`,
+- Open Simulation -> LV4500R
+- Confirm casting/body, outlet/tap, batch target, and Z-depth override are visible
+- Confirm AUTO-SWEEP TAPS and Step -> Next Tap are not in selected-cycle flow
+- Run selected cycle only
+- Confirm single-cycle and batch-time estimates update
+- Confirm geometry and G76 values reflect the selected setup`,
   },
 ];

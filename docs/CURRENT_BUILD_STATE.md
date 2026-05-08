@@ -2,20 +2,22 @@
 
 Purpose: preserve the smallest useful operating context for the JCM Command Center build so future work continues from the current clean repository state without dragging full chat history forward.
 
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 ## Current Build Status
 
 Main is GREEN and deployed.
 
 ```text
-Latest merged PR: #50 Wire route confidence display into plant traveler
-Main commit: 19b0f2e60265bee5d0ae3db23839a2e6efbf70f7
-Main run: 25528506152
+Latest merged work: LV4500 selected-cycle estimator
+Main commit: ba7b9b21ecebfa8fbcccdedcf6c5bc03af763a79
+Main run: 25584980666
 Branch: main
 Workflow: Build
 Status: GREEN
+Typecheck and build: success
 GitHub Pages deploy: success
+Updated: 2026-05-08T23:43:25Z
 ```
 
 Verified main steps:
@@ -32,34 +34,39 @@ Verified main steps:
 
 ## Last Completed Mission
 
-Route-confidence display is complete and merged.
+LV4500 selected-cycle estimator is complete, merged, built, and deployed.
 
 What changed:
 
-- PR #49 extended `src/data/productFamilies.ts`.
-- Added route-confidence metadata to the existing product-family map.
-- Added `routeConfidence`, `sourceType`, `routeNote`, `likelyPlantArea`, and `needsConfirmation` fields.
-- Added `findProductFamilyBySeries()` and `getProductFamilyRouteConfidence()` helpers.
-- PR #50 added `routeConfidenceDisplay` and `getProductFamilyRouteConfidenceDisplay()`.
-- PR #50 surfaced Route Confidence, Likely Area, route review notice, route note, and confirmation items in the Full Plant Traveler Product Intelligence panel.
-- Kept product intelligence in one existing source instead of creating a duplicate map.
-- Main build and Pages deploy passed.
+- Restored and preserved the full original LV4500 simulator surface after the simplified V2 proved insufficient.
+- Added visible Thread Z-depth override support to the LV4500 simulator.
+- Added measured LV4500R timing constants:
+  - Rapid rate: 945 IPM
+  - G28 travel: X23.400 / Z10.431
+  - Indexing time: 0.2 seconds per step
+- Changed the simulator from auto-demo behavior to selected-cycle estimator behavior.
+- Removed operator-facing auto-sweep / step-through tap behavior from the primary flow.
+- Primary action is now selected-cycle focused: choose body/casting, outlet/tap, batch target, optional Z-depth override, then run that selected cycle.
+- Cycle-time results include single-cycle and batch-time visibility.
+- The simulator remains read-only and does not send machine commands or mutate production runtime state.
 
-What did not change:
+What should be true in the live demo:
 
-- Runtime routing did not change.
-- `requiredDepartments` did not change.
-- Action behavior did not change.
-- No department dispatch rules were added.
+- Simulation -> LV4500R opens the full LV4500 simulator, not the stripped V2.
+- Setup has casting/body, tap/outlet, batch target, and Thread Z-depth override.
+- No AUTO-SWEEP TAPS button should appear in the selected-cycle flow.
+- No Step -> Next Tap button should appear in the selected-cycle flow.
+- RUN SELECTED CYCLE runs only the currently selected setup.
+- Results show geometry and cycle time for that selected setup only.
+- Batch estimate is visible from the selected batch target.
 
 ## Current Decision
 
 ```text
-Website/catalog/manual data can identify product families.
-Plant-confirmed route knowledge is required before dispatch.
-Unknown route = review prompt, not command.
-Shipping is always the final physical department.
-Ready for Shipping is still conditional on blockers, QA, paperwork, and order completion state.
+The LV4500 simulator is a selected-cycle estimator, not an automated tap demo.
+It is used to answer: can this selected outlet/tap run in this selected body, and what is the expected single-part and batch cycle time?
+Z-depth override is a simulation input only.
+Cycle-time estimates are guidance, not machine command authority.
 ```
 
 ## Guardrails Preserved
@@ -81,6 +88,7 @@ Ready for Shipping is still conditional on blockers, QA, paperwork, and order co
 - RequiredDepartments still override classifier route hints.
 - No confidence increase without confirmed plant facts.
 - Shipping is always last; readiness to ship is not automatic.
+- LV4500 simulator is read-only and must not create real machine command behavior.
 
 ## Durable Plant Truth Reminders
 
@@ -92,15 +100,24 @@ Ready for Shipping is still conditional on blockers, QA, paperwork, and order co
 - Fab output moves to Coating.
 - Coating is complex and must not be modeled as one bucket.
 - Assembly is lane/product specific, not one generic department.
-- Saddles route is Receiving -> Coating -> Saddles Dept.
+- Saddles route differs by product/coating path:
+  - Plastic-coated saddles go to Coating before LV4500 tapping.
+  - Other saddles go to Saddles for tapping first, then to Coating for shop-coat or enamel.
+- Stainless parts do not get coated; they go to passivation or bead blast as applicable.
 - LV4500s are in Saddles Dept, not Machine Shop.
 - QA is conditional, not universal.
 - Shipping is always the final physical department.
-- Maintenance is stand-alone.
+- Maintenance is facilities and equipment repair only.
 
 ## Active Risks / Next Audit Targets
 
-- Smoke test the live demo after PR #50 deploy.
+- Manually smoke test the live LV4500 selected-cycle flow:
+  - choose casting/body;
+  - choose outlet/tap;
+  - set batch target;
+  - optionally set Z-depth override;
+  - click RUN SELECTED CYCLE;
+  - confirm geometry, cycle time, and batch estimate update for only that selected setup.
 - Coating sub-flow is still partly uncertain.
 - Couplings route relative to Coating is still uncertain.
 - Clamps and Patch Clamps need more detail.
@@ -122,12 +139,14 @@ Ready for Shipping is still conditional on blockers, QA, paperwork, and order co
 Smoke test the live demo:
 
 ```text
-Open a traveler.
-Open Full Plant Traveler.
-Confirm Route Confidence appears in Product Intelligence.
-Confirm Likely Area appears.
-Confirm review copy says confirm before dispatch or handoff.
-Confirm no route/action behavior changed.
+Open Simulation.
+Open LV4500R simulator.
+Confirm the simulator is selected-cycle only.
+Confirm AUTO-SWEEP TAPS and Step -> Next Tap are gone from the selected-cycle flow.
+Set Batch Target = 50.
+Set a Z-depth override.
+Click RUN SELECTED CYCLE.
+Confirm single-cycle time, batch total, batch hours, geometry, and G76 values update for the selected setup only.
 ```
 
-Then continue with the next display-only pass only if the source file can be patched safely.
+If smoke test passes, continue with the next small plant-truth or operator-copy pass. If it fails, fix the specific visible behavior before adding new features.
