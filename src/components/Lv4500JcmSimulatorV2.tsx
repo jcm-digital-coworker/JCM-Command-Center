@@ -64,6 +64,12 @@ function getTokens(theme: Theme): ThemeTokens {
   };
 }
 
+function combineStatus(logicStatus: SimStatus, geometryStatus: SimStatus): SimStatus {
+  if (logicStatus === 'FAIL' || geometryStatus === 'FAIL') return 'FAIL';
+  if (logicStatus === 'CAUTION' || geometryStatus === 'CAUTION') return 'CAUTION';
+  return 'PASS';
+}
+
 export default function Lv4500JcmSimulatorV2({ theme = 'dark', onGoToSaddles }: Lv4500JcmSimulatorV2Props) {
   const t = getTokens(theme);
   const [activeTab, setActiveTab] = useState<LvTab>('setup');
@@ -82,9 +88,7 @@ export default function Lv4500JcmSimulatorV2({ theme = 'dark', onGoToSaddles }: 
 
   const overallStatus = useMemo<SimStatus | null>(() => {
     if (!logicResult || !geometryResult) return null;
-    if (logicResult.status === 'FAIL' || geometryResult.status === 'FAIL') return 'FAIL';
-    if (logicResult.status === 'CAUTION' || geometryResult.status === 'CAUTION') return 'CAUTION';
-    return 'PASS';
+    return combineStatus(logicResult.status, geometryResult.status);
   }, [logicResult, geometryResult]);
 
   function chooseTap(nextTap: string) {
@@ -113,12 +117,7 @@ export default function Lv4500JcmSimulatorV2({ theme = 'dark', onGoToSaddles }: 
 
     const geometry = runLv4500Geometry(castingNumber, tapCode, { zDepthOverride });
     const time = estimateLv4500CycleTime(tapCode, { zDepthOverride });
-    const nextOverall: SimStatus =
-      logic.status === 'FAIL' || geometry.status === 'FAIL'
-        ? 'FAIL'
-        : logic.status === 'CAUTION' || geometry.status === 'CAUTION'
-          ? 'CAUTION'
-          : 'PASS';
+    const nextOverall = combineStatus(logic.status, geometry.status);
 
     setLogicResult(logic);
     setGeometryResult(geometry);
@@ -156,6 +155,7 @@ export default function Lv4500JcmSimulatorV2({ theme = 'dark', onGoToSaddles }: 
       });
       const geometry = runLv4500Geometry(castingNumber, nextTap.code, { zDepthOverride: nextDepth });
       const time = estimateLv4500CycleTime(nextTap.code, { zDepthOverride: nextDepth });
+      const nextOverall = combineStatus(logic.status, geometry.status);
       setLogicResult(logic);
       setGeometryResult(geometry);
       setCycleTime(time);
@@ -165,7 +165,7 @@ export default function Lv4500JcmSimulatorV2({ theme = 'dark', onGoToSaddles }: 
           casting: casting?.lastThree ?? castingNumber,
           tap: nextTap.label,
           zDepth: nextDepth,
-          overallStatus: logic.status === 'FAIL' || geometry.status === 'FAIL' ? 'FAIL' : logic.status === 'CAUTION' || geometry.status === 'CAUTION' ? 'CAUTION' : 'PASS',
+          overallStatus: nextOverall,
         },
         ...previous,
       ].slice(0, 8));
@@ -257,7 +257,7 @@ export default function Lv4500JcmSimulatorV2({ theme = 'dark', onGoToSaddles }: 
               <p style={subtitleStyle(t)}>Run the simulator from Setup to generate results.</p>
             ) : (
               <>
-                <StatusBanner t={t} status={overallStatus ?? 'PASS'} />
+                <StatusBanner status={overallStatus ?? 'PASS'} />
                 <InfoGrid>
                   <InfoTile t={t} label="Logic" value={logicResult.status} />
                   <InfoTile t={t} label="Geometry" value={geometryResult.status} />
@@ -353,7 +353,7 @@ function InfoTile({ t, label, value }: { t: ThemeTokens; label: string; value: s
   );
 }
 
-function StatusBanner({ t, status }: { t: ThemeTokens; status: SimStatus }) {
+function StatusBanner({ status }: { status: SimStatus }) {
   return <div style={statusBannerStyle(status)}>{status}</div>;
 }
 
