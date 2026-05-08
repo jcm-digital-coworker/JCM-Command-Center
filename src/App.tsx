@@ -376,6 +376,15 @@ export default function App() {
           }}
           theme={theme}
         />
+        <DevToolkitFlyout
+          theme={theme}
+          activeTab={tab}
+          roleView={roleView}
+          setRoleView={changeRoleView}
+          departmentFilter={departmentFilter}
+          setDepartmentFilter={openWorkCenterForDepartment}
+          workCenters={workCenters}
+        />
       </div>
     );
   }
