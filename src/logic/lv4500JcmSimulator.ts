@@ -5,7 +5,13 @@ import {
   suitePrograms,
   tapCodeTable,
 } from "../data/lv4500JcmSuite";
-import type { GeometryResult, LogicInput, LogicResult, SimStatus } from "../types/lv4500Jcm";
+import type {
+  GeometryResult,
+  LogicInput,
+  LogicResult,
+  Lv4500GeometryOptions,
+  SimStatus,
+} from "../types/lv4500Jcm";
 
 export function findCasting(castingNumber: string) {
   return implementedCastings.find((c) => c.castingNumber === castingNumber);
@@ -116,7 +122,11 @@ export function runLv4500Logic(input: LogicInput): LogicResult {
   };
 }
 
-export function runLv4500Geometry(castingNumber: string, tapCode: string): GeometryResult {
+export function runLv4500Geometry(
+  castingNumber: string,
+  tapCode: string,
+  options: Lv4500GeometryOptions = {},
+): GeometryResult {
   let status: SimStatus = "PASS";
   const messages: string[] = [];
 
@@ -130,14 +140,21 @@ export function runLv4500Geometry(castingNumber: string, tapCode: string): Geome
     return failGeometry("Small boss + tap code greater than 10 is not allowed.");
   }
 
+  const overrideDepth = normalizeDepthOverride(options.zDepthOverride);
+  const zDepthOverrideApplied = typeof overrideDepth === "number";
+
   const threadStartZ = tap.threadStartPlane;
-  const threadEndZ = Math.abs(tap.threadDepth);
-  const fullStroke = Math.abs(tap.threadDepth) + tap.threadStartPlane;
+  const threadEndZ = overrideDepth ?? Math.abs(tap.threadDepth);
+  const fullStroke = threadEndZ + tap.threadStartPlane;
   const g76R = fullStroke * tap.taperFactor;
-  const threadFinalX = tap.faceMajor - 2 * (Math.abs(tap.threadDepth) * tap.taperFactor);
+  const threadFinalX = tap.faceMajor - 2 * (threadEndZ * tap.taperFactor);
 
   const maxDepth = Math.max(tap.drillDepth, tap.boreTaperEndZ, tap.reliefEndZ, threadEndZ);
   const fixtureMargin = LV4500_FIXTURE_LIMIT - maxDepth;
+
+  if (zDepthOverrideApplied) {
+    messages.push(`Z-depth override applied to thread end: ${threadEndZ.toFixed(3)} in.`);
+  }
 
   if (maxDepth >= LV4500_FIXTURE_LIMIT) {
     status = "FAIL";
@@ -182,7 +199,14 @@ export function runLv4500Geometry(castingNumber: string, tapCode: string): Geome
     maxDepth,
     fixtureMargin,
     estimatedCycleMinutes: tap.estimatedCycleMinutes,
+    zDepthOverrideApplied,
   };
+}
+
+function normalizeDepthOverride(value?: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  if (value === 0) return undefined;
+  return Math.abs(value);
 }
 
 function failGeometry(message: string): GeometryResult {
@@ -199,5 +223,6 @@ function failGeometry(message: string): GeometryResult {
     maxDepth: 0,
     fixtureMargin: LV4500_FIXTURE_LIMIT,
     estimatedCycleMinutes: 0,
+    zDepthOverrideApplied: false,
   };
 }

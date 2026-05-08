@@ -60,6 +60,14 @@ export type LogicResult = {
   remainingCount: number;
 };
 
+export type Lv4500GeometryOptions = {
+  zDepthOverride?: number;
+};
+
+export type Lv4500CycleTimeOptions = {
+  zDepthOverride?: number;
+};
+
 export type GeometryResult = {
   status: SimStatus;
   messages: string[];
@@ -73,4 +81,5 @@ export type GeometryResult = {
   maxDepth: number;
   fixtureMargin: number;
   estimatedCycleMinutes: number;
+  zDepthOverrideApplied: boolean;
 };

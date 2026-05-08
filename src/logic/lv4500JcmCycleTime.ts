@@ -1,4 +1,5 @@
 import { findTapCode } from "./lv4500JcmSimulator";
+import type { Lv4500CycleTimeOptions } from "../types/lv4500Jcm";
 
 export type CycleTimeEstimate = {
   totalMinutes: number;
@@ -7,28 +8,40 @@ export type CycleTimeEstimate = {
   overheadMinutes: number;
   confidence: "rough" | "medium";
   notes: string[];
+  rapidRateIpm: number;
+  g28TravelX: number;
+  g28TravelZ: number;
+  indexingSeconds: number;
 };
 
-const START_X_DISTANCE = 23.4;
-const START_Z_DISTANCE = 12.0;
+export const LV4500R_RAPID_RATE_IPM = 945;
+export const LV4500R_G28_TRAVEL_X = 23.4;
+export const LV4500R_G28_TRAVEL_Z = 10.431;
+export const LV4500R_INDEX_SECONDS_PER_STEP = 0.2;
 
-// Conservative placeholders.
-// Tune these later from real stopwatch data.
-const ASSUMED_RAPID_IPM = 600;
 const TOOL_CHANGE_SECONDS = 8;
 const M_CODE_SECONDS = 2;
-const G28_HOME_SECONDS = 5;
 const CHIP_CLEAN_SECONDS = 3;
+const INDEX_STEPS_PER_CYCLE = 3;
 
 function secondsToMinutes(seconds: number) {
   return seconds / 60;
 }
 
 function rapidMinutes(distanceInches: number) {
-  return distanceInches / ASSUMED_RAPID_IPM;
+  return distanceInches / LV4500R_RAPID_RATE_IPM;
 }
 
-export function estimateLv4500CycleTime(tapCode: string): CycleTimeEstimate {
+function normalizeDepthOverride(value?: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  if (value === 0) return undefined;
+  return Math.abs(value);
+}
+
+export function estimateLv4500CycleTime(
+  tapCode: string,
+  options: Lv4500CycleTimeOptions = {},
+): CycleTimeEstimate {
   const tap = findTapCode(tapCode);
 
   if (!tap) {
@@ -39,10 +52,16 @@ export function estimateLv4500CycleTime(tapCode: string): CycleTimeEstimate {
       overheadMinutes: 0,
       confidence: "rough",
       notes: ["Cannot estimate cycle time because tap code data is missing."],
+      rapidRateIpm: LV4500R_RAPID_RATE_IPM,
+      g28TravelX: LV4500R_G28_TRAVEL_X,
+      g28TravelZ: LV4500R_G28_TRAVEL_Z,
+      indexingSeconds: LV4500R_INDEX_SECONDS_PER_STEP,
     };
   }
 
   const notes: string[] = [];
+  const overrideDepth = normalizeDepthOverride(options.zDepthOverride);
+  const threadEndDepth = overrideDepth ?? Math.abs(tap.threadDepth);
 
   // Drill feed estimate.
   // The macro uses feed-per-rev drilling. We approximate from typical RPM already embedded by tap family.
@@ -69,10 +88,7 @@ export function estimateLv4500CycleTime(tapCode: string): CycleTimeEstimate {
 
   // Threading estimate.
   // Thread feed per rev = 1 / TPI. RPM is derived in the macro from SFM and face major.
-  const threadSfm =
-    tap.code === "16" ? 200 :
-    tap.type === "AWWA" ? 200 :
-    200;
+  const threadSfm = 200;
 
   const threadRpm = Math.floor((3.82 * threadSfm) / tap.faceMajor);
   const threadFeedIpm = threadRpm * (1 / tap.tpi);
@@ -84,22 +100,23 @@ export function estimateLv4500CycleTime(tapCode: string): CycleTimeEstimate {
     Number(tap.code) >= 10 ? 6 :
     5;
 
-  const threadStroke = Math.abs(tap.threadDepth) + tap.threadStartPlane;
+  const threadStroke = threadEndDepth + tap.threadStartPlane;
   const threadMinutes = (threadStroke * (roughThreadPasses + springPassAllowance)) / threadFeedIpm;
 
   const cuttingMinutes = drillMinutes + boreMinutes + threadMinutes;
 
   // Rapid travel estimate.
-  // Uses your starting distance assumption plus multiple home/reposition cycles in prep + thread programs.
-  const startTravelDistance = START_X_DISTANCE + START_Z_DISTANCE;
+  // Uses measured LV4500R rapid rate and G28 travel supplied from the machine.
+  const g28TravelDistance = LV4500R_G28_TRAVEL_X + LV4500R_G28_TRAVEL_Z;
   const rapidCycles = 6;
-  const rapidTravelMinutes = rapidMinutes(startTravelDistance * rapidCycles);
+  const rapidTravelMinutes = rapidMinutes(g28TravelDistance * rapidCycles);
 
   // Overhead estimate.
+  const indexingSeconds = LV4500R_INDEX_SECONDS_PER_STEP * INDEX_STEPS_PER_CYCLE;
   const overheadSeconds =
     TOOL_CHANGE_SECONDS * 3 +
     M_CODE_SECONDS * 10 +
-    G28_HOME_SECONDS * 5 +
+    indexingSeconds +
     CHIP_CLEAN_SECONDS;
 
   const overheadMinutes = secondsToMinutes(overheadSeconds);
@@ -107,16 +124,22 @@ export function estimateLv4500CycleTime(tapCode: string): CycleTimeEstimate {
   const totalMinutes = cuttingMinutes + rapidTravelMinutes + overheadMinutes;
 
   notes.push("Estimate excludes operator stops, gauge hold time, and manual inspection.");
-  notes.push("Estimate includes rough rapid travel using X 23.4 in and Z 12.0 in starting distance.");
+  notes.push("Uses measured LV4500R rapid rate: 945 IPM.");
+  notes.push("Uses measured G28 travel: X23.400 / Z10.431.");
+  notes.push("Uses turret indexing allowance: 0.2 seconds per step.");
+  if (overrideDepth) notes.push(`Z-depth override included in threading stroke: ${threadEndDepth.toFixed(3)} in.`);
   notes.push("G71 and G76 pass counts are approximated because the control generates the exact motion internally.");
-  notes.push("Use real stopwatch data later to tune rapid rate, tool-change time, and pass allowances.");
 
   return {
     totalMinutes,
     cuttingMinutes,
     rapidMinutes: rapidTravelMinutes,
     overheadMinutes,
-    confidence: "rough",
+    confidence: "medium",
     notes,
+    rapidRateIpm: LV4500R_RAPID_RATE_IPM,
+    g28TravelX: LV4500R_G28_TRAVEL_X,
+    g28TravelZ: LV4500R_G28_TRAVEL_Z,
+    indexingSeconds: LV4500R_INDEX_SECONDS_PER_STEP,
   };
 }
