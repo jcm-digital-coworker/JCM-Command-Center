@@ -19,7 +19,8 @@ import {
   normalizeOrderToken,
 } from './orderStatusTruth';
 
-const DEFAULT_PLANT_ROUTE: Department[] = ['Receiving', 'Machine Shop', 'Assembly', 'QA', 'Shipping'];
+const FINAL_PLANT_DEPARTMENT: Department = 'Shipping';
+const NON_PRODUCTION_ROUTE_DEPARTMENTS: Department[] = ['Maintenance'];
 const ACTIVE_PLANT_STEP_STATUSES: TravelerStepStatus[] = ['READY', 'ACTIVE', 'BLOCKED', 'HOLD'];
 
 export function generateDynamicTravelers(
@@ -132,18 +133,47 @@ export function getRequiredCapabilities(order: ProductionOrder, department: Depa
 
 function getPlantRoute(order: ProductionOrder): Department[] {
   if (order.requiredDepartments && order.requiredDepartments.length > 0) {
-    return dedupeRoute(order.requiredDepartments);
+    return normalizePlantRoute(order.requiredDepartments, order.currentDepartment, order.nextDepartment);
   }
 
   const productClassification = classifyProductionOrder(order);
-  if (productClassification.routeHint.length > 0 && !productClassification.needsHumanReview) {
-    return dedupeRoute(productClassification.routeHint);
+  if (productClassification.routeHint.length > 0) {
+    return normalizePlantRoute(productClassification.routeHint, order.currentDepartment, order.nextDepartment);
   }
 
-  const route = [...DEFAULT_PLANT_ROUTE];
-  if (order.currentDepartment && !route.includes(order.currentDepartment)) route.splice(1, 0, order.currentDepartment);
-  if (order.nextDepartment && !route.includes(order.nextDepartment)) route.push(order.nextDepartment);
-  return dedupeRoute(route);
+  return normalizePlantRoute([order.currentDepartment, order.nextDepartment].filter(Boolean) as Department[]);
+}
+
+function normalizePlantRoute(
+  route: Department[],
+  currentDepartment?: Department,
+  nextDepartment?: Department,
+): Department[] {
+  const normalizedRoute = route.filter(isProductionRouteDepartment);
+
+  if (isProductionRouteDepartment(currentDepartment)) addBeforeFinalDepartment(normalizedRoute, currentDepartment);
+  if (isProductionRouteDepartment(nextDepartment)) addBeforeFinalDepartment(normalizedRoute, nextDepartment);
+  addBeforeFinalDepartment(normalizedRoute, FINAL_PLANT_DEPARTMENT);
+
+  return dedupeRoute(normalizedRoute)
+    .filter((department) => department !== FINAL_PLANT_DEPARTMENT)
+    .concat(FINAL_PLANT_DEPARTMENT);
+}
+
+function isProductionRouteDepartment(department: Department | undefined): department is Department {
+  return Boolean(department && !NON_PRODUCTION_ROUTE_DEPARTMENTS.includes(department));
+}
+
+function addBeforeFinalDepartment(route: Department[], department: Department): void {
+  if (route.includes(department)) return;
+
+  const finalIndex = route.indexOf(FINAL_PLANT_DEPARTMENT);
+  if (finalIndex >= 0 && department !== FINAL_PLANT_DEPARTMENT) {
+    route.splice(finalIndex, 0, department);
+    return;
+  }
+
+  route.push(department);
 }
 
 function dedupeRoute(route: Department[]): Department[] {
@@ -376,7 +406,7 @@ function getTravelerPriorityScore(
   return score;
 }
 
-function getVisualSignal(stepStatus: TravelerStepStatus): DynamicTraveler['visualSignal'] {
+function getVisualSignal(stepStatus: DynamicTraveler['stepStatus']): DynamicTraveler['visualSignal'] {
   if (stepStatus === 'BLOCKED') return 'BLOCKED';
   if (stepStatus === 'HOLD') return 'HOLD';
   if (stepStatus === 'DONE') return 'DONE';
