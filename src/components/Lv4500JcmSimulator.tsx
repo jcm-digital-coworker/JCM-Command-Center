@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { implementedCastings, tapCodeTable } from '../data/lv4500JcmSuite';
 import {
   estimateLv4500CycleTime,
@@ -326,13 +326,6 @@ export default function Lv4500JcmSimulator({
     runWith(castingNumber, tapCode, batchTarget);
   }
 
-  function stepToNext() {
-    const currentIndex = tapCodeTable.findIndex((tc) => tc.code === tapCode);
-    const nextTap = tapCodeTable[(currentIndex + 1) % tapCodeTable.length];
-    setTapCode(nextTap.code);
-    runWith(castingNumber, nextTap.code, batchTarget);
-  }
-
   function clearResults() {
     setLogicResult(null);
     setGeometryResult(null);
@@ -357,19 +350,6 @@ export default function Lv4500JcmSimulator({
   })();
 
   const activeSaddlesCount = getActiveSaddlesCount();
-  const [autoRun, setAutoRun] = useState(false);
-  const autoTapIndexRef = useRef(0);
-
-  useEffect(() => {
-    if (!autoRun) return;
-    const id = setInterval(() => {
-      autoTapIndexRef.current = (autoTapIndexRef.current + 1) % tapCodeTable.length;
-      const nextTap = tapCodeTable[autoTapIndexRef.current];
-      setTapCode(nextTap.code);
-      runWith(castingNumber, nextTap.code, batchTarget, zDepthOverride);
-    }, 1400);
-    return () => clearInterval(id);
-  }, [autoRun, castingNumber, batchTarget, zDepthOverride]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const auditRows = buildAuditRows();
 
@@ -380,8 +360,7 @@ export default function Lv4500JcmSimulator({
           LV4500 JCM Suite Simulator
         </h2>
         <p style={subTextStyle(t)}>
-          Read-only simulator based on the current macro suite. It validates
-          logic and geometry only.
+          Select casting, outlet/tap, batch, and optional Z-depth override. Run one selected cycle for geometry and cycle-time estimate.
         </p>
 
         <div style={tabBarStyle()}>
@@ -525,41 +504,11 @@ export default function Lv4500JcmSimulator({
               }}
             >
               <button onClick={runSimulation} style={runButtonStyle(t)}>
-                Run / Validate
-              </button>
-              <button onClick={stepToNext} style={resetButtonStyle(t)}>
-                Step → Next Tap
+                RUN SELECTED CYCLE
               </button>
               <button onClick={clearResults} style={resetButtonStyle(t)}>
                 Clear Results
               </button>
-            </div>
-
-            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button
-                onClick={() => {
-                  autoTapIndexRef.current = tapCodeTable.findIndex((tc) => tc.code === tapCode);
-                  setAutoRun((v) => !v);
-                }}
-                style={{
-                  padding: '9px 14px',
-                  borderRadius: 10,
-                  border: autoRun ? '1px solid #ef4444' : '1px solid #3b82f6',
-                  background: autoRun ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
-                  color: autoRun ? '#ef4444' : '#3b82f6',
-                  fontWeight: 900,
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                {autoRun ? '■ STOP AUTO-SWEEP' : '▶ AUTO-SWEEP TAPS'}
-              </button>
-              {autoRun && (
-                <span style={{ fontSize: 11, color: t.textMuted }}>
-                  Cycling through all tap codes · 1.4 s/step
-                </span>
-              )}
             </div>
           </div>
         )}
@@ -695,51 +644,80 @@ export default function Lv4500JcmSimulator({
               </div>
             )}
 
-            {cycleTime && (
-              <div style={cardStyle(t)}>
-                <h3 style={cardTitleStyle()}>Estimated Cycle Time</h3>
-                <InfoGrid>
-                  <InfoTile
-                    theme={theme}
-                    label="Total"
-                    value={`~${cycleTime.totalMinutes.toFixed(1)} min`}
-                  />
-                  <InfoTile
-                    theme={theme}
-                    label="Cutting"
-                    value={`${cycleTime.cuttingMinutes.toFixed(1)} min`}
-                  />
-                  <InfoTile
-                    theme={theme}
-                    label="Rapid"
-                    value={`${cycleTime.rapidMinutes.toFixed(1)} min`}
-                  />
-                  <InfoTile
-                    theme={theme}
-                    label="Overhead"
-                    value={`${cycleTime.overheadMinutes.toFixed(1)} min`}
-                  />
-                  <InfoTile
-                    theme={theme}
-                    label="Confidence"
-                    value={cycleTime.confidence}
-                  />
-                </InfoGrid>
+            {cycleTime && (() => {
+              const batchCycleMinutes = cycleTime.totalMinutes * batchTarget;
+              const batchCycleHours = batchCycleMinutes / 60;
+              const partsPerHour = cycleTime.totalMinutes > 0 ? 60 / cycleTime.totalMinutes : 0;
+              return (
+                <div style={cardStyle(t)}>
+                  <h3 style={cardTitleStyle()}>Estimated Cycle Time</h3>
+                  <InfoGrid>
+                    <InfoTile
+                      theme={theme}
+                      label="Single Cycle"
+                      value={`~${cycleTime.totalMinutes.toFixed(1)} min`}
+                    />
+                    <InfoTile
+                      theme={theme}
+                      label="Batch Target"
+                      value={`${batchTarget} parts`}
+                    />
+                    <InfoTile
+                      theme={theme}
+                      label="Batch Total"
+                      value={`~${batchCycleMinutes.toFixed(0)} min`}
+                    />
+                    <InfoTile
+                      theme={theme}
+                      label="Batch Hours"
+                      value={`~${batchCycleHours.toFixed(1)} hr`}
+                    />
+                    <InfoTile
+                      theme={theme}
+                      label="Parts / Hour"
+                      value={`~${partsPerHour.toFixed(1)}`}
+                    />
+                    <InfoTile
+                      theme={theme}
+                      label="Cutting"
+                      value={`${cycleTime.cuttingMinutes.toFixed(1)} min`}
+                    />
+                    <InfoTile
+                      theme={theme}
+                      label="Rapid"
+                      value={`${cycleTime.rapidMinutes.toFixed(1)} min`}
+                    />
+                    <InfoTile
+                      theme={theme}
+                      label="Overhead"
+                      value={`${cycleTime.overheadMinutes.toFixed(1)} min`}
+                    />
+                    <InfoTile
+                      theme={theme}
+                      label="Confidence"
+                      value={cycleTime.confidence}
+                    />
+                  </InfoGrid>
 
-                {cycleTime.notes.map((note, i) => (
-                  <p
-                    key={i}
-                    style={{
-                      color: t.textSubtle,
-                      margin: '8px 0',
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    • {note}
+                  {cycleTime.notes.map((note, i) => (
+                    <p
+                      key={i}
+                      style={{
+                        color: t.textSubtle,
+                        margin: '8px 0',
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      • {note}
+                    </p>
+                  ))}
+
+                  <p style={{ margin: '12px 0 0', fontSize: 11, color: t.textMuted, lineHeight: 1.5 }}>
+                    Batch estimate multiplies the selected cycle estimate by batch target. It excludes operator stops, gauge holds, manual inspection, and unmodeled interruptions.
                   </p>
-                ))}
-              </div>
-            )}
+                </div>
+              );
+            })()}
 
             {hasRun && onGoToSaddles && (
               <div style={{ ...cardStyle(t), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
