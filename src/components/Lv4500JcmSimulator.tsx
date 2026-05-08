@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { implementedCastings, tapCodeTable } from '../data/lv4500JcmSuite';
-import { estimateLv4500CycleTime } from '../logic/lv4500JcmCycleTime';
+import {
+  estimateLv4500CycleTime,
+  LV4500R_RAPID_RATE_IPM,
+  LV4500R_G28_TRAVEL_X,
+  LV4500R_G28_TRAVEL_Z,
+  LV4500R_INDEX_SECONDS_PER_STEP,
+} from '../logic/lv4500JcmCycleTime';
 import { runLv4500Geometry, runLv4500Logic } from '../logic/lv4500JcmSimulator';
 import type { GeometryResult, LogicResult } from '../types/lv4500Jcm';
 
@@ -214,6 +220,7 @@ type RunRecord = {
   tapCode: string;
   tapLabel: string;
   batchTarget: number;
+  zDepthOverride?: number;
   logicStatus: 'PASS' | 'CAUTION' | 'FAIL';
   geometryStatus: 'PASS' | 'CAUTION' | 'FAIL';
   overallStatus: 'PASS' | 'CAUTION' | 'FAIL';
@@ -266,13 +273,15 @@ export default function Lv4500JcmSimulator({
   const [cycleTime, setCycleTime] = useState<ReturnType<typeof estimateLv4500CycleTime> | null>(null);
   const [hasRun, setHasRun] = useState(false);
   const [runHistory, setRunHistory] = useState<RunRecord[]>([]);
+  const [zDepthOverride, setZDepthOverride] = useState<number | ''>('');
 
   const selectedCasting = implementedCastings.find((c) => c.castingNumber === castingNumber);
   const selectedTap = tapCodeTable.find((tc) => tc.code === tapCode);
 
-  function runWith(casting: string, tap: string, batch: number) {
+  function runWith(casting: string, tap: string, batch: number, zOverride: number | '' = zDepthOverride) {
     const castingData = implementedCastings.find((c) => c.castingNumber === casting);
     const tapData = tapCodeTable.find((tc) => tc.code === tap);
+    const numericZ = typeof zOverride === 'number' && zOverride > 0 ? zOverride : undefined;
 
     const logic = runLv4500Logic({
       castingNumber: casting,
@@ -286,8 +295,8 @@ export default function Lv4500JcmSimulator({
       bossType: castingData?.bossType ?? 'large',
     });
 
-    const geometry = runLv4500Geometry(casting, tap);
-    const time = estimateLv4500CycleTime(tap);
+    const geometry = runLv4500Geometry(casting, tap, { zDepthOverride: numericZ });
+    const time = estimateLv4500CycleTime(tap, { zDepthOverride: numericZ });
 
     const overallStatus: RunRecord['overallStatus'] =
       logic.status === 'FAIL' || geometry.status === 'FAIL' ? 'FAIL' :
@@ -299,6 +308,7 @@ export default function Lv4500JcmSimulator({
       tapCode: tap,
       tapLabel: tapData?.label ?? tap,
       batchTarget: batch,
+      zDepthOverride: numericZ,
       logicStatus: logic.status,
       geometryStatus: geometry.status,
       overallStatus,
@@ -339,6 +349,9 @@ export default function Lv4500JcmSimulator({
     if (latest.castingDisplay !== prev.castingDisplay) parts.push(`casting ${prev.castingDisplay}→${latest.castingDisplay}`);
     if (latest.tapCode !== prev.tapCode) parts.push(`tap ${prev.tapCode}→${latest.tapCode}`);
     if (latest.overallStatus !== prev.overallStatus) parts.push(`status ${prev.overallStatus}→${latest.overallStatus}`);
+    const prevZ = prev.zDepthOverride != null ? prev.zDepthOverride.toFixed(3) : 'default';
+    const latestZ = latest.zDepthOverride != null ? latest.zDepthOverride.toFixed(3) : 'default';
+    if (prevZ !== latestZ) parts.push(`Z ${prevZ}→${latestZ}`);
     if (parts.length === 0) return 'No change from prior run';
     return parts.join(' · ');
   })();
@@ -353,10 +366,10 @@ export default function Lv4500JcmSimulator({
       autoTapIndexRef.current = (autoTapIndexRef.current + 1) % tapCodeTable.length;
       const nextTap = tapCodeTable[autoTapIndexRef.current];
       setTapCode(nextTap.code);
-      runWith(castingNumber, nextTap.code, batchTarget);
+      runWith(castingNumber, nextTap.code, batchTarget, zDepthOverride);
     }, 1400);
     return () => clearInterval(id);
-  }, [autoRun, castingNumber, batchTarget]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [autoRun, castingNumber, batchTarget, zDepthOverride]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const auditRows = buildAuditRows();
 
@@ -448,6 +461,30 @@ export default function Lv4500JcmSimulator({
               style={inputStyle(t)}
             />
 
+            <label style={labelStyle(t)}>Thread Z-depth override</label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                value={zDepthOverride}
+                type="number"
+                step="0.001"
+                min={0}
+                placeholder="Blank = macro table default"
+                onChange={(e) => setZDepthOverride(e.target.value === '' ? '' : Number(e.target.value))}
+                style={{ ...inputStyle(t), marginBottom: 0, flex: 1 }}
+              />
+              {zDepthOverride !== '' && (
+                <button
+                  onClick={() => setZDepthOverride('')}
+                  style={{ padding: '10px 12px', borderRadius: 10, border: `1px solid ${t.resetBtnBorder}`, background: t.resetBtnBg, color: t.resetBtnText, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 11 }}
+                >
+                  Use macro default
+                </button>
+              )}
+            </div>
+            <p style={{ margin: '4px 0 12px', fontSize: 11, color: t.textMuted }}>
+              Overrides the thread end Z calculated from the macro table. Leave blank to use the default.
+            </p>
+
             <InfoGrid>
               <InfoTile
                 theme={theme}
@@ -464,6 +501,14 @@ export default function Lv4500JcmSimulator({
                 label="Tap"
                 value={selectedTap?.label ?? 'Unknown'}
               />
+              <InfoTile
+                theme={theme}
+                label="Z-depth override"
+                value={zDepthOverride !== '' ? `${Number(zDepthOverride).toFixed(3)} in` : 'Macro default'}
+              />
+              <InfoTile theme={theme} label="Rapid rate" value={`${LV4500R_RAPID_RATE_IPM} IPM`} />
+              <InfoTile theme={theme} label="G28 travel" value={`X${LV4500R_G28_TRAVEL_X.toFixed(3)} / Z${LV4500R_G28_TRAVEL_Z.toFixed(3)}`} />
+              <InfoTile theme={theme} label="Index time" value={`${LV4500R_INDEX_SECONDS_PER_STEP} sec/step`} />
               <InfoTile
                 theme={theme}
                 label="Active at Saddles"
@@ -884,19 +929,21 @@ export default function Lv4500JcmSimulator({
               <InfoTile theme={theme} label="#3902" value="iHMI target count" />
             </InfoGrid>
 
-            <div
-              style={{
-                marginTop: 14,
-                padding: 12,
-                borderRadius: 12,
-                background: t.noteBg,
-              }}
-            >
+            <div style={{ marginTop: 14, padding: 12, borderRadius: 12, background: t.noteBg }}>
               <strong>Important:</strong>
               <p style={{ marginBottom: 0 }}>
-                Do not use #3903. The current macro uses #550 for remaining
-                count.
+                Do not use #3903. The current macro uses #550 for remaining count.
               </p>
+            </div>
+
+            <div style={{ marginTop: 14, padding: 12, borderRadius: 12, background: t.readonlyBg }}>
+              <strong>Measured machine constants (LV4500R)</strong>
+              <InfoGrid>
+                <InfoTile theme={theme} label="Rapid rate" value={`${LV4500R_RAPID_RATE_IPM} IPM`} />
+                <InfoTile theme={theme} label="G28 X travel" value={`${LV4500R_G28_TRAVEL_X.toFixed(3)} in`} />
+                <InfoTile theme={theme} label="G28 Z travel" value={`${LV4500R_G28_TRAVEL_Z.toFixed(3)} in`} />
+                <InfoTile theme={theme} label="Index time" value={`${LV4500R_INDEX_SECONDS_PER_STEP} sec/step`} />
+              </InfoGrid>
             </div>
 
             <div
@@ -938,6 +985,7 @@ function EventTimeline({ records, theme }: { records: RunRecord[]; theme: Theme 
             <span style={{ padding: '2px 7px', borderRadius: 999, fontWeight: 900, background: pillBg(rec.overallStatus), color: pillColor(rec.overallStatus), fontSize: 10 }}>{rec.overallStatus}</span>
             <span style={{ color: t.text, fontWeight: 700 }}>Casting {rec.castingDisplay}</span>
             <span style={{ color: t.textMuted }}>Tap {rec.tapCode} — {rec.tapLabel}</span>
+            {rec.zDepthOverride != null && <span style={{ color: t.textSubtle, fontSize: 10 }}>Z={rec.zDepthOverride.toFixed(3)}</span>}
             <span style={{ color: t.textSubtle, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
               {new Date(rec.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
