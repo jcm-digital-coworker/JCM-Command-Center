@@ -5,6 +5,7 @@ import type { WorkCenter } from '../../types/plant';
 import { FLAG_LABELS, getAllFeatureFlags, setFeatureFlag } from '../../logic/featureFlags';
 import type { FeatureFlag } from '../../logic/featureFlags';
 import { getThemeColors } from '../../theme/theme';
+import ClockworkPlantSimulation from '../simulation/ClockworkPlantSimulation';
 import {
   PLANT_SIMULATION_UPDATED_EVENT,
   advancePlantSimulationStep,
@@ -127,7 +128,12 @@ export default function DevToolkitFlyout({
           </button>
 
           <div style={sectionStyle(theme)}>
-            <div style={sectionLabelStyle(theme)}>PLANT SIMULATION</div>
+            <div style={sectionLabelStyle(theme)}>CLOCKWORK PLANT</div>
+            <ClockworkPlantSimulation theme={theme} />
+          </div>
+
+          <div style={sectionStyle(theme)}>
+            <div style={sectionLabelStyle(theme)}>DIAGNOSTIC ORDER SIMULATION</div>
             <div style={simulationCardStyle(theme)}>
               <div style={simulationTitleStyle(theme)}>{simulation.scenario?.name ?? 'No scenario available'}</div>
               <p style={simulationTextStyle(theme)}>{simulation.scenario?.description ?? 'Add production orders before running simulation.'}</p>
@@ -296,7 +302,7 @@ function panelStyle(theme: 'dark' | 'light'): CSSProperties {
     position: 'absolute',
     right: 0,
     bottom: 58,
-    width: 360,
+    width: 420,
     maxWidth: 'calc(100vw - 28px)',
     maxHeight: 'calc(100vh - 90px)',
     overflowY: 'auto',
