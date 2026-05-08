@@ -63,6 +63,8 @@ export default function AppDrawer({
     setOpenGroupId((current) => (current === groupId ? null : groupId));
   }
 
+  const closeLabel = t('close', lang);
+
   return (
     <>
       <style>
@@ -87,8 +89,14 @@ export default function AppDrawer({
               DIGITAL CO-WORKER
             </div>
           </div>
-          <button onClick={onClose} style={closeButtonStyle(theme)}>
-            {t('close', lang).toUpperCase()}
+          <button
+            type="button"
+            onClick={onClose}
+            style={closeButtonStyle(theme)}
+            aria-label={closeLabel}
+            title={closeLabel}
+          >
+            ×
           </button>
         </div>
 
@@ -307,13 +315,15 @@ function closeButtonStyle(theme: 'dark' | 'light'): CSSProperties {
     width: 36,
     height: 36,
     borderRadius: 4,
-    fontSize: 11,
+    fontSize: 22,
+    lineHeight: 1,
     cursor: 'pointer',
     fontWeight: 800,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    letterSpacing: '0.5px',
+    letterSpacing: 0,
+    padding: 0,
   };
 }
 
