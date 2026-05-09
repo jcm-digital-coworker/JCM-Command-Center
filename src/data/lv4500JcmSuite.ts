@@ -42,6 +42,28 @@ const castingOds: Record<string, string> = {
   "126": "12 NOM / 12.60-14.38 OD",
 };
 
+const smallBossCycleMinutesByCode: Partial<Record<string, number>> = {
+  "06": 0.8785714285714284,
+  "07": 0.8802380952380953,
+  "08": 1.0085714285714285,
+  "09": 1.0135714285714286,
+  "10": 1.0635714285714284,
+};
+
+const largeBossCycleMinutesByCode: Record<string, number> = {
+  "06": 1.0035714285714286,
+  "07": 1.0052380952380953,
+  "08": 1.1552380952380952,
+  "09": 1.1602380952380953,
+  "10": 1.2085714285714284,
+  "11": 1.4602380952380953,
+  "12": 1.4802380952380954,
+  "13": 1.535238095238095,
+  "14": 1.7385714285714287,
+  "15": 2.036904761904762,
+  "16": 2.2769047619047615,
+};
+
 function bossTypeFor(lastThree: string): BossType {
   return smallBossCastings.includes(lastThree) ? "small" : "large";
 }
@@ -69,6 +91,18 @@ export const implementedCastings: CastingData[] = [
   "039", "122", "123", "124", "125", "126",
 ].map(castingFromLastThree);
 
+function estimatedCycleMinutesFor(code: string, bossType: BossType) {
+  if (bossType === "small") {
+    return smallBossCycleMinutesByCode[code] ?? largeBossCycleMinutesByCode[code];
+  }
+
+  return largeBossCycleMinutesByCode[code];
+}
+
+export function getLv4500EstimatedCycleMinutes(code: string, bossType: BossType) {
+  return estimatedCycleMinutesFor(code, bossType);
+}
+
 export const tapCodeTable: TapCodeData[] = [
   {
     code: "06",
@@ -87,7 +121,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T0202 .906 DRILL",
     boreTool: "T0404 5/8 BORING BAR",
     threadTool: "T0626",
-    estimatedCycleMinutes: 6.5,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("06", "large"),
   },
   {
     code: "07",
@@ -106,7 +140,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T0202 .906 DRILL",
     boreTool: "T0404 5/8 BORING BAR",
     threadTool: "T0627",
-    estimatedCycleMinutes: 6.7,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("07", "large"),
   },
   {
     code: "08",
@@ -125,7 +159,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T0202 .906 DRILL",
     boreTool: "T0404 5/8 BORING BAR",
     threadTool: "T0628",
-    estimatedCycleMinutes: 7.0,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("08", "large"),
   },
   {
     code: "09",
@@ -144,7 +178,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T0202 .906 DRILL",
     boreTool: "T0404 5/8 BORING BAR",
     threadTool: "T0629",
-    estimatedCycleMinutes: 7.2,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("09", "large"),
   },
   {
     code: "10",
@@ -163,7 +197,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T1212 37MM DRILL",
     boreTool: "T1010 1-1/4 BORING BAR",
     threadTool: "T0630",
-    estimatedCycleMinutes: 7.8,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("10", "large"),
   },
   {
     code: "11",
@@ -182,7 +216,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T1212 37MM DRILL",
     boreTool: "T1010 1-1/4 BORING BAR",
     threadTool: "T0631",
-    estimatedCycleMinutes: 8.0,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("11", "large"),
   },
   {
     code: "12",
@@ -201,7 +235,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T1212 37MM DRILL",
     boreTool: "T1010 1-1/4 BORING BAR",
     threadTool: "T0632",
-    estimatedCycleMinutes: 8.2,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("12", "large"),
   },
   {
     code: "13",
@@ -220,7 +254,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T0808 1.75 DRILL",
     boreTool: "T1010 1-1/4 BORING BAR",
     threadTool: "T0633",
-    estimatedCycleMinutes: 8.7,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("13", "large"),
   },
   {
     code: "14",
@@ -239,7 +273,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T0808 1.75 DRILL",
     boreTool: "T1010 1-1/4 BORING BAR",
     threadTool: "T0634",
-    estimatedCycleMinutes: 9.1,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("14", "large"),
   },
   {
     code: "15",
@@ -258,7 +292,7 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T0808 1.75 DRILL",
     boreTool: "T1010 1-1/4 BORING BAR",
     threadTool: "T0635",
-    estimatedCycleMinutes: 9.7,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("15", "large"),
   },
   {
     code: "16",
@@ -277,6 +311,6 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T0808 1.75 DRILL",
     boreTool: "T1010 1-1/4 BORING BAR",
     threadTool: "T0636",
-    estimatedCycleMinutes: 10.5,
+    estimatedCycleMinutes: estimatedCycleMinutesFor("16", "large"),
   },
 ];
