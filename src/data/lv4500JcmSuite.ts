@@ -277,6 +277,6 @@ export const tapCodeTable: TapCodeData[] = [
     drillTool: "T0808 1.75 DRILL",
     boreTool: "T1010 1-1/4 BORING BAR",
     threadTool: "T0636",
-    estimatedCycleMinutes: 10.5,
+    estimatedCycleMinutes: 2.25,
   },
 ];
