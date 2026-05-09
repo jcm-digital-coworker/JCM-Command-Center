@@ -23,6 +23,8 @@ const TOOL_CHANGE_SECONDS = 8;
 const M_CODE_SECONDS = 2;
 const CHIP_CLEAN_SECONDS = 3;
 const INDEX_STEPS_PER_CYCLE = 3;
+const BASELINE_RAPID_CYCLES = 6;
+const DEPTH_ADJUSTMENT_MINUTES_PER_INCH = 0.55;
 
 function secondsToMinutes(seconds: number) {
   return seconds / 60;
@@ -36,6 +38,22 @@ function normalizeDepthOverride(value?: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
   if (value === 0) return undefined;
   return Math.abs(value);
+}
+
+function estimateMeasuredMachineOverhead() {
+  const indexingSeconds = LV4500R_INDEX_SECONDS_PER_STEP * INDEX_STEPS_PER_CYCLE;
+  const overheadSeconds =
+    TOOL_CHANGE_SECONDS * 3 +
+    M_CODE_SECONDS * 10 +
+    indexingSeconds +
+    CHIP_CLEAN_SECONDS;
+
+  return secondsToMinutes(overheadSeconds);
+}
+
+function estimateMeasuredRapidPortion() {
+  const g28TravelDistance = LV4500R_G28_TRAVEL_X + LV4500R_G28_TRAVEL_Z;
+  return rapidMinutes(g28TravelDistance * BASELINE_RAPID_CYCLES);
 }
 
 export function estimateLv4500CycleTime(
@@ -61,74 +79,29 @@ export function estimateLv4500CycleTime(
 
   const notes: string[] = [];
   const overrideDepth = normalizeDepthOverride(options.zDepthOverride);
-  const threadEndDepth = overrideDepth ?? Math.abs(tap.threadDepth);
+  const defaultThreadDepth = Math.abs(tap.threadDepth);
+  const threadEndDepth = overrideDepth ?? defaultThreadDepth;
+  const depthDelta = threadEndDepth - defaultThreadDepth;
 
-  // Drill feed estimate.
-  // The macro uses feed-per-rev drilling. We approximate from typical RPM already embedded by tap family.
-  const drillRpm =
-    tap.code === "16" ? 500 :
-    ["13", "14", "15"].includes(tap.code) ? 654 :
-    ["10", "11", "12"].includes(tap.code) ? 785 :
-    1264;
+  const rapidTravelMinutes = estimateMeasuredRapidPortion();
+  const overheadMinutes = estimateMeasuredMachineOverhead();
 
-  const drillFeedPerRev = ["11", "13"].includes(tap.code) ? 0.004 : 0.006;
-  const drillIpm = drillRpm * drillFeedPerRev;
-  const drillMinutes = tap.drillDepth / drillIpm;
+  // Use the tap table's per-size baseline as the source of truth for practical estimate shape.
+  // The previous formula rebuilt time from guessed G71/G76 pass counts and was not close enough.
+  const baselineCycleMinutes = tap.estimatedCycleMinutes;
+  const zDepthAdjustmentMinutes = depthDelta * DEPTH_ADJUSTMENT_MINUTES_PER_INCH;
+  const totalMinutes = Math.max(baselineCycleMinutes + zDepthAdjustmentMinutes, 0);
+  const cuttingMinutes = Math.max(totalMinutes - rapidTravelMinutes - overheadMinutes, 0);
 
-  // Bore prep rough estimate.
-  // G71 pass count is controller-generated, so this is intentionally approximate.
-  const boreProfileLength = tap.boreTaperEndZ + tap.reliefEndZ + 0.35;
-  const estimatedG71Passes =
-    Number(tap.code) >= 14 ? 7 :
-    Number(tap.code) >= 10 ? 5 :
-    4;
-
-  const boreFeedIpm = 10; // Macro uses F.01 in G99/G96 context; this is a practical simplified estimate.
-  const boreMinutes = (boreProfileLength * estimatedG71Passes) / boreFeedIpm;
-
-  // Threading estimate.
-  // Thread feed per rev = 1 / TPI. RPM is derived in the macro from SFM and face major.
-  const threadSfm = 200;
-
-  const threadRpm = Math.floor((3.82 * threadSfm) / tap.faceMajor);
-  const threadFeedIpm = threadRpm * (1 / tap.tpi);
-
-  const springPassAllowance = 2;
-  const roughThreadPasses =
-    Number(tap.code) >= 16 ? 8 :
-    Number(tap.code) >= 14 ? 7 :
-    Number(tap.code) >= 10 ? 6 :
-    5;
-
-  const threadStroke = threadEndDepth + tap.threadStartPlane;
-  const threadMinutes = (threadStroke * (roughThreadPasses + springPassAllowance)) / threadFeedIpm;
-
-  const cuttingMinutes = drillMinutes + boreMinutes + threadMinutes;
-
-  // Rapid travel estimate.
-  // Uses measured LV4500R rapid rate and G28 travel supplied from the machine.
-  const g28TravelDistance = LV4500R_G28_TRAVEL_X + LV4500R_G28_TRAVEL_Z;
-  const rapidCycles = 6;
-  const rapidTravelMinutes = rapidMinutes(g28TravelDistance * rapidCycles);
-
-  // Overhead estimate.
-  const indexingSeconds = LV4500R_INDEX_SECONDS_PER_STEP * INDEX_STEPS_PER_CYCLE;
-  const overheadSeconds =
-    TOOL_CHANGE_SECONDS * 3 +
-    M_CODE_SECONDS * 10 +
-    indexingSeconds +
-    CHIP_CLEAN_SECONDS;
-
-  const overheadMinutes = secondsToMinutes(overheadSeconds);
-
-  const totalMinutes = cuttingMinutes + rapidTravelMinutes + overheadMinutes;
-
-  notes.push("Estimate excludes operator stops, gauge hold time, and manual inspection.");
+  notes.push("Uses calibrated tap-code baseline time from the LV4500 suite table instead of guessed G71/G76 pass counts.");
   notes.push("Uses measured LV4500R rapid rate: 945 IPM.");
   notes.push("Uses measured G28 travel: X23.400 / Z10.431.");
   notes.push("Uses turret indexing allowance: 0.2 seconds per step.");
-  if (overrideDepth) notes.push(`Z-depth override included in threading stroke: ${threadEndDepth.toFixed(3)} in.`);
-  notes.push("G71 and G76 pass counts are approximated because the control generates the exact motion internally.");
+  if (overrideDepth) {
+    notes.push(`Z-depth override adjusted from macro default ${defaultThreadDepth.toFixed(3)} in to ${threadEndDepth.toFixed(3)} in.`);
+  }
+  notes.push("For best accuracy, replace tap-code baseline minutes with stopwatch cycle data from the machine.");
+  notes.push("Estimate excludes operator stops, gauge hold time, manual inspection, and interruption recovery.");
 
   return {
     totalMinutes,
