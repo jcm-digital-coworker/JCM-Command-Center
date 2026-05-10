@@ -66,6 +66,7 @@ export type Lv4500GeometryOptions = {
 
 export type Lv4500CycleTimeOptions = {
   zDepthOverride?: number;
+  bossType?: BossType;
 };
 
 export type GeometryResult = {
