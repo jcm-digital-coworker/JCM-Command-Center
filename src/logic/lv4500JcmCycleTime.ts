@@ -1,5 +1,8 @@
 import { findTapCode } from "./lv4500JcmSimulator";
+import { simulateCycleTime } from "./timeStudy/simulateCycleTime";
 import type { Lv4500CycleTimeOptions } from "../types/lv4500Jcm";
+import type { BossType } from "../types/lv4500Jcm";
+import type { TapCode } from "./timeStudy/types";
 
 export type CycleTimeEstimate = {
   totalMinutes: number;
@@ -19,19 +22,12 @@ export const LV4500R_G28_TRAVEL_X = 23.4;
 export const LV4500R_G28_TRAVEL_Z = 10.431;
 export const LV4500R_INDEX_SECONDS_PER_STEP = 0.2;
 
-const TOOL_CHANGE_SECONDS = 8;
-const M_CODE_SECONDS = 2;
-const CHIP_CLEAN_SECONDS = 3;
-const INDEX_STEPS_PER_CYCLE = 3;
-const BASELINE_RAPID_CYCLES = 6;
-const DEPTH_ADJUSTMENT_MINUTES_PER_INCH = 0.55;
+const G28_COUNT_PER_CYCLE = 6;
+const TOOL_INDEX_COUNT_PER_CYCLE = 3;
+const CHIP_DWELL_SECONDS = 3;
 
 function secondsToMinutes(seconds: number) {
   return seconds / 60;
-}
-
-function rapidMinutes(distanceInches: number) {
-  return distanceInches / LV4500R_RAPID_RATE_IPM;
 }
 
 function normalizeDepthOverride(value?: number) {
@@ -40,20 +36,29 @@ function normalizeDepthOverride(value?: number) {
   return Math.abs(value);
 }
 
-function estimateMeasuredMachineOverhead() {
-  const indexingSeconds = LV4500R_INDEX_SECONDS_PER_STEP * INDEX_STEPS_PER_CYCLE;
-  const overheadSeconds =
-    TOOL_CHANGE_SECONDS * 3 +
-    M_CODE_SECONDS * 10 +
-    indexingSeconds +
-    CHIP_CLEAN_SECONDS;
+function parseTapCode(tapCode: string): TapCode | undefined {
+  const parsed = Number(tapCode);
+  if (
+    parsed === 6 ||
+    parsed === 7 ||
+    parsed === 8 ||
+    parsed === 9 ||
+    parsed === 10 ||
+    parsed === 11 ||
+    parsed === 12 ||
+    parsed === 13 ||
+    parsed === 14 ||
+    parsed === 15 ||
+    parsed === 16
+  ) {
+    return parsed;
+  }
 
-  return secondsToMinutes(overheadSeconds);
+  return undefined;
 }
 
-function estimateMeasuredRapidPortion() {
-  const g28TravelDistance = LV4500R_G28_TRAVEL_X + LV4500R_G28_TRAVEL_Z;
-  return rapidMinutes(g28TravelDistance * BASELINE_RAPID_CYCLES);
+function bossTypeOrDefault(value?: BossType): BossType {
+  return value ?? "large";
 }
 
 export function estimateLv4500CycleTime(
@@ -61,8 +66,9 @@ export function estimateLv4500CycleTime(
   options: Lv4500CycleTimeOptions = {},
 ): CycleTimeEstimate {
   const tap = findTapCode(tapCode);
+  const numericTapCode = parseTapCode(tapCode);
 
-  if (!tap) {
+  if (!tap || !numericTapCode) {
     return {
       totalMinutes: 0,
       cuttingMinutes: 0,
@@ -77,36 +83,58 @@ export function estimateLv4500CycleTime(
     };
   }
 
-  const notes: string[] = [];
   const overrideDepth = normalizeDepthOverride(options.zDepthOverride);
   const defaultThreadDepth = Math.abs(tap.threadDepth);
   const threadEndDepth = overrideDepth ?? defaultThreadDepth;
-  const depthDelta = threadEndDepth - defaultThreadDepth;
+  const bossType = bossTypeOrDefault(options.bossType);
 
-  const rapidTravelMinutes = estimateMeasuredRapidPortion();
-  const overheadMinutes = estimateMeasuredMachineOverhead();
+  const timeStudy = simulateCycleTime({
+    bossType,
+    tapCode: numericTapCode,
+    bossDepthZ: tap.reliefEndZ,
+    threadDepthZ: threadEndDepth,
+    rapidIpm: LV4500R_RAPID_RATE_IPM,
+    g28XTravel: LV4500R_G28_TRAVEL_X,
+    g28ZTravel: LV4500R_G28_TRAVEL_Z,
+    g28Count: G28_COUNT_PER_CYCLE,
+    toolIndexSec: LV4500R_INDEX_SECONDS_PER_STEP,
+    toolIndexCount: TOOL_INDEX_COUNT_PER_CYCLE,
+    chipDwellSec: CHIP_DWELL_SECONDS,
+    calibrationFactor: 1,
+    boreCalibrationFactor: 1,
+    threadCalibrationFactor: 1,
+    modelMode: "shopCalibrated",
+  });
 
-  // Use the tap table's per-size baseline as the source of truth for practical estimate shape.
-  // The previous formula rebuilt time from guessed G71/G76 pass counts and was not close enough.
-  const baselineCycleMinutes = tap.estimatedCycleMinutes;
-  const zDepthAdjustmentMinutes = depthDelta * DEPTH_ADJUSTMENT_MINUTES_PER_INCH;
-  const totalMinutes = Math.max(baselineCycleMinutes + zDepthAdjustmentMinutes, 0);
-  const cuttingMinutes = Math.max(totalMinutes - rapidTravelMinutes - overheadMinutes, 0);
+  const rapidMinutes = secondsToMinutes(timeStudy.g28TimeSec);
+  const overheadMinutes = secondsToMinutes(timeStudy.overheadSec);
+  const cuttingMinutes = secondsToMinutes(
+    timeStudy.drillTimeSec + timeStudy.boreTimeSec + timeStudy.threadTimeSec,
+  );
 
-  notes.push("Uses calibrated tap-code baseline time from the LV4500 suite table instead of guessed G71/G76 pass counts.");
-  notes.push("Uses measured LV4500R rapid rate: 945 IPM.");
-  notes.push("Uses measured G28 travel: X23.400 / Z10.431.");
-  notes.push("Uses turret indexing allowance: 0.2 seconds per step.");
+  const notes = [
+    "Uses deterministic LV4500 time-study engine from the handoff packet.",
+    `Boss timing mode: ${bossType}.`,
+    `Estimated G71 passes: ${timeStudy.g71Passes}.`,
+    `Estimated G76 passes: ${timeStudy.g76Passes}.`,
+    "Uses measured LV4500R rapid rate: 945 IPM.",
+    "Uses measured G28 travel: X23.400 / Z10.431.",
+    "Uses turret indexing allowance: 0.2 seconds per step.",
+    ...timeStudy.warnings,
+  ];
+
   if (overrideDepth) {
-    notes.push(`Z-depth override adjusted from macro default ${defaultThreadDepth.toFixed(3)} in to ${threadEndDepth.toFixed(3)} in.`);
+    notes.push(
+      `Z-depth override adjusted from macro default ${defaultThreadDepth.toFixed(3)} in to ${threadEndDepth.toFixed(3)} in.`,
+    );
   }
-  notes.push("For best accuracy, replace tap-code baseline minutes with stopwatch cycle data from the machine.");
+
   notes.push("Estimate excludes operator stops, gauge hold time, manual inspection, and interruption recovery.");
 
   return {
-    totalMinutes,
+    totalMinutes: timeStudy.totalMin,
     cuttingMinutes,
-    rapidMinutes: rapidTravelMinutes,
+    rapidMinutes,
     overheadMinutes,
     confidence: "medium",
     notes,
