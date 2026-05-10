@@ -296,7 +296,7 @@ export default function Lv4500JcmSimulator({
     });
 
     const geometry = runLv4500Geometry(casting, tap, { zDepthOverride: numericZ });
-    const time = estimateLv4500CycleTime(tap, { zDepthOverride: numericZ });
+    const time = estimateLv4500CycleTime(tap, { zDepthOverride: numericZ, bossType: castingData?.bossType ?? 'large' });
 
     const overallStatus: RunRecord['overallStatus'] =
       logic.status === 'FAIL' || geometry.status === 'FAIL' ? 'FAIL' :
