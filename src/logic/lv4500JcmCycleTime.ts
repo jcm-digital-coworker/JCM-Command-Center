@@ -26,10 +26,13 @@ export const LV4500R_INDEX_SECONDS_PER_STEP = 0.2;
 const G28_COUNT_PER_CYCLE = 6;
 const TOOL_INDEX_COUNT_PER_CYCLE = 3;
 const CHIP_DWELL_SECONDS = 3;
-const DEPTH_ADJUSTMENT_MINUTES_PER_INCH = 0.55;
 
 function secondsToMinutes(seconds: number) {
   return seconds / 60;
+}
+
+function minutesToSeconds(minutes: number) {
+  return minutes * 60;
 }
 
 function normalizeDepthOverride(value?: number) {
@@ -63,6 +66,36 @@ function bossTypeOrDefault(value?: BossType): BossType {
   return value ?? "large";
 }
 
+function runTimeStudy({
+  bossType,
+  numericTapCode,
+  bossDepthZ,
+  threadDepthZ,
+}: {
+  bossType: BossType;
+  numericTapCode: TapCode;
+  bossDepthZ: number;
+  threadDepthZ: number;
+}) {
+  return simulateCycleTime({
+    bossType,
+    tapCode: numericTapCode,
+    bossDepthZ,
+    threadDepthZ,
+    rapidIpm: LV4500R_RAPID_RATE_IPM,
+    g28XTravel: LV4500R_G28_TRAVEL_X,
+    g28ZTravel: LV4500R_G28_TRAVEL_Z,
+    g28Count: G28_COUNT_PER_CYCLE,
+    toolIndexSec: LV4500R_INDEX_SECONDS_PER_STEP,
+    toolIndexCount: TOOL_INDEX_COUNT_PER_CYCLE,
+    chipDwellSec: CHIP_DWELL_SECONDS,
+    calibrationFactor: 1,
+    boreCalibrationFactor: 1,
+    threadCalibrationFactor: 1,
+    modelMode: "shopCalibrated",
+  });
+}
+
 export function estimateLv4500CycleTime(
   tapCode: string,
   options: Lv4500CycleTimeOptions = {},
@@ -88,45 +121,42 @@ export function estimateLv4500CycleTime(
   const overrideDepth = normalizeDepthOverride(options.zDepthOverride);
   const defaultThreadDepth = Math.abs(tap.threadDepth);
   const threadEndDepth = overrideDepth ?? defaultThreadDepth;
-  const depthDelta = threadEndDepth - defaultThreadDepth;
   const bossType = bossTypeOrDefault(options.bossType);
 
-  const timeStudy = simulateCycleTime({
+  const defaultTimeStudy = runTimeStudy({
     bossType,
-    tapCode: numericTapCode,
+    numericTapCode,
+    bossDepthZ: tap.reliefEndZ,
+    threadDepthZ: defaultThreadDepth,
+  });
+  const selectedTimeStudy = runTimeStudy({
+    bossType,
+    numericTapCode,
     bossDepthZ: tap.reliefEndZ,
     threadDepthZ: threadEndDepth,
-    rapidIpm: LV4500R_RAPID_RATE_IPM,
-    g28XTravel: LV4500R_G28_TRAVEL_X,
-    g28ZTravel: LV4500R_G28_TRAVEL_Z,
-    g28Count: G28_COUNT_PER_CYCLE,
-    toolIndexSec: LV4500R_INDEX_SECONDS_PER_STEP,
-    toolIndexCount: TOOL_INDEX_COUNT_PER_CYCLE,
-    chipDwellSec: CHIP_DWELL_SECONDS,
-    calibrationFactor: 1,
-    boreCalibrationFactor: 1,
-    threadCalibrationFactor: 1,
-    modelMode: "shopCalibrated",
   });
 
   const chartBaselineMinutes = getLv4500EstimatedCycleMinutes(tap.code, bossType);
-  const zDepthAdjustmentMinutes = depthDelta * DEPTH_ADJUSTMENT_MINUTES_PER_INCH;
+  const zDepthAdjustmentMinutes = overrideDepth
+    ? selectedTimeStudy.totalMin - defaultTimeStudy.totalMin
+    : 0;
   const totalMinutes = Math.max(chartBaselineMinutes + zDepthAdjustmentMinutes, 0);
-  const rapidMinutes = secondsToMinutes(timeStudy.g28TimeSec);
-  const overheadMinutes = secondsToMinutes(timeStudy.overheadSec);
+  const rapidMinutes = secondsToMinutes(selectedTimeStudy.g28TimeSec);
+  const overheadMinutes = secondsToMinutes(selectedTimeStudy.overheadSec);
   const cuttingMinutes = Math.max(totalMinutes - rapidMinutes - overheadMinutes, 0);
 
   const notes = [
     "Displayed cycle time uses the LV4500 time-study chart baseline.",
-    "Deterministic engine supplies pass estimates, warnings, and machine-constant breakdown.",
+    "Z-depth adjustment uses deterministic engine delta from default depth to selected depth.",
     `Boss timing mode: ${bossType}.`,
     `Chart baseline: ${chartBaselineMinutes.toFixed(3)} min.`,
-    `Estimated G71 passes: ${timeStudy.g71Passes}.`,
-    `Estimated G76 passes: ${timeStudy.g76Passes}.`,
+    `Z-depth time delta: ${minutesToSeconds(zDepthAdjustmentMinutes).toFixed(1)} sec.`,
+    `Estimated G71 passes: ${selectedTimeStudy.g71Passes}.`,
+    `Estimated G76 passes: ${selectedTimeStudy.g76Passes}.`,
     "Uses measured LV4500R rapid rate: 945 IPM.",
     "Uses measured G28 travel: X23.400 / Z10.431.",
     "Uses turret indexing allowance: 0.2 seconds per step.",
-    ...timeStudy.warnings,
+    ...selectedTimeStudy.warnings,
   ];
 
   if (overrideDepth) {
