@@ -1,3 +1,4 @@
+import { getLv4500EstimatedCycleMinutes } from "../data/lv4500JcmSuite";
 import { findTapCode } from "./lv4500JcmSimulator";
 import { simulateCycleTime } from "./timeStudy/simulateCycleTime";
 import type { Lv4500CycleTimeOptions } from "../types/lv4500Jcm";
@@ -25,6 +26,7 @@ export const LV4500R_INDEX_SECONDS_PER_STEP = 0.2;
 const G28_COUNT_PER_CYCLE = 6;
 const TOOL_INDEX_COUNT_PER_CYCLE = 3;
 const CHIP_DWELL_SECONDS = 3;
+const DEPTH_ADJUSTMENT_MINUTES_PER_INCH = 0.55;
 
 function secondsToMinutes(seconds: number) {
   return seconds / 60;
@@ -86,6 +88,7 @@ export function estimateLv4500CycleTime(
   const overrideDepth = normalizeDepthOverride(options.zDepthOverride);
   const defaultThreadDepth = Math.abs(tap.threadDepth);
   const threadEndDepth = overrideDepth ?? defaultThreadDepth;
+  const depthDelta = threadEndDepth - defaultThreadDepth;
   const bossType = bossTypeOrDefault(options.bossType);
 
   const timeStudy = simulateCycleTime({
@@ -106,15 +109,18 @@ export function estimateLv4500CycleTime(
     modelMode: "shopCalibrated",
   });
 
+  const chartBaselineMinutes = getLv4500EstimatedCycleMinutes(tap.code, bossType);
+  const zDepthAdjustmentMinutes = depthDelta * DEPTH_ADJUSTMENT_MINUTES_PER_INCH;
+  const totalMinutes = Math.max(chartBaselineMinutes + zDepthAdjustmentMinutes, 0);
   const rapidMinutes = secondsToMinutes(timeStudy.g28TimeSec);
   const overheadMinutes = secondsToMinutes(timeStudy.overheadSec);
-  const cuttingMinutes = secondsToMinutes(
-    timeStudy.drillTimeSec + timeStudy.boreTimeSec + timeStudy.threadTimeSec,
-  );
+  const cuttingMinutes = Math.max(totalMinutes - rapidMinutes - overheadMinutes, 0);
 
   const notes = [
-    "Uses deterministic LV4500 time-study engine from the handoff packet.",
+    "Displayed cycle time uses the LV4500 time-study chart baseline.",
+    "Deterministic engine supplies pass estimates, warnings, and machine-constant breakdown.",
     `Boss timing mode: ${bossType}.`,
+    `Chart baseline: ${chartBaselineMinutes.toFixed(3)} min.`,
     `Estimated G71 passes: ${timeStudy.g71Passes}.`,
     `Estimated G76 passes: ${timeStudy.g76Passes}.`,
     "Uses measured LV4500R rapid rate: 945 IPM.",
@@ -132,7 +138,7 @@ export function estimateLv4500CycleTime(
   notes.push("Estimate excludes operator stops, gauge hold time, manual inspection, and interruption recovery.");
 
   return {
-    totalMinutes: timeStudy.totalMin,
+    totalMinutes,
     cuttingMinutes,
     rapidMinutes,
     overheadMinutes,
