@@ -2,22 +2,22 @@
 
 Purpose: preserve the smallest useful operating context for the JCM Command Center build so future work continues from the current clean repository state without dragging full chat history forward.
 
-Last updated: 2026-05-08
+Last updated: 2026-05-15
 
 ## Current Build Status
 
 Main is GREEN and deployed.
 
 ```text
-Latest merged work: LV4500 selected-cycle estimator
-Main commit: ba7b9b21ecebfa8fbcccdedcf6c5bc03af763a79
-Main run: 25584980666
+Latest merged work: LV4500 Z-depth deterministic cycle delta
+Main commit: 6c104d7c36323f81b26b22495cd4ec4b3fdca98a
+Main run: 25942778604
 Branch: main
 Workflow: Build
 Status: GREEN
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-08T23:43:25Z
+Updated: 2026-05-15T21:42:15Z
 ```
 
 Verified main steps:
@@ -34,40 +34,87 @@ Verified main steps:
 
 ## Last Completed Mission
 
-LV4500 selected-cycle estimator is complete, merged, built, and deployed.
+LV4500 timing estimator is chart-backed, boss-aware, and Z-depth responsive.
 
 What changed:
 
-- Restored and preserved the full original LV4500 simulator surface after the simplified V2 proved insufficient.
-- Added visible Thread Z-depth override support to the LV4500 simulator.
-- Added measured LV4500R timing constants:
+- Loaded LV4500 time-study chart baselines for small and large boss tap-code ranges.
+- Added deterministic LV4500 time-study engine under `src/logic/timeStudy/`.
+- Wired `estimateLv4500CycleTime()` to the deterministic engine while preserving the existing simulator UI return shape.
+- Passed selected casting `bossType` into the estimator.
+- Restored displayed cycle time to use the LV4500 time-study chart baseline.
+- Added deterministic Z-depth delta logic by comparing default-depth and override-depth engine results.
+- Added visible estimator notes including chart baseline and `Z-depth time delta: X.X sec`.
+- Preserved measured LV4500R constants:
   - Rapid rate: 945 IPM
   - G28 travel: X23.400 / Z10.431
   - Indexing time: 0.2 seconds per step
-- Changed the simulator from auto-demo behavior to selected-cycle estimator behavior.
-- Removed operator-facing auto-sweep / step-through tap behavior from the primary flow.
-- Primary action is now selected-cycle focused: choose body/casting, outlet/tap, batch target, optional Z-depth override, then run that selected cycle.
-- Cycle-time results include single-cycle and batch-time visibility.
 - The simulator remains read-only and does not send machine commands or mutate production runtime state.
 
 What should be true in the live demo:
 
 - Simulation -> LV4500R opens the full LV4500 simulator, not the stripped V2.
 - Setup has casting/body, tap/outlet, batch target, and Thread Z-depth override.
-- No AUTO-SWEEP TAPS button should appear in the selected-cycle flow.
-- No Step -> Next Tap button should appear in the selected-cycle flow.
 - RUN SELECTED CYCLE runs only the currently selected setup.
 - Results show geometry and cycle time for that selected setup only.
-- Batch estimate is visible from the selected batch target.
+- Single-cycle and batch estimates use chart-backed baseline timing.
+- Small and large boss choices use the correct chart baseline where available.
+- Z-depth override updates timing notes with a visible second-level delta.
 
 ## Current Decision
 
 ```text
 The LV4500 simulator is a selected-cycle estimator, not an automated tap demo.
-It is used to answer: can this selected outlet/tap run in this selected body, and what is the expected single-part and batch cycle time?
+Cycle-time total is anchored to the time-study chart.
+Deterministic engine supplies depth delta, pass estimates, warnings, and machine-constant breakdown.
 Z-depth override is a simulation input only.
 Cycle-time estimates are guidance, not machine command authority.
 ```
+
+## Active Risks / Next Audit Targets
+
+### LV4500 live smoke validation
+
+Manual smoke test is still required because CI proves compile/deploy, not visible UI behavior.
+
+Smoke target:
+
+```text
+Open Simulation -> LV4500R.
+Choose large boss casting.
+Choose 2-1/2 IP / code 16.
+Run with macro default.
+Record single-cycle time and Z-depth delta note.
+Set deeper Z override.
+Run again.
+Confirm single-cycle time, batch total, and Z-depth delta note update.
+```
+
+### LV4500 display precision
+
+The Single Cycle tile rounds to one decimal minute. The backend now reports second-level Z-depth delta in notes, but small changes may still look unchanged on the tile.
+
+Recommended polish:
+
+```text
+Show Single Cycle as minutes and seconds, for example:
+~2.28 min / 136.6 sec
+```
+
+### Duplicate simulator component
+
+Both files still exist:
+
+```text
+src/components/Lv4500JcmSimulator.tsx
+src/components/Lv4500JcmSimulatorV2.tsx
+```
+
+`App.tsx` imports the full simulator. V2 should be deleted if unused or marked deprecated to prevent future routing confusion.
+
+### Plant-truth gaps remain
+
+Continue preserving uncertainty for Coating sub-flow, couplings, clamps, patch clamps, 412/432/452 rules, assembly lanes, QA conditions, and shipping readiness.
 
 ## Guardrails Preserved
 
@@ -109,22 +156,6 @@ Cycle-time estimates are guidance, not machine command authority.
 - Shipping is always the final physical department.
 - Maintenance is facilities and equipment repair only.
 
-## Active Risks / Next Audit Targets
-
-- Manually smoke test the live LV4500 selected-cycle flow:
-  - choose casting/body;
-  - choose outlet/tap;
-  - set batch target;
-  - optionally set Z-depth override;
-  - click RUN SELECTED CYCLE;
-  - confirm geometry, cycle time, and batch estimate update for only that selected setup.
-- Coating sub-flow is still partly uncertain.
-- Couplings route relative to Coating is still uncertain.
-- Clamps and Patch Clamps need more detail.
-- 412, 432, and 452 rules need confirmation before route hints become dispatch logic.
-- Assembly lanes, QA conditions, and Shipping readiness rules need confirmation.
-- Continue to prevent text-inferred action dispatch and copy that implies automatic resolution.
-
 ## Repo-First Operating Rule
 
 - Pull current repo files before editing.
@@ -141,12 +172,12 @@ Smoke test the live demo:
 ```text
 Open Simulation.
 Open LV4500R simulator.
-Confirm the simulator is selected-cycle only.
-Confirm AUTO-SWEEP TAPS and Step -> Next Tap are gone from the selected-cycle flow.
 Set Batch Target = 50.
+Choose large-boss 2-1/2 IP / code 16.
+Run macro default.
 Set a Z-depth override.
-Click RUN SELECTED CYCLE.
-Confirm single-cycle time, batch total, batch hours, geometry, and G76 values update for the selected setup only.
+Click RUN SELECTED CYCLE again.
+Confirm single-cycle time, batch total, batch hours, geometry, and Z-depth time delta update.
 ```
 
-If smoke test passes, continue with the next small plant-truth or operator-copy pass. If it fails, fix the specific visible behavior before adding new features.
+If smoke test passes, continue with display precision polish and duplicate V2 cleanup. If it fails, fix the specific visible behavior before adding new features.
