@@ -22,20 +22,22 @@ export const warRoomContextSections: WarRoomContextSection[] = [
   {
     title: 'Current Stable State',
     items: [
-      'Main is green and deployed at ba7b9b21 with run 25584980666.',
-      'LV4500 simulator is now a selected-cycle estimator, not an auto tap demo.',
-      'LV4500 selected cycle uses casting/body, outlet/tap, batch target, and optional Z-depth override.',
-      'LV4500 cycle-time results should show single-cycle and batch-time estimates.',
+      'Main is green and deployed at 6c104d7c with run 25942778604.',
+      'LV4500 simulator is a selected-cycle estimator, not an auto tap demo.',
+      'LV4500 displayed cycle time is anchored to the time-study chart baseline.',
+      'LV4500 selected cycle uses casting/body, outlet/tap, batch target, boss type, and optional Z-depth override.',
+      'Z-depth override now applies a deterministic default-vs-override depth time delta and reports the delta in seconds.',
       'DEV toolkit is one bottom-right floating DEV button and is available on work-center detail pages.',
     ],
   },
   {
     title: 'Next Mission',
     items: [
-      'Smoke test the live LV4500 selected-cycle flow.',
-      'Confirm AUTO-SWEEP TAPS and Step -> Next Tap are gone from selected-cycle flow.',
+      'Smoke test the live LV4500 timing estimator.',
       'Confirm RUN SELECTED CYCLE only runs current casting/tap/Z-depth/batch.',
-      'Confirm batch total, batch hours, geometry, and G76 values update for the selected setup only.',
+      'Confirm single-cycle time, batch total, batch hours, geometry, and Z-depth time delta update for the selected setup.',
+      'Polish display precision so the Single Cycle tile shows minutes plus seconds or two decimals.',
+      'Delete or clearly deprecate Lv4500JcmSimulatorV2 if it is unused.',
     ],
   },
   {
@@ -78,13 +80,15 @@ Then inspect the specific target file for the current task. Do not rely on memor
   {
     id: 'current-target',
     title: 'Current Target',
-    body: `Smoke test the LV4500 selected-cycle estimator:
+    body: `Smoke test the LV4500 timing estimator:
 
 - Open Simulation -> LV4500R
 - Confirm casting/body, outlet/tap, batch target, and Z-depth override are visible
-- Confirm AUTO-SWEEP TAPS and Step -> Next Tap are not in selected-cycle flow
 - Run selected cycle only
 - Confirm single-cycle and batch-time estimates update
-- Confirm geometry and G76 values reflect the selected setup`,
+- Confirm geometry and G76 values reflect the selected setup
+- Confirm Z-depth time delta appears in the notes and changes when override depth changes
+
+Then polish display precision and retire/deprecate the unused V2 simulator component.`,
   },
 ];
