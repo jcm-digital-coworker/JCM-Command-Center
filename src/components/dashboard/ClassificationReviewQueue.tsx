@@ -24,6 +24,7 @@ type ClassificationReviewQueueProps = {
 
 export default function ClassificationReviewQueue({ theme, workCenters, onOpenWorkCenter }: ClassificationReviewQueueProps) {
   const [confirmationsVersion, setConfirmationsVersion] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
   const confirmations = useMemo(() => loadClassificationReviewConfirmations(), [confirmationsVersion]);
   const travelers = useMemo(() => generateDynamicTravelers(productionOrders, 'All'), []);
   const reviewTravelers = useMemo(
@@ -38,6 +39,8 @@ export default function ClassificationReviewQueue({ theme, workCenters, onOpenWo
   );
   const checklistConfirmedCount = checklistStatuses.filter((item) => item.status === 'CONFIRMED').length;
   const checklistTouchedCount = checklistStatuses.filter((item) => item.status !== 'OPEN').length;
+  const needsReview = reviewTravelers.length > 0;
+  const accentColor = needsReview ? '#f97316' : '#10b981';
 
   useEffect(() => {
     const refresh = () => setConfirmationsVersion((version) => version + 1);
@@ -65,93 +68,90 @@ export default function ClassificationReviewQueue({ theme, workCenters, onOpenWo
     onOpenWorkCenter(matchingWorkCenter);
   }
 
-  if (reviewTravelers.length === 0) {
-    return (
-      <section style={queueShellStyle(theme, false)}>
-        <div style={queueHeaderStyle}>
-          <div>
-            <div style={eyebrowStyle('#10b981')}>CLASSIFICATION REVIEW QUEUE</div>
-            <h3 style={titleStyle(theme)}>No plant-wide classification review warnings.</h3>
-            <p style={subtitleStyle(theme)}>Dynamic Travelers currently have no low-confidence route/product review signals.</p>
-          </div>
-          <span style={badgeStyle('#10b981')}>CLEAR</span>
-        </div>
-        <PlantTruthChecklist
-          theme={theme}
-          checklistStatuses={checklistStatuses}
-          confirmedCount={checklistConfirmedCount}
-          touchedCount={checklistTouchedCount}
-        />
-      </section>
-    );
-  }
-
   return (
-    <section style={queueShellStyle(theme, true)}>
-      <div style={queueHeaderStyle}>
+    <section style={queueShellStyle(theme, needsReview)}>
+      <button
+        type="button"
+        aria-expanded={isExpanded}
+        onClick={() => setIsExpanded((current) => !current)}
+        style={summaryButtonStyle(theme)}
+      >
         <div>
-          <div style={eyebrowStyle('#f97316')}>CLASSIFICATION REVIEW QUEUE</div>
-          <h3 style={titleStyle(theme)}>Plant-wide route/product confirmations needed.</h3>
-          <p style={subtitleStyle(theme)}>Visibility only. This queue does not approve routes, mutate classifier rules, raise confidence, or dispatch work.</p>
+          <div style={eyebrowStyle(accentColor)}>PLANT ROUTE REVIEW</div>
+          <h3 style={titleStyle(theme)}>
+            {needsReview ? 'Route/product confirmations need human review.' : 'No plant route review warnings.'}
+          </h3>
+          <p style={subtitleStyle(theme)}>
+            {needsReview
+              ? 'Visibility only. This does not approve routes, change classifier rules, raise confidence, or move work.'
+              : 'Dynamic Travelers currently have no low-confidence route/product review signals.'}
+          </p>
         </div>
         <div style={summaryBadgeColumnStyle}>
-          <span style={badgeStyle('#f97316')}>{reviewTravelers.length} REVIEW</span>
-          <span style={badgeStyle('#ef4444')}>{unresolvedCount} UNSAVED</span>
+          <span style={badgeStyle(accentColor)}>{needsReview ? `${reviewTravelers.length} REVIEW` : 'CLEAR'}</span>
+          <span style={badgeStyle(needsReview ? '#ef4444' : '#64748b')}>{unresolvedCount} UNSAVED</span>
           <span style={badgeStyle('#10b981')}>{savedCount} CAPTURED</span>
+          <span style={expandBadgeStyle(theme)}>{isExpanded ? 'COLLAPSE' : 'EXPAND'}</span>
         </div>
-      </div>
+      </button>
 
-      <PlantTruthChecklist
-        theme={theme}
-        checklistStatuses={checklistStatuses}
-        confirmedCount={checklistConfirmedCount}
-        touchedCount={checklistTouchedCount}
-      />
+      {isExpanded && (
+        <>
+          <PlantTruthChecklist
+            theme={theme}
+            checklistStatuses={checklistStatuses}
+            confirmedCount={checklistConfirmedCount}
+            touchedCount={checklistTouchedCount}
+          />
 
-      <div style={queueListStyle}>
-        {reviewTravelers.slice(0, 6).map((traveler) => {
-          const travelerConfirmations = getConfirmationsForTraveler(confirmations, traveler);
-          const firstReason = traveler.classificationReviewReasons[0] ?? 'Classification needs human review.';
-          const canDrillIn = workCenters.some((workCenter) => workCenter.department === traveler.department);
-          return (
-            <article key={traveler.id} style={queueItemStyle(theme, travelerConfirmations.length > 0)}>
-              <div style={queueItemTopStyle}>
-                <div>
-                  <strong style={itemTitleStyle(theme)}>#{traveler.order.orderNumber} · {traveler.productClassification.modelSignal ?? 'No model signal'}</strong>
-                  <div style={itemMetaStyle(theme)}>{traveler.department} · {formatToken(traveler.productClassification.productFamily)} · {formatHintList(traveler.finishHints)}</div>
-                </div>
-                <div style={itemBadgeRowStyle}>
-                  <span style={badgeStyle(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
-                  <span style={badgeStyle(traveler.qaRequired ? '#f97316' : '#64748b')}>{traveler.qaRequired ? 'QA REQUIRED' : 'QA NOT REQUIRED'}</span>
-                </div>
-              </div>
+          {needsReview && (
+            <div style={queueListStyle}>
+              {reviewTravelers.slice(0, 6).map((traveler) => {
+                const travelerConfirmations = getConfirmationsForTraveler(confirmations, traveler);
+                const firstReason = traveler.classificationReviewReasons[0] ?? 'Classification needs human review.';
+                const canDrillIn = workCenters.some((workCenter) => workCenter.department === traveler.department);
+                return (
+                  <article key={traveler.id} style={queueItemStyle(theme, travelerConfirmations.length > 0)}>
+                    <div style={queueItemTopStyle}>
+                      <div>
+                        <strong style={itemTitleStyle(theme)}>#{traveler.order.orderNumber} - {traveler.productClassification.modelSignal ?? 'No model signal'}</strong>
+                        <div style={itemMetaStyle(theme)}>{traveler.department} - {formatToken(traveler.productClassification.productFamily)} - {formatHintList(traveler.finishHints)}</div>
+                      </div>
+                      <div style={itemBadgeRowStyle}>
+                        <span style={badgeStyle(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
+                        <span style={badgeStyle(traveler.qaRequired ? '#f97316' : '#64748b')}>{traveler.qaRequired ? 'QA REQUIRED' : 'QA NOT REQUIRED'}</span>
+                      </div>
+                    </div>
 
-              <div style={reasonStyle(theme)}>{firstReason}</div>
+                    <div style={reasonStyle(theme)}>{firstReason}</div>
 
-              <div style={routeStyle(theme)}>
-                Suggested route: {traveler.productClassification.routeHint.length > 0 ? traveler.productClassification.routeHint.join(' → ') : 'No route hint'}
-              </div>
+                    <div style={routeStyle(theme)}>
+                      Suggested route: {traveler.productClassification.routeHint.length > 0 ? traveler.productClassification.routeHint.join(' -> ') : 'No route hint'}
+                    </div>
 
-              <div style={queueFooterStyle}>
-                <span style={smallTextStyle(theme)}>Current: {traveler.currentInstruction}</span>
-                <div style={footerActionRowStyle}>
-                  <span style={badgeStyle(travelerConfirmations.length > 0 ? '#10b981' : '#64748b')}>
-                    {travelerConfirmations.length} CONFIRMATION{travelerConfirmations.length === 1 ? '' : 'S'}
-                  </span>
-                  <button
-                    type="button"
-                    style={drillInButtonStyle(theme, canDrillIn)}
-                    disabled={!canDrillIn}
-                    onClick={() => openTravelerWorkCenter(traveler)}
-                  >
-                    OPEN REVIEW CAPTURE
-                  </button>
-                </div>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+                    <div style={queueFooterStyle}>
+                      <span style={smallTextStyle(theme)}>Current: {traveler.currentInstruction}</span>
+                      <div style={footerActionRowStyle}>
+                        <span style={badgeStyle(travelerConfirmations.length > 0 ? '#10b981' : '#64748b')}>
+                          {travelerConfirmations.length} CONFIRMATION{travelerConfirmations.length === 1 ? '' : 'S'}
+                        </span>
+                        <button
+                          type="button"
+                          style={drillInButtonStyle(theme, canDrillIn)}
+                          disabled={!canDrillIn}
+                          onClick={() => openTravelerWorkCenter(traveler)}
+                        >
+                          OPEN REVIEW CAPTURE
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
     </section>
   );
 }
@@ -195,7 +195,7 @@ function PlantTruthChecklist({
             <div style={queueItemTopStyle}>
               <div>
                 <strong style={itemTitleStyle(theme)}>{item.title}</strong>
-                <div style={itemMetaStyle(theme)}>{item.modelSignals.join(' / ')} · {formatToken(item.productFamily)} · {item.department}</div>
+                <div style={itemMetaStyle(theme)}>{item.modelSignals.join(' / ')} - {formatToken(item.productFamily)} - {item.department}</div>
               </div>
               <span style={badgeStyle(getChecklistStatusColor(status))}>{formatToken(status)}</span>
             </div>
@@ -205,7 +205,7 @@ function PlantTruthChecklist({
             <div style={checklistFooterStyle}>
               <span style={badgeStyle(matchingTravelerCount > 0 ? '#38bdf8' : '#64748b')}>{matchingTravelerCount} MATCHING TRAVELER{matchingTravelerCount === 1 ? '' : 'S'}</span>
               {latestConfirmation ? (
-                <span style={smallTextStyle(theme)}>Latest: {formatToken(latestConfirmation.answer)} · {latestConfirmation.reviewedBy}</span>
+                <span style={smallTextStyle(theme)}>Latest: {formatToken(latestConfirmation.answer)} - {latestConfirmation.reviewedBy}</span>
               ) : (
                 <span style={smallTextStyle(theme)}>Open in department review capture to answer.</span>
               )}
@@ -335,6 +335,25 @@ const checklistFooterStyle: CSSProperties = {
   flexWrap: 'wrap',
   marginTop: 8,
 };
+
+function summaryButtonStyle(theme: DashboardTheme): CSSProperties {
+  return {
+    appearance: 'none',
+    width: '100%',
+    border: 0,
+    background: 'transparent',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 14,
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    textAlign: 'left',
+    cursor: 'pointer',
+    color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+  };
+}
 
 function queueShellStyle(theme: DashboardTheme, needsReview: boolean): CSSProperties {
   const color = needsReview ? '#f97316' : '#10b981';
@@ -469,6 +488,20 @@ function drillInButtonStyle(theme: DashboardTheme, enabled: boolean): CSSPropert
     fontSize: 10,
     fontWeight: 900,
     cursor: enabled ? 'pointer' : 'not-allowed',
+  };
+}
+
+function expandBadgeStyle(theme: DashboardTheme): CSSProperties {
+  const color = theme === 'dark' ? '#cbd5e1' : '#334155';
+  return {
+    whiteSpace: 'nowrap',
+    color,
+    border: `1px solid ${color}`,
+    background: theme === 'dark' ? 'rgba(203,213,225,0.12)' : '#ffffff',
+    borderRadius: 4,
+    padding: '5px 7px',
+    fontSize: 10,
+    fontWeight: 900,
   };
 }
 
