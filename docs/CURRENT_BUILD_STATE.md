@@ -9,15 +9,15 @@ Last updated: 2026-05-17
 Main is GREEN and deployed.
 
 ```text
-Latest verified deployed work: PR #86 full plant traveler hold-location navigation
-Verified commit: d6dbfa65f9caa0e11fd822660aa87970ee156cf9
-Verified run: 26004820988
+Latest verified deployed work: PR #89 plant signal hold-location navigation
+Verified commit: a38e8406b05c3471979f6a139f327f637b18b1c4
+Verified run: 26005568860
 Branch: main
 Workflow: Build
 Status: GREEN
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-17T22:40:53Z
+Updated: 2026-05-17T23:16:16Z
 ```
 
 Verified deployed steps:
@@ -34,15 +34,62 @@ Verified deployed steps:
 
 ## Last Completed Missions
 
-### PR #86 - Full Plant Traveler hold-location navigation
+### PR #89 - Plant Signal hold-location navigation
 
-Full Plant Traveler route steps now show `GO TO HOLD LOCATION` for blocked/held steps with mapped work centers.
+Plant Signal cards now carry optional exact hold-location target data and open the owning work center when a hold target is available.
 
 What changed:
 
-- `PlantTravelerDetailModal` stores an exact target payload with order number, department, traveler id, source, and timestamp.
-- The action opens the owning work center through the existing station route.
-- The destination workflow panel opens the matching traveler/order using the PR #82 target behavior.
+- `plantSignals.ts` adds optional hold-target data to Plant Signals.
+- `PlantSignalsPanel` stores exact target context when a signal has a hold target.
+- Signals without a hold target keep existing broad tab navigation.
+
+Verified:
+
+```text
+PR source run: 26005369402
+PR source commit: 76dfa93e9c6a317b41d99c615481477777d62919
+Post-merge main run: 26005568860
+Main commit: a38e8406b05c3471979f6a139f327f637b18b1c4
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #88 - Dashboard blocked-order hold-location navigation
+
+Dashboard blocked-order rows now show `GO TO HOLD LOCATION - <department>` when a blocked/held traveler step can be derived.
+
+What changed:
+
+- `DashboardPage` derives the active blocked or held traveler step from the order.
+- The action stores exact target context and opens the owning work center.
+- No blocker, route, runtime, or dispatch state is changed.
+
+Verified:
+
+```text
+PR source run: 26005203259
+PR source commit: 1e4f789e81e42024161e316c09cfe22020894ba5
+Post-merge main run: 26005217470
+Main commit: fb55495152436a5097e6994e8c3a830c8e8bf43d
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #87 - Context docs refresh after PR #85/#86
+
+Verified:
+
+```text
+Run: 26004965265
+Main commit: ee37c34eb95125424afca8eef934ce3d413d6f2c
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #86 - Full Plant Traveler hold-location navigation
+
+Full Plant Traveler route steps now show `GO TO HOLD LOCATION` for blocked/held steps with mapped work centers.
 
 Verified:
 
@@ -59,12 +106,6 @@ GitHub Pages deploy: success
 
 Orders detail route steps now show `GO TO HOLD LOCATION` for blocked/held route steps with mapped work centers.
 
-What changed:
-
-- `OrdersPage` stores the exact target payload for the held route step.
-- The action opens the owning work center through the existing station route.
-- No order, route, blocker, workflow runtime, or dispatch state changes.
-
 Verified:
 
 ```text
@@ -77,8 +118,6 @@ GitHub Pages deploy: success
 ```
 
 ### PR #84 - Context docs refresh after PR #82
-
-Current context/build-state docs were refreshed after exact held-traveler navigation.
 
 Verified:
 
@@ -93,14 +132,6 @@ GitHub Pages deploy: success
 
 Blocked/held Dynamic Travelers can open the owning department and exact traveler/order.
 
-What changed:
-
-- `TravelerDetailModal` shows `GO TO HOLD DEPARTMENT - <department>` for blocked/held travelers when a matching work center exists.
-- The action stores an exact target payload with order number, department, traveler id, source, and timestamp.
-- The action opens the owning work center through the existing station route.
-- `WorkCenterWorkflowPanelV2` consumes the target and opens the matching traveler modal by traveler id, falling back to order number.
-- Existing classification-review target behavior is preserved; review capture still opens when the targeted traveler needs review.
-
 Verified:
 
 ```text
@@ -112,31 +143,9 @@ Typecheck and build: success
 GitHub Pages deploy: success
 ```
 
-### PR #80 - Context docs refresh
-
-Current context/build-state docs were refreshed after demo polish and runbook work.
-
-Verified:
-
-```text
-Run: 26003641341
-Main commit: 01688692ad0f10f661f31b54767d469864a80152
-Typecheck and build: success
-GitHub Pages deploy: success
-```
-
 ### PR #78 - Guided demo runbook
 
 `docs/DEMO_RUNBOOK.md` is merged and deployed.
-
-What changed:
-
-- Added pre-demo reset steps.
-- Added recommended Pilot Tools feature flags.
-- Added guided demo path.
-- Added dashboard, maintenance, orders, LV4500 simulator, and Saddles Dept talk tracks.
-- Added caution list for areas not to present as finalized routing.
-- Added success criteria for the guided demo.
 
 Verified:
 
@@ -149,32 +158,6 @@ Typecheck and build: success
 GitHub Pages deploy: success
 ```
 
-### PR #77 - Plant Route Review accordion
-
-Dashboard route-review noise was reduced for demo.
-
-Verified:
-
-```text
-PR source run: 26002747344
-Main run: 26002765269
-Typecheck and build: success
-GitHub Pages deploy: success
-```
-
-### PR #76 - Demo polish pass
-
-Demo polish is merged and deployed.
-
-Verified:
-
-```text
-PR source run: 26002451177
-Post-merge main run: 26002472352
-Typecheck and build: success
-GitHub Pages deploy: success
-```
-
 ## Hold-Location Navigation Truth
 
 Exact hold-location navigation is now available from:
@@ -183,9 +166,11 @@ Exact hold-location navigation is now available from:
 Dynamic Traveler detail
 Orders detail route steps
 Full Plant Traveler route steps
+Dashboard blocked-order rows
+Plant Signal cards
 ```
 
-All three store exact target context and open the owning work center without clearing or mutating the hold.
+All five store exact target context and open the owning work center without clearing or mutating the hold.
 
 Guardrails preserved:
 
@@ -224,6 +209,8 @@ Reset plant simulation from Pilot Tools.
 Set role to Management or Department Lead.
 Enable desired Pilot Tools feature flags.
 Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
+Test Dashboard blocked-order GO TO HOLD LOCATION.
+Test Plant Signals hold-location navigation.
 Test Dynamic Traveler detail GO TO HOLD DEPARTMENT.
 Test Orders route-step GO TO HOLD LOCATION.
 Test Full Plant Traveler route-step GO TO HOLD LOCATION.
@@ -261,9 +248,16 @@ Demo polish must not imply dispatch automation is complete.
 
 ## Active Risks / Next Audit Targets
 
-### Dashboard / plant-signal blocker doorways
+### Remaining blocker doorway audit
 
-Audit whether blocked-order rows, plant signal cards, and department order cards can open the exact hold location instead of only showing status or opening broad tabs.
+Audit whether support signal rows and department cards can open exact work locations instead of broad tabs.
+
+Likely next files/surfaces:
+
+- Dashboard QA / Safety / Maintenance signal rows.
+- Department order cards with broad blocker buttons.
+- Maintenance / equipment alert paths.
+- Receiving material issue paths.
 
 ### Plant-truth gaps remain
 
@@ -344,4 +338,4 @@ CI proves compile/deploy, not full click-flow behavior. Live browser validation 
 
 Run the live demo reset and dry run.
 
-After demo prep, audit dashboard/plant-signal blocker doorways before changing route behavior.
+After demo prep, audit QA / Safety / Maintenance signal rows and department order-card blocker buttons before changing route behavior.
