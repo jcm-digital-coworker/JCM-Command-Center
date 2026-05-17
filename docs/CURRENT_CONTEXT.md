@@ -10,34 +10,42 @@ Build: npm run build
 Main is GREEN and deployed.
 
 ```text
-Latest merged work: AI worker guardrails and patch relay workflow
-Main commit: 41f8ef4bfecbd253514458d21385457113a8ed28
-Main run: 26000843221
+Latest merged work: PR #76 demo polish pass
+Main commit: b6a1bfa39ccd8e6808d355fcc7922620b5ffc2d5
+Main run: 26002472352
 Workflow: Build
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-17T19:44:40Z
+Updated: 2026-05-17T20:55:47Z
 ```
 
 ## Current Truth
 
-The LV4500 simulator timing loop is now live-smoke-confirmed by the user.
+The app is in a guided demo-ready polish state.
 
-Completed LV4500 state:
+Completed demo polish state:
 
-- Active simulator is the full LV4500 simulator, not the stripped V2 route.
-- Cycle-time estimator is chart-backed, boss-aware, and Z-depth responsive.
-- Z-depth override is a simulation input only.
-- Results expose second-level timing deltas in the visible UI.
-- Single Cycle displays `X.XX min / Y.Y sec`.
-- Batch Total displays one decimal minute.
-- Batch Hours displays two decimal hours.
-- Simulator remains read-only and does not send machine commands or mutate production runtime state.
+- Seeded sales-wave demo order ship dates were refreshed so the Orders board reads as intentional demo pressure instead of stale overdue data.
+- Progress drawer language now frames open route work as plant-truth validation, not unfinished wiring.
+- Floating DEV controls are renamed to Pilot Tools with demo/validation wording.
+- Saddles page handoff wording no longer implies all ready handoffs go to Coating.
+- Progress checklist drawer now uses the `plant-truth-review` status and builds cleanly.
 
-User smoke result:
+PR #76 source build result:
 
 ```text
-Sim is working good.
+Run: 26002451177
+Commit: 0442c5b44c2be2a4eb4bce8d9808db5a73082710
+Typecheck and build: success
+```
+
+Post-merge main result:
+
+```text
+Run: 26002472352
+Commit: b6a1bfa39ccd8e6808d355fcc7922620b5ffc2d5
+Typecheck and build: success
+GitHub Pages deploy: success
 ```
 
 ## Recently Completed Work
@@ -48,37 +56,48 @@ Sim is working good.
 - PR #72: Department order-card navigation labels clarified.
 - PR #73: Skill-gap coverage action label clarified.
 - PR #74: AI worker guardrails and patch relay workflow added.
+- PR #75: Current context/build-state docs refreshed after LV4500 and worker lane updates.
+- PR #76: Demo polish pass merged and deployed.
 
-## AI Worker Lane
+## Best Demo Path
 
-Generic worker rules are now in repo:
+Use a guided demo instead of free-roam clicking.
+
+Recommended path:
 
 ```text
-AGENTS.md
-docs/AI_WORKER_RULES.md
-.github/ISSUE_TEMPLATE/agent-task.yml
+Dashboard / Command Center
+Maintenance Requests
+Orders
+LV4500 Simulator
+Saddles Dept
+Progress / Validation only if explaining roadmap
 ```
 
-Operating rule:
+Strong demo surfaces:
+
+- Maintenance request visibility and status flow.
+- Orders/traveler visibility.
+- Department views.
+- LV4500 read-only simulator.
+- Pilot Tools for controlled role/feature/simulation setup.
+
+Demo language:
 
 ```text
-Do not push directly to main.
-Use feature branches.
-Open PRs.
-Run npm run build when available.
-If local build fails for environment or pre-existing reasons, push the branch anyway with notes.
-If push/auth/proxy fails, return exact patch output using git show --patch --no-ext-diff HEAD.
-GitHub Actions remains the merge judge.
+The app gives guidance and visibility.
+It does not replace supervisors.
+It preserves uncertainty where plant truth is still being validated.
 ```
 
 ## Current Mission
 
-Begin the plant-truth integration pass from the remaining drawer checklist item.
+Prepare for polished guided demo, then continue plant-truth integration only after demo-safe state is verified.
 
-Focus:
+Focus after demo polish:
 
 ```text
-Route truth gaps for Coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness.
+Route validation for Coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness.
 ```
 
 ## Current Decision
@@ -90,6 +109,7 @@ RequiredDepartments still override classifier route hints.
 No confidence increase without confirmed plant facts.
 Shipping is always last, but readiness to ship is not automatic.
 QA is conditional, not universal.
+Demo polish must not imply dispatch automation is complete.
 ```
 
 ## Known Risk Areas
@@ -101,6 +121,7 @@ QA is conditional, not universal.
 - QA conditions need explicit rules.
 - Shipping readiness needs explicit completion/inspection/material conditions.
 - Large files must not be full-rewritten from truncated connector output.
+- Demo still needs a clean browser/localStorage reset before showing live.
 
 ## Guardrails
 
@@ -139,30 +160,18 @@ QA is conditional, not universal.
 
 ## Next Recommended Move
 
-Audit current product classification and route-rule files before changing behavior.
+Prepare the live demo reset and script.
 
-Search targets:
-
-```text
-classification
-productFamily
-requiredDepartments
-route confidence
-shipping readiness
-QA hold
-412
-432
-452
-coupling
-clamp
-patch clamp
-coating
-```
-
-Success for the next pass:
+Checklist:
 
 ```text
-Identify existing route-rule seams.
-Do not modify dispatch behavior until current logic is understood.
-If patching, keep it conservative and small.
+Open the deployed app in the demo browser.
+Reset Maintenance Requests.
+Reset plant simulation from Pilot Tools.
+Set role to Management or Department Lead.
+Enable desired Pilot Tools feature flags.
+Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
+Do not deep-demo Coating/clamps/412/432/452 as finalized routing.
 ```
+
+After demo prep, resume plant-truth route audit before changing behavior.
