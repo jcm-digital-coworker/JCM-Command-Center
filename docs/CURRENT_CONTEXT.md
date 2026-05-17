@@ -7,45 +7,37 @@ Build: npm run build
 
 ## Current Build State
 
-Main is GREEN and deployed.
+Latest verified deployed main run is GREEN.
 
 ```text
-Latest merged work: PR #76 demo polish pass
-Main commit: b6a1bfa39ccd8e6808d355fcc7922620b5ffc2d5
-Main run: 26002472352
+Latest verified deployed work: demo readiness docs and polish through PR #78
+Verified commit: b5d831c7ecbbd2d228860b4e7d59813b8ca60b94
+Verified run: 26003448229
 Workflow: Build
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-17T20:55:47Z
+Updated: 2026-05-17T21:39:33Z
 ```
+
+Note: this context refresh branch was started from current `main` after that verified breadcrumb. Verify this docs-only refresh by PR Actions before merging.
 
 ## Current Truth
 
 The app is in a guided demo-ready polish state.
 
-Completed demo polish state:
+Completed demo readiness work:
 
-- Seeded sales-wave demo order ship dates were refreshed so the Orders board reads as intentional demo pressure instead of stale overdue data.
-- Progress drawer language now frames open route work as plant-truth validation, not unfinished wiring.
-- Floating DEV controls are renamed to Pilot Tools with demo/validation wording.
-- Saddles page handoff wording no longer implies all ready handoffs go to Coating.
-- Progress checklist drawer now uses the `plant-truth-review` status and builds cleanly.
+- PR #76 refreshed demo order dates, softened route-validation wording, renamed DEV controls to Pilot Tools, and corrected Saddles handoff wording.
+- PR #77 collapsed the dashboard Classification Review Queue into a calmer Plant Route Review summary while preserving review badges and expanded review details.
+- PR #78 added `docs/DEMO_RUNBOOK.md` with pre-demo reset steps, guided demo path, talk tracks, caution areas, and success criteria.
+- `docs/GITHUB_OPERATIONS_PLAYBOOK.md` defines the repo workflow, risk tracks, pull/merge protocols, and large-file protocol.
 
-PR #76 source build result:
-
-```text
-Run: 26002451177
-Commit: 0442c5b44c2be2a4eb4bce8d9808db5a73082710
-Typecheck and build: success
-```
-
-Post-merge main result:
+Current demo story:
 
 ```text
-Run: 26002472352
-Commit: b6a1bfa39ccd8e6808d355fcc7922620b5ffc2d5
-Typecheck and build: success
-GitHub Pages deploy: success
+JCM Command Center gives visibility and guidance.
+It does not replace supervisors.
+It preserves uncertainty where plant truth is still being validated.
 ```
 
 ## Recently Completed Work
@@ -58,6 +50,8 @@ GitHub Pages deploy: success
 - PR #74: AI worker guardrails and patch relay workflow added.
 - PR #75: Current context/build-state docs refreshed after LV4500 and worker lane updates.
 - PR #76: Demo polish pass merged and deployed.
+- PR #77: Plant Route Review accordion merged and deployed.
+- PR #78: Guided demo runbook merged and deployed.
 
 ## Best Demo Path
 
@@ -81,6 +75,7 @@ Strong demo surfaces:
 - Department views.
 - LV4500 read-only simulator.
 - Pilot Tools for controlled role/feature/simulation setup.
+- Plant Route Review collapsed summary for transparent route validation.
 
 Demo language:
 
@@ -94,6 +89,8 @@ It preserves uncertainty where plant truth is still being validated.
 
 Prepare for polished guided demo, then continue plant-truth integration only after demo-safe state is verified.
 
+Use `docs/DEMO_RUNBOOK.md` as the live demo playbook.
+
 Focus after demo polish:
 
 ```text
@@ -103,6 +100,11 @@ Route validation for Coating lanes, couplings, clamps, patch clamps, 412/432/452
 ## Current Decision
 
 ```text
+Repo truth beats chat memory.
+GitHub Actions beats status vibes.
+PR patch beats verbal summaries.
+Small branches beat giant rewrites.
+Risk track decides inspection depth.
 Product classification is useful guidance, not dispatch authority.
 Unconfirmed routes must stay conservative.
 RequiredDepartments still override classifier route hints.
@@ -138,6 +140,7 @@ Demo polish must not imply dispatch automation is complete.
 - Review copy must not imply automatic resolution.
 - View/no-op actions must not mutate runtime state.
 - LV4500 simulator is read-only and must not create real machine command behavior.
+- Use the GitHub Operations Playbook risk tracks before repo edits.
 
 ## Durable Plant Truth
 
@@ -160,7 +163,7 @@ Demo polish must not imply dispatch automation is complete.
 
 ## Next Recommended Move
 
-Prepare the live demo reset and script.
+Run the live demo reset and dry run.
 
 Checklist:
 
@@ -171,6 +174,7 @@ Reset plant simulation from Pilot Tools.
 Set role to Management or Department Lead.
 Enable desired Pilot Tools feature flags.
 Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
+Keep Plant Route Review collapsed unless explaining route validation.
 Do not deep-demo Coating/clamps/412/432/452 as finalized routing.
 ```
 
