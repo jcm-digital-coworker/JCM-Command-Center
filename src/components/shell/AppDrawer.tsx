@@ -10,6 +10,7 @@ import {
 import { getThemeColors } from '../../theme/theme';
 import type { Language } from '../../i18n/language';
 import { t, tabLabel, navGroupLabel } from '../../i18n/translations';
+import ProgressChecklistDrawerSection from './ProgressChecklistDrawerSection';
 
 interface AppDrawerProps {
   open: boolean;
@@ -187,6 +188,8 @@ export default function AppDrawer({
               )}
             </div>
           </div>
+
+          <ProgressChecklistDrawerSection theme={theme} />
 
           <div style={settingsSectionStyle(theme)}>
             <div style={settingsHeaderStyle(theme)}>{t('settings', lang).toUpperCase()}</div>
