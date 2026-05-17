@@ -6,21 +6,19 @@ Last updated: 2026-05-17
 
 ## Current Build Status
 
-Latest verified deployed main run is GREEN.
+Main is GREEN and deployed.
 
 ```text
-Latest verified deployed work: demo readiness docs and polish through PR #78
-Verified commit: b5d831c7ecbbd2d228860b4e7d59813b8ca60b94
-Verified run: 26003448229
+Latest verified deployed work: PR #82 exact held-traveler navigation
+Verified commit: 1c6f427e7692c0e944b2f305f134c05d74622efb
+Verified run: 26004203662
 Branch: main
 Workflow: Build
 Status: GREEN
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-17T21:39:33Z
+Updated: 2026-05-17T22:13:27Z
 ```
-
-Note: this context refresh branch was started from current `main` after that verified breadcrumb. Verify this docs-only refresh by PR Actions before merging.
 
 Verified deployed steps:
 
@@ -35,6 +33,53 @@ Verified deployed steps:
 - Complete jobs
 
 ## Last Completed Missions
+
+### PR #82 - Exact held-traveler navigation
+
+Blocked/held Dynamic Travelers can now open the owning department and exact traveler/order.
+
+What changed:
+
+- `TravelerDetailModal` shows `GO TO HOLD DEPARTMENT - <department>` for blocked/held travelers when a matching work center exists.
+- The action stores an exact target payload with order number, department, traveler id, source, and timestamp.
+- The action opens the owning work center through the existing station route.
+- `WorkCenterWorkflowPanelV2` consumes the target and opens the matching traveler modal by traveler id, falling back to order number.
+- Existing classification-review target behavior is preserved; review capture still opens when the targeted traveler needs review.
+
+Guardrails preserved:
+
+```text
+No blocker clearing.
+No route changes.
+No department advancement.
+No classifier confidence changes.
+No workflow runtime mutation.
+No dispatch behavior change.
+```
+
+Verified:
+
+```text
+PR source run: 26004187535
+PR source commit: 809ebf6a87e8f0dc10ea1e3039151487e9e9874a
+Post-merge main run: 26004203662
+Main commit: 1c6f427e7692c0e944b2f305f134c05d74622efb
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #80 - Context docs refresh
+
+Current context/build-state docs were refreshed after demo polish and runbook work.
+
+Verified:
+
+```text
+Run: 26003641341
+Main commit: 01688692ad0f10f661f31b54767d469864a80152
+Typecheck and build: success
+GitHub Pages deploy: success
+```
 
 ### PR #78 - Guided demo runbook
 
@@ -182,6 +227,10 @@ Reset plant simulation from Pilot Tools.
 Set role to Management or Department Lead.
 Enable desired Pilot Tools feature flags.
 Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
+Find or create a blocked/held Dynamic Traveler.
+Open traveler detail.
+Click GO TO HOLD DEPARTMENT.
+Confirm the owning work center opens and the exact traveler/order opens automatically.
 Keep Plant Route Review collapsed unless explaining route validation.
 ```
 
@@ -199,8 +248,6 @@ Avoid deep-demoing as finalized routing:
 
 ```text
 GitHub Actions is the source of truth for merge readiness.
-Codex/Claude/Cursor-style helpers may generate patches, but main remains protected by PR review and CI.
-If a helper cannot push, it must return `git show --patch --no-ext-diff HEAD` for patch relay.
 Repo truth beats chat memory.
 GitHub Actions beats status vibes.
 PR patch beats verbal summaries.
@@ -236,6 +283,10 @@ These should remain visible as validation until confirmed.
 
 The app uses localStorage for pilot/demo state. Use one clean browser profile or reset Maintenance Requests, plant simulation, and feature flags before presenting.
 
+### PR #82 smoke-test risk
+
+CI proves compile/deploy, not full click-flow behavior. Live browser validation still needs to confirm that `GO TO HOLD DEPARTMENT` lands in the owning work center and opens the exact traveler/order.
+
 ### Large-file edit risk
 
 `update_file` is full-file replacement, not a true line patch. For large files, follow `docs/GITHUB_OPERATIONS_PLAYBOOK.md`: search target, fetch nearby lines, fetch complete blob if needed, re-fetch edited range, review PR patch, and stop if only truncated content is available.
@@ -260,7 +311,6 @@ The app uses localStorage for pilot/demo state. Use one clean browser profile or
 - No confidence increase without confirmed plant facts.
 - Shipping is always last; readiness to ship is not automatic.
 - LV4500 simulator is read-only and must not create real machine command behavior.
-- AI workers must not push directly to main.
 
 ## Durable Plant Truth Reminders
 
