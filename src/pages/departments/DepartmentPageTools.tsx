@@ -397,7 +397,7 @@ export function LiveCrewSection({
                 onClick={() => onGoToTab('coverage')}
                 style={crewGapActionButtonStyle}
               >
-                → OPEN COVERAGE
+                Open coverage plan
               </button>
             )}
           </div>
