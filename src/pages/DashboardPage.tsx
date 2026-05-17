@@ -6,6 +6,8 @@ import type { RiskItem } from '../types/risk';
 import type { AppTab, RoleView } from '../types/app';
 import type { WorkCenter } from '../types/plant';
 import type { ProductionOrder } from '../types/productionOrder';
+import type { DynamicTraveler } from '../types/dynamicTraveler';
+import { workCenters as allWorkCenters } from '../data/workCenters';
 import { getOrderStatusLabel, getOrderBlockReason, formatBlockedReason } from '../logic/orderReadiness';
 import { getOperatorSafeStatusLabel } from '../logic/orderStatusTruth';
 import { getDashboardRuntimeTruth } from '../logic/dashboardRuntimeSelectors';
@@ -14,6 +16,7 @@ import { getNavigationTab } from '../logic/navigationContracts';
 import { getCommandRecommendation } from '../logic/commandRecommendations';
 import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
 import { recordPressureSnapshot, getPressureHistory, type PressureSnapshot } from '../logic/pressureHistory';
+import { generatePlantTraveler } from '../logic/dynamicTraveler';
 import AccordionSection from '../components/common/AccordionSection';
 import SmartEmptyState from '../components/common/SmartEmptyState';
 import PlantSignalsPanel from '../components/dashboard/PlantSignalsPanel';
@@ -44,6 +47,9 @@ import {
   type DashboardTheme,
 } from '../components/dashboard/dashboardStyles';
 import StatusBadge from '../components/StatusBadge';
+
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
 
 interface DashboardPageProps {
   machines: Machine[];
@@ -292,7 +298,7 @@ function PlantPressureScore({
       <div>
         <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '1px', color: band.color }}>{band.label}</div>
         <div style={{ fontSize: 11, color: theme === 'dark' ? '#94a3b8' : '#64748b', marginTop: 2 }}>
-          Plant Pressure Score — {blockedCount} blocked · {alertCount} alerts · {overdueCount} overdue tasks · {materialIssueCount} material issues
+          Plant Pressure Score - {blockedCount} blocked - {alertCount} alerts - {overdueCount} overdue tasks - {materialIssueCount} material issues
         </div>
       </div>
     </div>
@@ -333,5 +339,62 @@ const lastUpdatedStyle: CSSProperties = {
 
 function getQuickActionsToggleStyle(theme: DashboardTheme): CSSProperties { return { border: theme === 'dark' ? '1px dashed #475569' : '1px dashed #cbd5e1', background: theme === 'dark' ? 'rgba(15, 23, 42, 0.55)' : '#f8fafc', color: '#94a3b8', borderRadius: 4, padding: '12px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase', minHeight: 54 }; }
 function formatOrderBlock(order: ProductionOrder) { const blockReason = getOrderBlockReason(order); return blockReason ? formatBlockedReason(blockReason) : 'No blocker listed'; }
-function OrderRow({ order, theme, compact = false }: { order: ProductionOrder; theme: DashboardTheme; compact?: boolean }) { return <div style={getDashboardItemStyle(theme)}><div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} - {order.assemblyPartNumber}</div><div style={dashboardMutedTextStyle}>{order.customer} - Qty {order.quantity} - Ship {order.projectedShipDate}</div>{!compact && <div style={dashboardMutedTextStyle}>{formatOrderBlock(order)}</div>}</div><span style={getPriorityBadge(order.status)}>{getOrderStatusLabel(order)}</span></div>; }
+function getDashboardHoldStep(order: ProductionOrder): DynamicTraveler | null {
+  const plantTraveler = generatePlantTraveler(order);
+  return plantTraveler.departmentSteps.find((step) => {
+    if (step.stepStatus !== 'BLOCKED' && step.stepStatus !== 'HOLD') return false;
+    return allWorkCenters.some((workCenter) => workCenter.department === step.department);
+  }) ?? null;
+}
+function openDashboardHoldLocation(order: ProductionOrder, step: DynamicTraveler) {
+  const matchingWorkCenter = allWorkCenters.find((workCenter) => workCenter.department === step.department);
+  if (!matchingWorkCenter) return;
+  localStorage.setItem(
+    REVIEW_TARGET_STORAGE_KEY,
+    JSON.stringify({
+      orderNumber: order.orderNumber,
+      department: step.department,
+      travelerId: step.id,
+      source: 'dashboard-blocked-order-hold-navigation',
+      updatedAt: new Date().toISOString(),
+    }),
+  );
+  window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('wc', matchingWorkCenter.id);
+  window.location.assign(nextUrl.toString());
+}
+function OrderRow({ order, theme, compact = false }: { order: ProductionOrder; theme: DashboardTheme; compact?: boolean }) {
+  const holdStep = !compact ? getDashboardHoldStep(order) : null;
+  return (
+    <div style={getDashboardItemStyle(theme)}>
+      <div>
+        <div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} - {order.assemblyPartNumber}</div>
+        <div style={dashboardMutedTextStyle}>{order.customer} - Qty {order.quantity} - Ship {order.projectedShipDate}</div>
+        {!compact && <div style={dashboardMutedTextStyle}>{formatOrderBlock(order)}</div>}
+        {holdStep ? (
+          <button type="button" style={dashboardHoldLocationButtonStyle(theme)} onClick={() => openDashboardHoldLocation(order, holdStep)}>
+            GO TO HOLD LOCATION - {holdStep.department}
+          </button>
+        ) : null}
+      </div>
+      <span style={getPriorityBadge(order.status)}>{getOrderStatusLabel(order)}</span>
+    </div>
+  );
+}
+function dashboardHoldLocationButtonStyle(theme: DashboardTheme): CSSProperties {
+  return {
+    marginTop: 8,
+    padding: '6px 9px',
+    borderRadius: 4,
+    border: '1px solid #dc2626',
+    background: theme === 'dark' ? 'rgba(220,38,38,0.14)' : '#fee2e2',
+    color: theme === 'dark' ? '#fca5a5' : '#991b1b',
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: '0.6px',
+    cursor: 'pointer',
+    textTransform: 'uppercase',
+  };
+}
 function getPriorityBadge(priority: string): CSSProperties { const normalizedPriority = String(priority ?? '').trim().toUpperCase(); const colors: Record<string, string> = { BLOCKED: '#dc2626', HOLD: '#dc2626', FAILED: '#dc2626', HIGH: '#dc2626', CRITICAL: '#dc2626', READY: '#10b981', RUNNABLE: '#10b981', IN_PROGRESS: '#3b82f6', RUNNING: '#3b82f6', MEDIUM: '#f59e0b', LOW: '#3b82f6', NORMAL: '#10b981', WAITING: '#f59e0b', DONE: '#64748b', COMPLETE: '#64748b', COMPLETED: '#64748b' }; const color = colors[normalizedPriority] || '#64748b'; return { padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 800, background: `${color}25`, color, textTransform: 'uppercase', letterSpacing: '0.5px', border: `1px solid ${color}50`, whiteSpace: 'nowrap' }; }
