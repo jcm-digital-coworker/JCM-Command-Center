@@ -655,7 +655,7 @@ export default function Lv4500JcmSimulator({
                     <InfoTile
                       theme={theme}
                       label="Single Cycle"
-                      value={`~${cycleTime.totalMinutes.toFixed(1)} min`}
+                      value={`${cycleTime.totalMinutes.toFixed(2)} min / ${(cycleTime.totalMinutes * 60).toFixed(1)} sec`}
                     />
                     <InfoTile
                       theme={theme}
@@ -665,12 +665,12 @@ export default function Lv4500JcmSimulator({
                     <InfoTile
                       theme={theme}
                       label="Batch Total"
-                      value={`~${batchCycleMinutes.toFixed(0)} min`}
+                      value={`~${batchCycleMinutes.toFixed(1)} min`}
                     />
                     <InfoTile
                       theme={theme}
                       label="Batch Hours"
-                      value={`~${batchCycleHours.toFixed(1)} hr`}
+                      value={`~${batchCycleHours.toFixed(2)} hr`}
                     />
                     <InfoTile
                       theme={theme}
