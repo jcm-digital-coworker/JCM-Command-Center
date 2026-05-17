@@ -2,22 +2,22 @@
 
 Purpose: preserve the smallest useful operating context for the JCM Command Center build so future work continues from the current clean repository state without dragging full chat history forward.
 
-Last updated: 2026-05-15
+Last updated: 2026-05-17
 
 ## Current Build Status
 
 Main is GREEN and deployed.
 
 ```text
-Latest merged work: LV4500 Z-depth deterministic cycle delta
-Main commit: 6c104d7c36323f81b26b22495cd4ec4b3fdca98a
-Main run: 25942778604
+Latest merged work: AI worker guardrails and patch relay workflow
+Main commit: 41f8ef4bfecbd253514458d21385457113a8ed28
+Main run: 26000843221
 Branch: main
 Workflow: Build
 Status: GREEN
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-15T21:42:15Z
+Updated: 2026-05-17T19:44:40Z
 ```
 
 Verified main steps:
@@ -32,89 +32,106 @@ Verified main steps:
 - Deploy GitHub Pages
 - Complete jobs
 
-## Last Completed Mission
+## Last Completed Missions
 
-LV4500 timing estimator is chart-backed, boss-aware, and Z-depth responsive.
+### PR #69 - LV4500 cycle-time display precision
+
+LV4500 simulator display now exposes small Z-depth timing changes in the active UI.
 
 What changed:
 
-- Loaded LV4500 time-study chart baselines for small and large boss tap-code ranges.
-- Added deterministic LV4500 time-study engine under `src/logic/timeStudy/`.
-- Wired `estimateLv4500CycleTime()` to the deterministic engine while preserving the existing simulator UI return shape.
-- Passed selected casting `bossType` into the estimator.
-- Restored displayed cycle time to use the LV4500 time-study chart baseline.
-- Added deterministic Z-depth delta logic by comparing default-depth and override-depth engine results.
-- Added visible estimator notes including chart baseline and `Z-depth time delta: X.X sec`.
-- Preserved measured LV4500R constants:
-  - Rapid rate: 945 IPM
-  - G28 travel: X23.400 / Z10.431
-  - Indexing time: 0.2 seconds per step
-- The simulator remains read-only and does not send machine commands or mutate production runtime state.
+- Single Cycle now displays `X.XX min / Y.Y sec`.
+- Batch Total now displays one decimal minute.
+- Batch Hours now displays two decimal hours.
+- Estimator math, routing, macros, and machine command behavior were not changed.
 
-What should be true in the live demo:
+Live result:
 
-- Simulation -> LV4500R opens the full LV4500 simulator, not the stripped V2.
-- Setup has casting/body, tap/outlet, batch target, and Thread Z-depth override.
-- RUN SELECTED CYCLE runs only the currently selected setup.
-- Results show geometry and cycle time for that selected setup only.
-- Single-cycle and batch estimates use chart-backed baseline timing.
-- Small and large boss choices use the correct chart baseline where available.
-- Z-depth override updates timing notes with a visible second-level delta.
+```text
+User smoke test confirmed: Sim is working good.
+```
+
+### PR #70 - Progress checklist refresh
+
+Progress / Not Yet Live drawer no longer lists completed LV4500 smoke-test or precision work as unfinished.
+
+Remaining checklist item:
+
+```text
+Plant route truth gaps: coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness still need confirmation.
+```
+
+### PR #71-#73 - Operator action copy cleanup
+
+Dashboard quick actions, department order-card navigation labels, and the skill-gap coverage action now use behavior-truth wording.
+
+Examples:
+
+```text
+Call Maintenance -> Open Maintenance Requests
+Request Queue -> Open Request Queue
+→ QA -> Open QA hold
+→ ALERTS -> Open equipment alert
+→ COVERAGE -> Open coverage gap
+→ OPEN COVERAGE -> Open coverage plan
+```
+
+Guardrail preserved:
+
+```text
+Labels describe navigation/review context only. No runtime reducer/action mutation, route logic, or workflow behavior changed.
+```
+
+### PR #74 - AI worker guardrails and patch relay workflow
+
+Generic AI worker lane is live.
+
+Files added:
+
+```text
+AGENTS.md
+docs/AI_WORKER_RULES.md
+.github/ISSUE_TEMPLATE/agent-task.yml
+```
+
+Purpose:
+
+```text
+AI helpers must use feature branches, avoid direct main pushes, push branches when local container tests fail for environment/pre-existing reasons, and return exact patches when push/auth/proxy blocks them.
+```
 
 ## Current Decision
 
 ```text
-The LV4500 simulator is a selected-cycle estimator, not an automated tap demo.
-Cycle-time total is anchored to the time-study chart.
-Deterministic engine supplies depth delta, pass estimates, warnings, and machine-constant breakdown.
-Z-depth override is a simulation input only.
-Cycle-time estimates are guidance, not machine command authority.
+GitHub Actions is the source of truth for merge readiness.
+Codex/Claude/Cursor-style helpers may generate patches, but main remains protected by PR review and CI.
+If a helper cannot push, it must return `git show --patch --no-ext-diff HEAD` for patch relay.
 ```
 
 ## Active Risks / Next Audit Targets
 
-### LV4500 live smoke validation
-
-Manual smoke test is still required because CI proves compile/deploy, not visible UI behavior.
-
-Smoke target:
-
-```text
-Open Simulation -> LV4500R.
-Choose large boss casting.
-Choose 2-1/2 IP / code 16.
-Run with macro default.
-Record single-cycle time and Z-depth delta note.
-Set deeper Z override.
-Run again.
-Confirm single-cycle time, batch total, and Z-depth delta note update.
-```
-
-### LV4500 display precision
-
-The Single Cycle tile rounds to one decimal minute. The backend now reports second-level Z-depth delta in notes, but small changes may still look unchanged on the tile.
-
-Recommended polish:
-
-```text
-Show Single Cycle as minutes and seconds, for example:
-~2.28 min / 136.6 sec
-```
-
-### Duplicate simulator component
-
-Both files still exist:
-
-```text
-src/components/Lv4500JcmSimulator.tsx
-src/components/Lv4500JcmSimulatorV2.tsx
-```
-
-`App.tsx` imports the full simulator. V2 should be deleted if unused or marked deprecated to prevent future routing confusion.
-
 ### Plant-truth gaps remain
 
-Continue preserving uncertainty for Coating sub-flow, couplings, clamps, patch clamps, 412/432/452 rules, assembly lanes, QA conditions, and shipping readiness.
+Continue preserving uncertainty for:
+
+- Coating sub-flow.
+- Couplings.
+- Clamps.
+- Patch clamps.
+- 412 / 432 / 452 routing rules.
+- Assembly lanes.
+- QA conditions.
+- Shipping readiness.
+
+These should remain visible in the Progress / Not Yet Live drawer until confirmed.
+
+### Current context drift risk
+
+Memory docs had become stale after several green PRs. Keep repo memory short and current after mission completions.
+
+### Large-file edit risk
+
+`src/pages/departments/DepartmentPageTools.tsx` is large. Avoid blind full-file rewrites from truncated connector output. Use blob/full-file access, narrow seams, or patch relay.
 
 ## Guardrails Preserved
 
@@ -136,6 +153,7 @@ Continue preserving uncertainty for Coating sub-flow, couplings, clamps, patch c
 - No confidence increase without confirmed plant facts.
 - Shipping is always last; readiness to ship is not automatic.
 - LV4500 simulator is read-only and must not create real machine command behavior.
+- AI workers must not push directly to main.
 
 ## Durable Plant Truth Reminders
 
@@ -167,17 +185,11 @@ Continue preserving uncertainty for Coating sub-flow, couplings, clamps, patch c
 
 ## Next Recommended Move
 
-Smoke test the live demo:
+Start the plant-truth integration pass from the remaining Progress / Not Yet Live item.
+
+Best first target:
 
 ```text
-Open Simulation.
-Open LV4500R simulator.
-Set Batch Target = 50.
-Choose large-boss 2-1/2 IP / code 16.
-Run macro default.
-Set a Z-depth override.
-Click RUN SELECTED CYCLE again.
-Confirm single-cycle time, batch total, batch hours, geometry, and Z-depth time delta update.
+Audit product classification and route rules for couplings, clamps, patch clamps, 412, 432, 452, QA conditions, and shipping readiness.
+Keep uncertain routes conservative. Do not convert classifier hints into dispatch authority without confirmed plant truth.
 ```
-
-If smoke test passes, continue with display precision polish and duplicate V2 cleanup. If it fails, fix the specific visible behavior before adding new features.
