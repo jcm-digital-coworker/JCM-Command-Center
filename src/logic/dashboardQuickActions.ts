@@ -23,7 +23,7 @@ export type QuickActionState = {
 
 export function getQuickActionsForRole(roleView: RoleView, state: QuickActionState): QuickAction[] {
   const alertAction = createLiveAction(
-    'View Equipment Alerts',
+    'Open Equipment Alerts',
     'No active equipment alerts in current view',
     'Open active equipment alarms and offline status',
     'OPEN_EQUIPMENT_ALERTS',
@@ -75,10 +75,10 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
 
   if (roleView === 'Production') {
     return sortQuickActions([
-      { label: 'View Work Queue', detail: 'Open assigned work and current station priorities', intent: 'OPEN_WORKFLOW', tone: 'orange', priority: 3 },
+      { label: 'Open Work Queue', detail: 'Open assigned work and current station priorities', intent: 'OPEN_WORKFLOW', tone: 'orange', priority: 3 },
       { ...blockerAction, label: state.blockedOrderCount > 0 ? 'Review Blocked Work' : 'Review Blocker Status', intent: 'OPEN_WORKFLOW' },
       { ...materialAction, label: state.materialIssueCount > 0 ? 'Open Material Request' : 'Check Material Status' },
-      { ...maintenanceAction, label: state.activeTaskCount > 0 ? 'Call Maintenance' : 'Maintenance Status' },
+      { ...maintenanceAction, label: state.activeTaskCount > 0 ? 'Open Maintenance Requests' : 'Open Maintenance Status' },
       qaAction,
       { label: 'Open Documents', detail: 'Access procedures, standards, and references', intent: 'OPEN_DOCUMENTS', tone: 'slate', priority: 1 },
     ]);
@@ -98,7 +98,7 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
 
   if (roleView === 'Management') {
     return sortQuickActions([
-      { label: 'Plant Command Review', detail: 'Review plant criticals, flow, and department status', intent: 'OPEN_DASHBOARD', tone: state.blockedOrderCount + state.alertCount > 0 ? 'orange' : 'slate', priority: 2 },
+      { label: 'Review Plant Command', detail: 'Review plant criticals, flow, and department status', intent: 'OPEN_DASHBOARD', tone: state.blockedOrderCount + state.alertCount > 0 ? 'orange' : 'slate', priority: 2 },
       blockerAction,
       { label: 'Open War Board', detail: state.blockedOrderCount > 0 ? `${state.blockedOrderCount} blocked — full plant kanban by urgency` : 'Full plant kanban — all orders across all departments, urgency-sorted', intent: 'OPEN_KANBAN', tone: 'blue', priority: state.blockedOrderCount > 0 ? 5 : 3 },
       { label: 'Check Crew Coverage', detail: 'Review staffing status across departments', intent: 'OPEN_CREW_COVERAGE', tone: 'slate', priority: 2 },
@@ -114,7 +114,7 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
     return sortQuickActions([
       maintenanceAction,
       alertAction,
-      { ...blockerAction, label: 'Review Work Queue', detail: state.blockedOrderCount > 0 ? 'Check workflow impact before taking equipment down' : 'Check production impact before maintenance work', intent: 'OPEN_WORKFLOW' },
+      { ...blockerAction, label: 'Open Work Queue', detail: state.blockedOrderCount > 0 ? 'Check workflow impact before taking equipment down' : 'Check production impact before maintenance work', intent: 'OPEN_WORKFLOW' },
       { label: 'Open Equipment', detail: 'Review equipment status and detail cards', intent: 'OPEN_EQUIPMENT', tone: 'blue', priority: 3 },
       qaAction,
       { label: 'Open Documents', detail: 'Access procedures, standards, and references', intent: 'OPEN_DOCUMENTS', tone: 'slate', priority: 1 },
@@ -125,8 +125,8 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
     return sortQuickActions([
       { ...materialAction, label: state.materialIssueCount > 0 ? 'Open Material Issues' : 'Open Receiving' },
       qaAction,
-      { label: 'Request Queue', detail: 'Check material and support requests from production departments', intent: 'OPEN_RECEIVING', tone: state.materialIssueCount > 0 ? 'orange' : 'slate', priority: state.materialIssueCount > 0 ? 4 : 2 },
-      { ...blockerAction, label: 'View Work Queue', detail: state.blockedOrderCount > 0 ? 'Review orders waiting on receiving, QA, or support action' : 'Review orders near support handoff', intent: 'OPEN_WORKFLOW' },
+      { label: 'Open Request Queue', detail: 'Check material and support requests from production departments', intent: 'OPEN_RECEIVING', tone: state.materialIssueCount > 0 ? 'orange' : 'slate', priority: state.materialIssueCount > 0 ? 4 : 2 },
+      { ...blockerAction, label: 'Open Work Queue', detail: state.blockedOrderCount > 0 ? 'Review orders waiting on receiving, QA, or support action' : 'Review orders near support handoff', intent: 'OPEN_WORKFLOW' },
       { label: 'Open QA Department', detail: 'Review QA department cards and station signals', intent: 'OPEN_QA_DEPARTMENT', tone: 'blue', priority: 3 },
       { label: 'Check Crew Coverage', detail: 'Review support coverage and available help', intent: 'OPEN_CREW_COVERAGE', tone: 'slate', priority: 2 },
       { label: 'Open Orders', detail: 'Review material, QA, and release status by order', intent: 'OPEN_ORDERS', tone: 'blue', priority: 2 },
@@ -136,7 +136,7 @@ export function getQuickActionsForRole(roleView: RoleView, state: QuickActionSta
   }
 
   return sortQuickActions([
-    { label: 'View Work Queue', detail: 'Open current workflow and station priorities', intent: 'OPEN_WORKFLOW', tone: 'orange', priority: 3 },
+    { label: 'Open Work Queue', detail: 'Open current workflow and station priorities', intent: 'OPEN_WORKFLOW', tone: 'orange', priority: 3 },
     blockerAction,
     materialAction,
     { label: 'Open Departments', detail: 'Use department focus cards and work-center view', intent: 'OPEN_PLANT_MAP', tone: 'green', priority: 2 },
