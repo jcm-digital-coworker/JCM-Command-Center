@@ -9,15 +9,15 @@ Last updated: 2026-05-17
 Main is GREEN and deployed.
 
 ```text
-Latest verified deployed work: PR #82 exact held-traveler navigation
-Verified commit: 1c6f427e7692c0e944b2f305f134c05d74622efb
-Verified run: 26004203662
+Latest verified deployed work: PR #86 full plant traveler hold-location navigation
+Verified commit: d6dbfa65f9caa0e11fd822660aa87970ee156cf9
+Verified run: 26004820988
 Branch: main
 Workflow: Build
 Status: GREEN
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-17T22:13:27Z
+Updated: 2026-05-17T22:40:53Z
 ```
 
 Verified deployed steps:
@@ -34,9 +34,64 @@ Verified deployed steps:
 
 ## Last Completed Missions
 
+### PR #86 - Full Plant Traveler hold-location navigation
+
+Full Plant Traveler route steps now show `GO TO HOLD LOCATION` for blocked/held steps with mapped work centers.
+
+What changed:
+
+- `PlantTravelerDetailModal` stores an exact target payload with order number, department, traveler id, source, and timestamp.
+- The action opens the owning work center through the existing station route.
+- The destination workflow panel opens the matching traveler/order using the PR #82 target behavior.
+
+Verified:
+
+```text
+PR source run: 26004794667
+PR source commit: af0b02919939e46cb9a2c1158ef3edf5db4b74c7
+Post-merge main run: 26004820988
+Main commit: d6dbfa65f9caa0e11fd822660aa87970ee156cf9
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #85 - Orders route-step hold-location navigation
+
+Orders detail route steps now show `GO TO HOLD LOCATION` for blocked/held route steps with mapped work centers.
+
+What changed:
+
+- `OrdersPage` stores the exact target payload for the held route step.
+- The action opens the owning work center through the existing station route.
+- No order, route, blocker, workflow runtime, or dispatch state changes.
+
+Verified:
+
+```text
+PR source run: 26004643834
+PR source commit: 10f27098bb9a395d71095a4360e00a6cb07e30f8
+Post-merge main run: 26004662063
+Main commit: e823eaefc8e30139e379484124304fe57040faa6
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #84 - Context docs refresh after PR #82
+
+Current context/build-state docs were refreshed after exact held-traveler navigation.
+
+Verified:
+
+```text
+Run: 26004371731
+Main commit: bc85a60a0c6efd5ecf32829a026eaed7a762622d
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
 ### PR #82 - Exact held-traveler navigation
 
-Blocked/held Dynamic Travelers can now open the owning department and exact traveler/order.
+Blocked/held Dynamic Travelers can open the owning department and exact traveler/order.
 
 What changed:
 
@@ -45,17 +100,6 @@ What changed:
 - The action opens the owning work center through the existing station route.
 - `WorkCenterWorkflowPanelV2` consumes the target and opens the matching traveler modal by traveler id, falling back to order number.
 - Existing classification-review target behavior is preserved; review capture still opens when the targeted traveler needs review.
-
-Guardrails preserved:
-
-```text
-No blocker clearing.
-No route changes.
-No department advancement.
-No classifier confidence changes.
-No workflow runtime mutation.
-No dispatch behavior change.
-```
 
 Verified:
 
@@ -109,13 +153,6 @@ GitHub Pages deploy: success
 
 Dashboard route-review noise was reduced for demo.
 
-What changed:
-
-- Dashboard classification queue was renamed to Plant Route Review.
-- Review details now collapse by default.
-- Review / unsaved / captured badges remain visible.
-- Existing checklist, traveler review cards, and Open Review Capture behavior are preserved when expanded.
-
 Verified:
 
 ```text
@@ -129,14 +166,6 @@ GitHub Pages deploy: success
 
 Demo polish is merged and deployed.
 
-What changed:
-
-- Seeded sales-wave demo order ship dates were refreshed.
-- Progress drawer route language now says plant-truth validation instead of unfinished wiring.
-- Floating DEV controls were renamed to Pilot Tools with demo/validation wording.
-- Saddles handoff wording no longer implies every ready handoff goes to Coating.
-- Progress checklist drawer status logic was aligned with `plant-truth-review`.
-
 Verified:
 
 ```text
@@ -146,59 +175,27 @@ Typecheck and build: success
 GitHub Pages deploy: success
 ```
 
-### PR #69 - LV4500 cycle-time display precision
+## Hold-Location Navigation Truth
 
-LV4500 simulator display now exposes small Z-depth timing changes in the active UI.
-
-What changed:
-
-- Single Cycle now displays `X.XX min / Y.Y sec`.
-- Batch Total now displays one decimal minute.
-- Batch Hours now displays two decimal hours.
-- Estimator math, routing, macros, and machine command behavior were not changed.
-
-Live result:
+Exact hold-location navigation is now available from:
 
 ```text
-User smoke test confirmed: Sim is working good.
+Dynamic Traveler detail
+Orders detail route steps
+Full Plant Traveler route steps
 ```
 
-### PR #70 - Progress checklist refresh
+All three store exact target context and open the owning work center without clearing or mutating the hold.
 
-Progress drawer no longer lists completed LV4500 smoke-test or precision work as unfinished.
-
-Remaining validation item:
+Guardrails preserved:
 
 ```text
-Plant route validation: coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness are being validated before routing guidance is expanded.
-```
-
-### PR #71-#73 - Operator action copy cleanup
-
-Dashboard quick actions, department order-card navigation labels, and the skill-gap coverage action now use behavior-truth wording.
-
-Guardrail preserved:
-
-```text
-Labels describe navigation/review context only. No runtime reducer/action mutation, route logic, or workflow behavior changed.
-```
-
-### PR #74 - AI worker guardrails and patch relay workflow
-
-Generic AI worker lane is live.
-
-Files added:
-
-```text
-AGENTS.md
-docs/AI_WORKER_RULES.md
-.github/ISSUE_TEMPLATE/agent-task.yml
-```
-
-Purpose:
-
-```text
-AI helpers must use feature branches, avoid direct main pushes, push branches when local container tests fail for environment/pre-existing reasons, and return exact patches when push/auth/proxy blocks them.
+No blocker clearing.
+No route changes.
+No department advancement.
+No classifier confidence changes.
+No workflow runtime mutation.
+No dispatch behavior change.
 ```
 
 ## Demo Prep State
@@ -227,10 +224,10 @@ Reset plant simulation from Pilot Tools.
 Set role to Management or Department Lead.
 Enable desired Pilot Tools feature flags.
 Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
-Find or create a blocked/held Dynamic Traveler.
-Open traveler detail.
-Click GO TO HOLD DEPARTMENT.
-Confirm the owning work center opens and the exact traveler/order opens automatically.
+Test Dynamic Traveler detail GO TO HOLD DEPARTMENT.
+Test Orders route-step GO TO HOLD LOCATION.
+Test Full Plant Traveler route-step GO TO HOLD LOCATION.
+Confirm each opens the owning work center and exact traveler/order.
 Keep Plant Route Review collapsed unless explaining route validation.
 ```
 
@@ -264,6 +261,10 @@ Demo polish must not imply dispatch automation is complete.
 
 ## Active Risks / Next Audit Targets
 
+### Dashboard / plant-signal blocker doorways
+
+Audit whether blocked-order rows, plant signal cards, and department order cards can open the exact hold location instead of only showing status or opening broad tabs.
+
 ### Plant-truth gaps remain
 
 Continue preserving uncertainty for:
@@ -277,15 +278,13 @@ Continue preserving uncertainty for:
 - QA conditions.
 - Shipping readiness.
 
-These should remain visible as validation until confirmed.
-
 ### Demo local-state risk
 
 The app uses localStorage for pilot/demo state. Use one clean browser profile or reset Maintenance Requests, plant simulation, and feature flags before presenting.
 
-### PR #82 smoke-test risk
+### Live smoke-test risk
 
-CI proves compile/deploy, not full click-flow behavior. Live browser validation still needs to confirm that `GO TO HOLD DEPARTMENT` lands in the owning work center and opens the exact traveler/order.
+CI proves compile/deploy, not full click-flow behavior. Live browser validation still needs to confirm that hold-location actions land in the owning work center and open the exact traveler/order.
 
 ### Large-file edit risk
 
@@ -345,4 +344,4 @@ CI proves compile/deploy, not full click-flow behavior. Live browser validation 
 
 Run the live demo reset and dry run.
 
-After demo prep, resume plant-truth route audit before changing behavior.
+After demo prep, audit dashboard/plant-signal blocker doorways before changing route behavior.
