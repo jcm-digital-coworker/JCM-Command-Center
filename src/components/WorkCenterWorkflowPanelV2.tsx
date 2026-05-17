@@ -89,11 +89,14 @@ export default function WorkCenterWorkflowPanelV2({
   const reviewTravelers = travelers.filter((traveler) => needsClassificationReview(traveler));
 
   useEffect(() => {
-    const targetedTraveler = reviewTarget?.department === workCenter.department
-      ? reviewTravelers.find((traveler) => traveler.order.orderNumber === reviewTarget.orderNumber)
-      : null;
-    if (targetedTraveler) setSelectedReviewTraveler(targetedTraveler);
-  }, [reviewTarget, reviewTravelers, workCenter.department]);
+    if (reviewTarget?.department !== workCenter.department) return;
+    const targetedTraveler = travelers.find((traveler) => (
+      traveler.id === reviewTarget.travelerId || traveler.order.orderNumber === reviewTarget.orderNumber
+    ));
+    if (!targetedTraveler) return;
+    setSelectedTraveler(targetedTraveler);
+    if (needsClassificationReview(targetedTraveler)) setSelectedReviewTraveler(targetedTraveler);
+  }, [reviewTarget, travelers, workCenter.department]);
 
   function saveReviewCapture() {
     if (!selectedReviewTraveler) return;
@@ -242,7 +245,7 @@ function TravelerCard({ traveler, theme, onOpen }: { traveler: DynamicTraveler; 
     <button type="button" style={travelerCardStyle(theme, signalColor)} onClick={onOpen}>
       <div style={headerRowStyle}>
         <div>
-          <strong style={strongTextStyle(theme)}>#{traveler.order.orderNumber} • {traveler.order.productFamily}</strong>
+          <strong style={strongTextStyle(theme)}>#{traveler.order.orderNumber} - {traveler.order.productFamily}</strong>
           <div style={bodyTextStyle(theme)}>{traveler.currentInstruction}</div>
         </div>
         <span style={badge(signalColor)}>{traveler.visualSignal}</span>
@@ -271,7 +274,7 @@ function WorkflowCard({ card, theme, onAction }: { card: any; theme: 'dark' | 'l
     <article style={workflowCardStyle(theme, card.urgency.color)}>
       <div style={headerRowStyle}>
         <div>
-          <strong style={strongTextStyle(theme)}>Order {order.orderNumber} • {order.productFamily}</strong>
+          <strong style={strongTextStyle(theme)}>Order {order.orderNumber} - {order.productFamily}</strong>
           <div style={tinyTextStyle(theme)}>{order.partNumber ?? order.assemblyPartNumber ?? 'No part number'}</div>
         </div>
         <div style={rightBadgeColumnStyle}>
@@ -366,11 +369,11 @@ function ClassificationReviewSummary({
           return (
             <button key={traveler.id} type="button" style={reviewItemStyle(theme, isSelected)} onClick={() => onSelectTraveler(traveler)}>
               <div style={headerRowStyle}>
-                <strong>#{traveler.order.orderNumber} • {traveler.productClassification.modelSignal ?? 'No model'}</strong>
+                <strong>#{traveler.order.orderNumber} - {traveler.productClassification.modelSignal ?? 'No model'}</strong>
                 <span style={badge(getConfidenceColor(traveler.productClassification.confidence))}>{formatToken(traveler.productClassification.confidence)}</span>
               </div>
               <div style={bodyTextStyle(theme)}>{traveler.classificationReviewReasons[0] ?? 'Classification needs human review.'}</div>
-              <div style={tinyTextStyle(theme)}>{formatToken(traveler.productClassification.productFamily)} • {traveler.finishHints.length ? traveler.finishHints.map(formatToken).join(', ') : 'No finish hint'}</div>
+              <div style={tinyTextStyle(theme)}>{formatToken(traveler.productClassification.productFamily)} - {traveler.finishHints.length ? traveler.finishHints.map(formatToken).join(', ') : 'No finish hint'}</div>
               {travelerConfirmations.length > 0 ? <div style={savedTextStyle(theme)}>{travelerConfirmations.length} structured confirmation{travelerConfirmations.length === 1 ? '' : 's'} saved</div> : null}
             </button>
           );
@@ -439,7 +442,6 @@ function act(actionId: WorkflowButtonAction, label: string, orderNumber: string,
       return null;
   }
 }
-
 
 function loadCoverage(): CoveragePerson[] {
   try {

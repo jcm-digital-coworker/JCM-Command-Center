@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
+import { workCenters } from '../../data/workCenters';
 import type { DynamicTraveler, TravelerAction, TravelerActionType, TravelerResource } from '../../types/dynamicTraveler';
 import { generatePlantTraveler } from '../../logic/dynamicTraveler';
 import { applyWorkflowRuntimeAction, getWorkflowRuntimeState } from '../../logic/workflowRuntimeState';
 import { addWorkflowAction, getWorkflowActionLog } from '../../logic/workflowActions';
 import PlantTravelerDetailModal from './PlantTravelerDetailModal';
 import type { Department } from '../../types/machine';
+
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
 
 type TravelerDetailModalProps = {
   traveler: DynamicTraveler;
@@ -19,6 +23,28 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
   const [showPlantTraveler, setShowPlantTraveler] = useState(false);
   const [lastFired, setLastFired] = useState<TravelerActionType | null>(null);
   const order = traveler.order;
+  const holdTargetWorkCenter = workCenters.find((workCenter) => workCenter.department === traveler.department);
+  const canOpenOwningDepartment = Boolean(
+    holdTargetWorkCenter && (traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD' || traveler.stepStatus === 'BLOCKED' || traveler.stepStatus === 'HOLD'),
+  );
+
+  function openOwningDepartment() {
+    if (!holdTargetWorkCenter) return;
+    localStorage.setItem(
+      REVIEW_TARGET_STORAGE_KEY,
+      JSON.stringify({
+        orderNumber: order.orderNumber,
+        department: traveler.department,
+        travelerId: traveler.id,
+        source: 'traveler-hold-navigation',
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('wc', holdTargetWorkCenter.id);
+    window.location.assign(nextUrl.toString());
+  }
 
   function handleAction(type: TravelerActionType) {
     const orderNumber = order.orderNumber;
@@ -62,7 +88,7 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
           <div>
             <div style={eyebrowStyle}>DEPARTMENT TRAVELER</div>
             <h3 style={modalTitleStyle(theme)}>#{order.orderNumber}</h3>
-            <div style={subTextStyle(theme)}>{traveler.department} · {order.productFamily}</div>
+            <div style={subTextStyle(theme)}>{traveler.department} - {order.productFamily}</div>
           </div>
           <button type="button" style={closeButtonStyle} onClick={onClose}>CLOSE</button>
         </div>
@@ -73,8 +99,14 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
         </div>
 
         <button type="button" style={plantTravelerButtonStyle} onClick={() => setShowPlantTraveler(true)}>
-          OPEN FULL PLANT TRAVELER · {plantTraveler.completionPercent}% COMPLETE
+          OPEN FULL PLANT TRAVELER - {plantTraveler.completionPercent}% COMPLETE
         </button>
+
+        {canOpenOwningDepartment ? (
+          <button type="button" style={holdDepartmentButtonStyle} onClick={openOwningDepartment}>
+            GO TO HOLD DEPARTMENT - {traveler.department}
+          </button>
+        ) : null}
 
         <div style={infoGridStyle}>
           <Info label="Signal" value={traveler.visualSignal} theme={theme} />
@@ -183,7 +215,7 @@ function ProductIntelligencePanel({ traveler, theme }: { traveler: DynamicTravel
         <Info label="Finish Hint" value={formatHintList(traveler.finishHints)} theme={theme} />
         <Info label="QA Required" value={traveler.qaRequired ? 'Yes' : 'No'} theme={theme} />
         <Info label="Confidence" value={formatToken(classification.confidence)} theme={theme} />
-        <Info label="Suggested Route" value={classification.routeHint.length > 0 ? classification.routeHint.join(' → ') : 'No route hint'} theme={theme} />
+        <Info label="Suggested Route" value={classification.routeHint.length > 0 ? classification.routeHint.join(' -> ') : 'No route hint'} theme={theme} />
       </div>
 
       {reviewReasons.length > 0 ? (
@@ -212,7 +244,7 @@ function ResourceContextPanel({ traveler, resource, theme }: { traveler: Dynamic
       <div style={resourceContextHeaderStyle}>
         <div>
           <div style={resourceTitleStyle(theme)}>{resource.label}</div>
-          <div style={subTextStyle(theme)}>{resource.department} · {formatToken(resource.type)}</div>
+          <div style={subTextStyle(theme)}>{resource.department} - {formatToken(resource.type)}</div>
         </div>
         <span style={resourceStatusBadgeStyle(resource.status, isRecommended)}>{isRecommended ? 'RECOMMENDED' : formatToken(resource.status)}</span>
       </div>
@@ -249,7 +281,7 @@ function ActionRow({ action, theme, onFire, fired }: { action: TravelerAction; t
           style={actionFireButtonStyle(fired)}
           disabled={fired}
         >
-          {fired ? '✓ DONE' : 'ACT'}
+          {fired ? 'DONE' : 'ACT'}
         </button>
       ) : (
         <span style={actionStatusStyle(false)}>LOCKED</span>
@@ -477,6 +509,20 @@ const plantTravelerButtonStyle: CSSProperties = {
   border: '1px solid #10b981',
   background: 'rgba(16,185,129,0.12)',
   color: '#10b981',
+  fontSize: 12,
+  fontWeight: 900,
+  cursor: 'pointer',
+  letterSpacing: '0.7px',
+};
+
+const holdDepartmentButtonStyle: CSSProperties = {
+  width: '100%',
+  marginTop: 8,
+  padding: '11px 12px',
+  borderRadius: 6,
+  border: '1px solid #ef4444',
+  background: 'rgba(239,68,68,0.12)',
+  color: '#fca5a5',
   fontSize: 12,
   fontWeight: 900,
   cursor: 'pointer',
