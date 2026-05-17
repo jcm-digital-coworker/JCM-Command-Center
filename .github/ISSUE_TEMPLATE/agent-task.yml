@@ -1,0 +1,102 @@
+name: AI Worker Task
+description: Small scoped task packet for Codex, Claude, Cursor, Copilot-style agents, or patch relay work.
+title: "AI task: "
+labels:
+  - ai-worker
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for AI-assisted repo work. Keep the task small, branch-based, and PR-reviewed.
+
+  - type: textarea
+    id: mission
+    attributes:
+      label: Mission
+      description: What should the agent accomplish?
+      placeholder: "Clarify one button label without changing runtime behavior."
+    validations:
+      required: true
+
+  - type: textarea
+    id: files-allowed
+    attributes:
+      label: Files allowed to touch
+      description: List the specific files or folders the worker may edit.
+      placeholder: |
+        src/pages/departments/DepartmentPageTools.tsx
+    validations:
+      required: true
+
+  - type: textarea
+    id: files-forbidden
+    attributes:
+      label: Files forbidden to touch
+      description: List protected files or areas that must not change.
+      placeholder: |
+        CNC macro files
+        src/App.tsx
+        src/logic/workflowRuntimeState.ts
+    validations:
+      required: true
+
+  - type: textarea
+    id: guardrails
+    attributes:
+      label: Guardrails
+      description: State what behavior must not change.
+      value: |
+        - Do not push directly to main.
+        - Use a feature branch.
+        - Open a PR.
+        - Do not change runtime behavior unless explicitly requested.
+        - Do not change route logic unless explicitly requested.
+        - Do not rewrite large files.
+    validations:
+      required: true
+
+  - type: textarea
+    id: build
+    attributes:
+      label: Build / test command
+      value: |
+        npm run build
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure-policy
+    attributes:
+      label: If local build or push fails
+      value: |
+        If local build fails due to environment setup, proxy, missing dependencies, or a pre-existing unrelated issue, do not keep changing files.
+
+        Commit the intended change, push the feature branch with:
+
+        git push --no-verify -u origin <branch-name>
+
+        If push fails due to auth/network/proxy, return:
+
+        git branch --show-current
+        git status --short
+        git remote -v
+        git log --oneline -n 3
+        git show --stat HEAD
+        git show --patch --no-ext-diff HEAD
+    validations:
+      required: true
+
+  - type: textarea
+    id: pr-notes
+    attributes:
+      label: Required PR notes
+      value: |
+        Include:
+        - Summary
+        - Files touched
+        - Build/test result
+        - Any local failure and whether it appears related, pre-existing, or environmental
+        - Guardrails preserved
+    validations:
+      required: true
