@@ -9,18 +9,6 @@ export type ProgressChecklistItem = {
 
 export const progressChecklistItems: ProgressChecklistItem[] = [
   {
-    id: 'lv4500-smoke-test',
-    title: 'LV4500 timing smoke test',
-    detail: 'Confirm Z-depth changes single-cycle, batch total, and the seconds-level delta note in the live simulator.',
-    status: 'needs-smoke-test',
-  },
-  {
-    id: 'lv4500-display-precision',
-    title: 'Show cycle seconds',
-    detail: 'Polish LV4500 result tiles so Single Cycle shows minutes plus seconds or two decimal minutes.',
-    status: 'planned',
-  },
-  {
     id: 'route-truth-open-items',
     title: 'Plant route truth gaps',
     detail: 'Coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness still need confirmation.',
