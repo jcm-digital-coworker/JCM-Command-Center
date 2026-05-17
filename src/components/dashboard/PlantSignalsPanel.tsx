@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { AppTab } from '../../types/app';
 import { productionOrders } from '../../data/productionOrders';
+import { workCenters } from '../../data/workCenters';
 import { getPlantSignals, type PlantSignal } from '../../logic/plantSignals';
 import {
   getRuntimeProductionOrders,
@@ -15,6 +16,9 @@ import {
   getDashboardPromptTitleStyle,
   getDashboardToneColor,
 } from './dashboardStyles';
+
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
 
 type PlantSignalsPanelProps = {
   onNavigate: (tab: AppTab) => void;
@@ -70,6 +74,27 @@ export default function PlantSignalsPanel({ onNavigate }: PlantSignalsPanelProps
   );
 }
 
+function openSignalHoldLocation(signal: PlantSignal): boolean {
+  if (!signal.holdTarget) return false;
+  const matchingWorkCenter = workCenters.find((workCenter) => workCenter.department === signal.holdTarget?.department);
+  if (!matchingWorkCenter) return false;
+  localStorage.setItem(
+    REVIEW_TARGET_STORAGE_KEY,
+    JSON.stringify({
+      orderNumber: signal.holdTarget.orderNumber,
+      department: signal.holdTarget.department,
+      travelerId: signal.holdTarget.travelerId,
+      source: 'plant-signal-hold-navigation',
+      updatedAt: new Date().toISOString(),
+    }),
+  );
+  window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('wc', matchingWorkCenter.id);
+  window.location.assign(nextUrl.toString());
+  return true;
+}
+
 function PlantSignalCard({
   signal,
   onNavigate,
@@ -86,7 +111,10 @@ function PlantSignalCard({
       <button
         type="button"
         style={getDashboardPromptButtonStyle(color)}
-        onClick={() => onNavigate(signal.routeTarget)}
+        onClick={() => {
+          if (openSignalHoldLocation(signal)) return;
+          onNavigate(signal.routeTarget);
+        }}
       >
         {signal.actionLabel.toUpperCase()}
       </button>
