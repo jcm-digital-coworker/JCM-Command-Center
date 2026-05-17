@@ -10,68 +10,32 @@ Build: npm run build
 Main is GREEN and deployed.
 
 ```text
-Latest verified deployed work: PR #82 exact held-traveler navigation
-Verified commit: 1c6f427e7692c0e944b2f305f134c05d74622efb
-Verified run: 26004203662
+Latest verified deployed work: PR #86 full plant traveler hold-location navigation
+Verified commit: d6dbfa65f9caa0e11fd822660aa87970ee156cf9
+Verified run: 26004820988
 Workflow: Build
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-17T22:13:27Z
+Updated: 2026-05-17T22:40:53Z
 ```
 
 ## Current Truth
 
-The app is in a guided demo-ready state with one important traveler-navigation fix now deployed.
+The app is in a guided demo-ready state with exact hold-location navigation now available from three traveler surfaces:
 
-Completed demo readiness work:
+- PR #82: Dynamic Traveler detail can open the owning hold department and exact traveler.
+- PR #85: Orders detail route steps show `GO TO HOLD LOCATION` for blocked/held steps.
+- PR #86: Full Plant Traveler route steps show `GO TO HOLD LOCATION` for blocked/held steps.
 
-- PR #76 refreshed demo order dates, softened route-validation wording, renamed DEV controls to Pilot Tools, and corrected Saddles handoff wording.
-- PR #77 collapsed the dashboard Classification Review Queue into a calmer Plant Route Review summary while preserving review badges and expanded review details.
-- PR #78 added `docs/DEMO_RUNBOOK.md` with pre-demo reset steps, guided demo path, talk tracks, caution areas, and success criteria.
-- PR #80 refreshed current context/build-state docs after demo runbook work.
-- PR #82 added blocked/held traveler navigation: traveler details can now store an exact target and open the owning work center, where the matching traveler opens automatically.
-- `docs/GITHUB_OPERATIONS_PLAYBOOK.md` defines the repo workflow, risk tracks, pull/merge protocols, and large-file protocol.
-
-Current demo story:
+All three use the same pattern:
 
 ```text
-JCM Command Center gives visibility and guidance.
-It does not replace supervisors.
-It preserves uncertainty where plant truth is still being validated.
+store orderNumber, department, travelerId, source, updatedAt
+open the owning work center through the existing station route
+let WorkCenterWorkflowPanelV2 open the matching traveler/order
 ```
 
-## Recently Completed Work
-
-- PR #69: LV4500 cycle-time display precision live and deployed.
-- PR #70: Progress / Not Yet Live drawer checklist refreshed after LV4500 smoke test.
-- PR #71: Dashboard quick-action labels clarified to match navigation behavior.
-- PR #72: Department order-card navigation labels clarified.
-- PR #73: Skill-gap coverage action label clarified.
-- PR #74: AI worker guardrails and patch relay workflow added.
-- PR #75: Current context/build-state docs refreshed after LV4500 and worker lane updates.
-- PR #76: Demo polish pass merged and deployed.
-- PR #77: Plant Route Review accordion merged and deployed.
-- PR #78: Guided demo runbook merged and deployed.
-- PR #80: Demo context docs refreshed and deployed.
-- PR #82: Exact held-traveler navigation merged and deployed.
-
-## PR #82 Behavior Truth
-
-For a Dynamic Traveler with `BLOCKED` or `HOLD` signal/status:
-
-```text
-GO TO HOLD DEPARTMENT - <department>
-```
-
-This action:
-
-```text
-stores orderNumber, department, travelerId, source, and timestamp
-opens the owning work center through the existing station route
-opens the matching traveler modal in the destination workflow panel
-```
-
-It does not:
+They do not:
 
 ```text
 clear blockers
@@ -81,6 +45,17 @@ change classifier confidence
 mutate workflow runtime state
 change dispatch behavior
 ```
+
+## Recently Completed Work
+
+- PR #76: Demo polish pass merged and deployed.
+- PR #77: Plant Route Review accordion merged and deployed.
+- PR #78: Guided demo runbook merged and deployed.
+- PR #80: Demo context docs refreshed and deployed.
+- PR #82: Exact held-traveler navigation merged and deployed.
+- PR #84: Context docs refreshed after PR #82 and deployed.
+- PR #85: Orders route-step `GO TO HOLD LOCATION` merged and deployed.
+- PR #86: Full Plant Traveler route-step `GO TO HOLD LOCATION` merged and deployed.
 
 ## Best Demo Path
 
@@ -102,6 +77,8 @@ Strong demo surfaces:
 - Maintenance request visibility and status flow.
 - Orders/traveler visibility.
 - Dynamic Traveler hold navigation to exact owning department/order.
+- Orders route-step hold-location navigation.
+- Full Plant Traveler route-step hold-location navigation.
 - Department views.
 - LV4500 read-only simulator.
 - Pilot Tools for controlled role/feature/simulation setup.
@@ -117,14 +94,30 @@ It preserves uncertainty where plant truth is still being validated.
 
 ## Current Mission
 
-Run the live demo reset and dry run, with special attention to the PR #82 hold-navigation flow.
+Run the live demo reset and dry run, with special attention to exact hold-location navigation from:
+
+```text
+Dynamic Traveler detail
+Orders detail route steps
+Full Plant Traveler route steps
+```
 
 Use `docs/DEMO_RUNBOOK.md` as the live demo playbook.
 
-Focus after demo polish:
+## Next Source Audit Target
+
+Audit dashboard and plant-signal blocker surfaces for the same pattern:
 
 ```text
-Route validation for Coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness.
+If a blocker or hold is visible, can the operator open the exact hold location?
+```
+
+Likely areas to inspect next:
+
+```text
+Dashboard blocked-order rows
+Plant signal cards
+Department order cards with broad blocker buttons
 ```
 
 ## Current Decision
@@ -135,7 +128,7 @@ GitHub Actions beats status vibes.
 PR patch beats verbal summaries.
 Small branches beat giant rewrites.
 Risk track decides inspection depth.
-Product classification is useful guidance, not dispatch authority.
+Product classification is guidance, not dispatch authority.
 Unconfirmed routes must stay conservative.
 RequiredDepartments still override classifier route hints.
 No confidence increase without confirmed plant facts.
@@ -152,9 +145,9 @@ Demo polish must not imply dispatch automation is complete.
 - Couplings, clamps, patch clamps, 412, 432, and 452 need route truth confirmation.
 - QA conditions need explicit rules.
 - Shipping readiness needs explicit completion/inspection/material conditions.
+- Demo still needs clean browser/localStorage reset before showing live.
+- PR #82/#85/#86 need live browser click-flow smoke validation; CI proves compile/deploy, not operator path.
 - Large files must not be full-rewritten from truncated connector output.
-- Demo still needs a clean browser/localStorage reset before showing live.
-- PR #82 needs live browser smoke validation, because CI proves compile/deploy but not full click-flow behavior.
 
 ## Guardrails
 
@@ -206,11 +199,12 @@ Set role to Management or Department Lead.
 Enable desired Pilot Tools feature flags.
 Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
 Find or create a blocked/held Dynamic Traveler.
-Open traveler detail.
-Click GO TO HOLD DEPARTMENT.
-Confirm the owning work center opens and the exact traveler/order opens automatically.
+Open traveler detail and test GO TO HOLD DEPARTMENT.
+Open Orders detail route steps and test GO TO HOLD LOCATION.
+Open Full Plant Traveler route steps and test GO TO HOLD LOCATION.
+Confirm each path opens the owning work center and exact traveler/order.
 Keep Plant Route Review collapsed unless explaining route validation.
 Do not deep-demo Coating/clamps/412/432/452 as finalized routing.
 ```
 
-After demo prep, resume plant-truth route audit before changing behavior.
+After demo prep, audit dashboard/plant-signal blocker doorways before changing route behavior.
