@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { productFamilies } from '../data/productFamilies';
+import { workCenters } from '../data/workCenters';
 import {
   formatMaterialStatus,
   formatStatus,
@@ -9,7 +10,7 @@ import {
 import type { ProductionOrder } from '../types/productionOrder';
 import type { AppTab } from '../types/app';
 import type { Department } from '../types/machine';
-import type { PlantTraveler } from '../types/dynamicTraveler';
+import type { DynamicTraveler, PlantTraveler } from '../types/dynamicTraveler';
 import { getOrderLane, getProductFlow } from '../logic/flowLogic';
 import { generatePlantTravelers } from '../logic/dynamicTraveler';
 import { getRuntimeProductionOrders, WORKFLOW_RUNTIME_UPDATED_EVENT } from '../logic/workflowRuntimeState';
@@ -25,6 +26,9 @@ const DEPT_TAB_MAP: Partial<Record<Department, AppTab>> = {
   QA: 'qa', Sales: 'sales', Engineering: 'engineering',
   'Material Handling': 'materialHandling', 'Saddles Dept': 'saddles', Receiving: 'receiving',
 };
+
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
 
 type OrdersPageProps = {
   theme?: 'dark' | 'light';
@@ -199,6 +203,25 @@ function OrderDetailModal({ traveler, theme, onClose }: { traveler: PlantTravele
   const flow = getProductFlow(order);
   const route = traveler.route.length > 0 ? traveler.route : flow?.departments ?? order.requiredDepartments ?? [];
 
+  function openHeldRouteStep(step: DynamicTraveler) {
+    const matchingWorkCenter = workCenters.find((workCenter) => workCenter.department === step.department);
+    if (!matchingWorkCenter) return;
+    localStorage.setItem(
+      REVIEW_TARGET_STORAGE_KEY,
+      JSON.stringify({
+        orderNumber: order.orderNumber,
+        department: step.department,
+        travelerId: step.id,
+        source: 'orders-route-step-hold-navigation',
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('wc', matchingWorkCenter.id);
+    window.location.assign(nextUrl.toString());
+  }
+
   return (
     <div style={modalOverlayStyle} onClick={onClose}>
       <div style={modalCardStyle(theme)} onClick={(event) => event.stopPropagation()}>
@@ -242,13 +265,22 @@ function OrderDetailModal({ traveler, theme, onClose }: { traveler: PlantTravele
           <div style={{ marginTop: 14 }}>
             <div style={smallLabelStyle(theme)}>ROUTE STEPS</div>
             <div style={stepStackStyle}>
-              {traveler.departmentSteps.map((step) => (
-                <div key={`${order.orderNumber}-${step.department}`} style={stepRowStyle(theme, step.stepStatus)}>
-                  <strong>{step.department}</strong>
-                  <span>{step.stepStatus}</span>
-                  {step.bestResource ? <span>{step.bestResource.label}</span> : <span>No mapped resource</span>}
-                </div>
-              ))}
+              {traveler.departmentSteps.map((step) => {
+                const isHeldStep = step.stepStatus === 'BLOCKED' || step.stepStatus === 'HOLD';
+                const hasHoldLocation = Boolean(workCenters.find((workCenter) => workCenter.department === step.department));
+                return (
+                  <div key={`${order.orderNumber}-${step.department}`} style={stepRowStyle(theme, step.stepStatus, isHeldStep && hasHoldLocation)}>
+                    <strong>{step.department}</strong>
+                    <span>{step.stepStatus}</span>
+                    {step.bestResource ? <span>{step.bestResource.label}</span> : <span>No mapped resource</span>}
+                    {isHeldStep && hasHoldLocation ? (
+                      <button type="button" style={routeStepActionButtonStyle(theme)} onClick={() => openHeldRouteStep(step)}>
+                        GO TO HOLD LOCATION
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : null}
@@ -343,6 +375,7 @@ function instructionLineStyle(theme: 'dark' | 'light'): CSSProperties { return {
 function travelerInstructionBoxStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', color: theme === 'dark' ? '#e2e8f0' : '#0f172a', fontSize: 13, fontWeight: 800, lineHeight: 1.4 }; }
 function urgencyBadgeStyle(score: number): CSSProperties { const color = score >= 100 ? '#ef4444' : score >= 40 ? '#f59e0b' : '#64748b'; return { fontSize: 9, fontWeight: 900, color, letterSpacing: '0.5px' }; }
 function deptLinkStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: '3px 8px', borderRadius: 4, border: theme === 'dark' ? '1px solid #334155' : '1px solid #cbd5e1', background: 'transparent', color: theme === 'dark' ? '#93c5fd' : '#2563eb', fontSize: 10, fontWeight: 900, cursor: 'pointer', letterSpacing: '0.3px' }; }
+function routeStepActionButtonStyle(theme: 'dark' | 'light'): CSSProperties { return { gridColumn: '1 / -1', justifySelf: 'start', marginTop: 2, padding: '6px 9px', borderRadius: 4, border: '1px solid #ef4444', background: theme === 'dark' ? 'rgba(239,68,68,0.14)' : '#fee2e2', color: theme === 'dark' ? '#fca5a5' : '#991b1b', fontSize: 10, fontWeight: 900, letterSpacing: '0.6px', cursor: 'pointer', textTransform: 'uppercase' }; }
 function familyCardStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function orderNumberStyle(theme: 'dark' | 'light'): CSSProperties { return { fontSize: 18, fontWeight: 900, color: theme === 'dark' ? '#f8fafc' : '#0f172a' }; }
 function miniTextStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: '6px 0 0', color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12, lineHeight: 1.45 }; }
@@ -358,5 +391,5 @@ function sortSelectStyle(theme: 'dark' | 'light'): CSSProperties { return { minH
 function modalCardStyle(theme: 'dark' | 'light'): CSSProperties { return { width: 'min(720px, 100%)', maxHeight: '88vh', overflow: 'auto', padding: 16, borderRadius: 10, background: theme === 'dark' ? '#0f172a' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 20px 60px rgba(0,0,0,0.45)' }; }
 function closeButtonStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: '9px 11px', borderRadius: 6, border: '1px solid #f97316', background: 'rgba(249,115,22,0.12)', color: '#f97316', fontSize: 11, fontWeight: 900, cursor: 'pointer' }; }
 function blockerStyle(theme: 'dark' | 'light'): CSSProperties { return { marginTop: 14, padding: 10, borderRadius: 6, background: theme === 'dark' ? 'rgba(127,29,29,0.35)' : '#fee2e2', border: '1px solid #ef4444', color: theme === 'dark' ? '#fecaca' : '#991b1b', fontSize: 12, fontWeight: 800 }; }
-function stepRowStyle(theme: 'dark' | 'light', status: string): CSSProperties { const color = status === 'BLOCKED' || status === 'HOLD' ? '#ef4444' : status === 'DONE' ? '#10b981' : status === 'ACTIVE' || status === 'READY' ? '#38bdf8' : '#64748b'; return { display: 'grid', gridTemplateColumns: '1fr auto 1.2fr', gap: 8, alignItems: 'center', padding: '7px 9px', borderRadius: 6, background: theme === 'dark' ? '#1e293b' : '#f8fafc', border: `1px solid ${color}55`, color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12 }; }
+function stepRowStyle(theme: 'dark' | 'light', status: string, hasAction = false): CSSProperties { const color = status === 'BLOCKED' || status === 'HOLD' ? '#ef4444' : status === 'DONE' ? '#10b981' : status === 'ACTIVE' || status === 'READY' ? '#38bdf8' : '#64748b'; return { display: 'grid', gridTemplateColumns: '1fr auto 1.2fr', gap: 8, alignItems: 'center', padding: '7px 9px', borderRadius: 6, background: theme === 'dark' ? '#1e293b' : '#f8fafc', border: `1px solid ${color}55`, borderLeft: hasAction ? `4px solid ${color}` : undefined, color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12 }; }
 function emptyStateStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 20, borderRadius: 6, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: theme === 'dark' ? '1px dashed #334155' : '1px dashed #cbd5e1', color: '#64748b', fontSize: 13, fontWeight: 700, textAlign: 'center' }; }
