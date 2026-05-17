@@ -1,7 +1,14 @@
 import type { AppTab } from '../types/app';
 import type { ProductionOrder } from '../types/productionOrder';
 import type { DashboardTone } from '../components/dashboard/dashboardStyles';
+import { generatePlantTraveler } from './dynamicTraveler';
 import { getOrderLastTouchedHours } from './blockerAge';
+
+export type PlantSignalHoldTarget = {
+  orderNumber: string;
+  department: string;
+  travelerId: string;
+};
 
 export type PlantSignal = {
   title: string;
@@ -10,6 +17,7 @@ export type PlantSignal = {
   priority: number;
   routeTarget: AppTab;
   tone: DashboardTone;
+  holdTarget?: PlantSignalHoldTarget;
 };
 
 export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
@@ -17,14 +25,17 @@ export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
   const signals: PlantSignal[] = [];
 
   openOrders.forEach((order) => {
+    const holdTarget = getOrderHoldTarget(order);
+
     if (order.qaStatus === 'HOLD' || order.qaStatus === 'FAILED') {
       signals.push({
         title: `QA hold ${order.orderNumber}`,
         detail: `Priority ${formatOrderPriority(order)} quality signal. Review release risk before this order moves downstream.`,
-        actionLabel: 'Review QA / Safety',
+        actionLabel: holdTarget ? `Go to hold location - ${holdTarget.department}` : 'Review QA / Safety',
         priority: 100 + getOrderPriorityScore(order),
         routeTarget: 'risk',
         tone: 'red',
+        holdTarget,
       });
     }
 
@@ -37,19 +48,21 @@ export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
         signals.push({
           title: `ESCALATE - ${order.orderNumber} stalled ${Math.round(ageHours)}h`,
           detail: `${formatOrderPriority(order)} priority order has been blocked and untouched for ${Math.round(ageHours)}h. Assign an owner or escalate now.`,
-          actionLabel: 'Open orders',
+          actionLabel: holdTarget ? `Go to hold location - ${holdTarget.department}` : 'Open orders',
           priority: 130 + getOrderPriorityScore(order),
           routeTarget: 'orders',
           tone: 'red',
+          holdTarget,
         });
       } else {
         signals.push({
           title: `Blocked order ${order.orderNumber}`,
           detail: `Priority ${formatOrderPriority(order)} blocked flow. Open workflow blocker context before labor is assigned.`,
-          actionLabel: 'Review blocker',
+          actionLabel: holdTarget ? `Go to hold location - ${holdTarget.department}` : 'Review blocker',
           priority: 80 + getOrderPriorityScore(order),
           routeTarget: 'workflow',
           tone: 'red',
+          holdTarget,
         });
       }
     }
@@ -58,10 +71,11 @@ export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
       signals.push({
         title: `Material issue ${order.orderNumber}`,
         detail: `Priority ${formatOrderPriority(order)} material gap. Open Receiving/material context before pushing work forward.`,
-        actionLabel: 'Open material issue',
+        actionLabel: holdTarget ? `Go to hold location - ${holdTarget.department}` : 'Open material issue',
         priority: 60 + getOrderPriorityScore(order),
         routeTarget: 'receiving',
         tone: 'orange',
+        holdTarget,
       });
     }
   });
@@ -80,6 +94,17 @@ export function getPlantSignals(orders: ProductionOrder[]): PlantSignal[] {
   return signals
     .sort((a, b) => b.priority - a.priority)
     .slice(0, 3);
+}
+
+function getOrderHoldTarget(order: ProductionOrder): PlantSignalHoldTarget | undefined {
+  const plantTraveler = generatePlantTraveler(order);
+  const heldStep = plantTraveler.departmentSteps.find((step) => step.stepStatus === 'BLOCKED' || step.stepStatus === 'HOLD');
+  if (!heldStep) return undefined;
+  return {
+    orderNumber: order.orderNumber,
+    department: heldStep.department,
+    travelerId: heldStep.id,
+  };
 }
 
 function isClosedOrder(order: ProductionOrder): boolean {
