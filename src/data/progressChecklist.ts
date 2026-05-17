@@ -1,4 +1,4 @@
-export type ProgressChecklistStatus = 'planned' | 'needs-smoke-test' | 'not-wired-yet' | 'cleanup';
+export type ProgressChecklistStatus = 'planned' | 'needs-smoke-test' | 'plant-truth-review' | 'cleanup';
 
 export type ProgressChecklistItem = {
   id: string;
@@ -10,9 +10,9 @@ export type ProgressChecklistItem = {
 export const progressChecklistItems: ProgressChecklistItem[] = [
   {
     id: 'route-truth-open-items',
-    title: 'Plant route truth gaps',
-    detail: 'Coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness still need confirmation.',
-    status: 'not-wired-yet',
+    title: 'Plant route validation',
+    detail: 'Coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness are being validated before routing guidance is expanded.',
+    status: 'plant-truth-review',
   },
 ];
 
@@ -20,7 +20,7 @@ export function progressChecklistStatusLabel(status: ProgressChecklistStatus): s
   const labels: Record<ProgressChecklistStatus, string> = {
     planned: 'Planned',
     'needs-smoke-test': 'Needs smoke test',
-    'not-wired-yet': 'Not wired yet',
+    'plant-truth-review': 'Plant truth review',
     cleanup: 'Cleanup',
   };
   return labels[status];

@@ -102,21 +102,21 @@ export default function DevToolkitFlyout({
   return (
     <div style={containerStyle}>
       <button type="button" onClick={() => setOpen((value) => !value)} style={buttonStyle(open, theme)}>
-        DEV
+        PILOT
       </button>
 
       {open && (
         <section style={panelStyle(theme)}>
           <div style={panelHeaderStyle}>
             <div>
-              <div style={eyebrowStyle(theme)}>DEV TOOLKIT</div>
-              <h3 style={titleStyle(theme)}>Experimental controls</h3>
+              <div style={eyebrowStyle(theme)}>PILOT TOOLS</div>
+              <h3 style={titleStyle(theme)}>Demo and validation controls</h3>
             </div>
             <button type="button" onClick={() => setOpen(false)} style={closeStyle(theme)}>X</button>
           </div>
 
           <p style={descriptionStyle(theme)}>
-            Floating dev-only controls for feature flags, role/dept simulation, live plant simulation, and war room context.
+            Pilot controls for feature flags, role/dept views, plant simulation, and war room context during demo validation.
           </p>
 
           <button
@@ -282,13 +282,13 @@ const containerStyle: CSSProperties = {
 function buttonStyle(open: boolean, theme: 'dark' | 'light'): CSSProperties {
   const colors = getThemeColors(theme);
   return {
-    width: 48,
+    width: 58,
     height: 48,
     borderRadius: 999,
     border: `1px solid ${colors.accent}`,
     background: open ? colors.accent : colors.panel,
     color: open ? colors.textInverted : colors.accent,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 900,
     letterSpacing: '0.8px',
     cursor: 'pointer',

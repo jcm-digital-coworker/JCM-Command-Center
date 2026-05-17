@@ -22,7 +22,7 @@ export const productionOrders: ProductionOrder[] = [
     engineeringRequired: false,
     productionSupervisorAcknowledged: false,
     materialStatus: 'UNKNOWN',
-    projectedShipDate: '2026-05-07',
+    projectedShipDate: '2026-05-22',
   },
   {
     id: 'order-2602',
@@ -53,7 +53,7 @@ export const productionOrders: ProductionOrder[] = [
     materialStatus: 'STAGED',
     qaStatus: 'NOT_REQUIRED',
     requiredDepartments: ['Receiving', 'Machine Shop', 'Assembly', 'QA', 'Shipping'],
-    projectedShipDate: '2026-05-02',
+    projectedShipDate: '2026-05-20',
     notes: ['Machine Shop proof traveler: coupling work should recommend turning-capable coupling resources.'],
   },
   {
@@ -78,7 +78,7 @@ export const productionOrders: ProductionOrder[] = [
     engineeringStatus: 'PENDING',
     productionSupervisorAcknowledged: true,
     materialStatus: 'STAGED',
-    projectedShipDate: '2026-05-01',
+    projectedShipDate: '2026-05-19',
   },
   {
     id: 'order-2604',
@@ -109,7 +109,7 @@ export const productionOrders: ProductionOrder[] = [
     engineeringStatus: 'RELEASED',
     productionSupervisorAcknowledged: true,
     materialStatus: 'NOT_RECEIVED',
-    projectedShipDate: '2026-05-01',
+    projectedShipDate: '2026-05-21',
   },
   {
     id: 'order-2605',
@@ -132,7 +132,7 @@ export const productionOrders: ProductionOrder[] = [
     engineeringRequired: false,
     productionSupervisorAcknowledged: true,
     materialStatus: 'ORDER_REQUIRED',
-    projectedShipDate: '2026-05-03',
+    projectedShipDate: '2026-05-23',
   },
   {
     id: 'order-2606',
@@ -158,7 +158,7 @@ export const productionOrders: ProductionOrder[] = [
     engineeringStatus: 'NOT_REQUIRED',
     productionSupervisorAcknowledged: true,
     materialStatus: 'STAGED',
-    projectedShipDate: '2026-05-08',
+    projectedShipDate: '2026-05-29',
   },
   {
     id: 'order-2607',
@@ -189,7 +189,7 @@ export const productionOrders: ProductionOrder[] = [
     materialStatus: 'STAGED',
     qaStatus: 'PENDING',
     requiredDepartments: ['Engineering', 'Machine Shop', 'Fab', 'Coating', 'QA', 'Shipping'],
-    projectedShipDate: '2026-05-04',
+    projectedShipDate: '2026-05-25',
     notes: ['Machine Shop proof traveler: engineered adapter should surface large turning / engineered fitting resources.'],
   },
   {
@@ -217,7 +217,7 @@ export const productionOrders: ProductionOrder[] = [
     engineeringRequired: false,
     productionSupervisorAcknowledged: false,
     materialStatus: 'MISSING',
-    projectedShipDate: '2026-05-01',
+    projectedShipDate: '2026-05-18',
   },
 
   // LEGACY / ACTIVE SHOP FLOOR ORDERS

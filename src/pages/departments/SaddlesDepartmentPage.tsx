@@ -18,13 +18,13 @@ export default function SaddlesDepartmentPage({ theme = 'dark', onGoToTab }: Dep
     { label: 'TOTAL', value: orders.length },
     { label: 'ACTIVE', value: active.length, color: active.length > 0 ? '#10b981' : '#64748b' },
     { label: 'BLOCKED', value: blocked.length, color: blocked.length > 0 ? '#ef4444' : '#64748b' },
-    { label: 'READY TO COAT', value: handoffReady.length, color: handoffReady.length > 0 ? '#38bdf8' : '#64748b' },
+    { label: 'READY TO HAND OFF', value: handoffReady.length, color: handoffReady.length > 0 ? '#38bdf8' : '#64748b' },
   ];
 
   return (
     <PageShell
       title="Saddles Dept"
-      subtitle="Dedicated service saddle cell — LV4500 tap drilling, saddle-specific gauges, and batch flow. Crew availability and machine state directly gate throughput. LV4500 is the primary constraint."
+      subtitle="Dedicated service saddle cell: LV4500 tap drilling, saddle-specific gauges, and batch flow. Crew availability and machine state directly gate throughput. LV4500 is the primary constraint."
       theme={theme}
     >
       <KpiStrip items={kpis} theme={theme} />
@@ -51,7 +51,7 @@ export default function SaddlesDepartmentPage({ theme = 'dark', onGoToTab }: Dep
         </Section>
       )}
       {handoffReady.length > 0 && (
-        <Section title={`Ready to Hand Off → Coating (${handoffReady.length})`} theme={theme}>
+        <Section title={`Ready for Next Department (${handoffReady.length})`} theme={theme}>
           <CardGrid>{handoffReady.map((o) => <OrderCard key={o.orderNumber} order={o} theme={theme} onGoToTab={onGoToTab} />)}</CardGrid>
         </Section>
       )}

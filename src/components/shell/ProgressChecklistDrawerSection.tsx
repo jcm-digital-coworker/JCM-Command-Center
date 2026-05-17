@@ -15,9 +15,9 @@ export default function ProgressChecklistDrawerSection({ theme }: ProgressCheckl
 
   return (
     <section style={sectionStyle(theme)}>
-      <div style={headerStyle(colors.textMuted)}>PROGRESS / NOT YET LIVE</div>
+      <div style={headerStyle(colors.textMuted)}>PROGRESS / VALIDATION</div>
       <p style={introStyle(colors.textMuted)}>
-        Small reminder list for work that is planned, needs smoke testing, or is intentionally not wired yet.
+        Small reminder list for work that is planned, needs smoke testing, or is intentionally held for plant-truth validation.
       </p>
       <div style={listStyle}>
         {progressChecklistItems.map((item) => (
@@ -105,7 +105,7 @@ function statusStyle(status: ProgressChecklistStatus, theme: 'dark' | 'light'): 
   const color =
     status === 'needs-smoke-test'
       ? '#f59e0b'
-      : status === 'not-wired-yet'
+      : status === 'plant-truth-review'
         ? '#38bdf8'
         : status === 'cleanup'
           ? '#a78bfa'
