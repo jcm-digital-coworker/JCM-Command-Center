@@ -21,12 +21,6 @@ export const progressChecklistItems: ProgressChecklistItem[] = [
     status: 'planned',
   },
   {
-    id: 'lv4500-v2-cleanup',
-    title: 'Retire duplicate LV4500 V2',
-    detail: 'Delete or clearly deprecate Lv4500JcmSimulatorV2 so future work does not wire the wrong surface.',
-    status: 'cleanup',
-  },
-  {
     id: 'route-truth-open-items',
     title: 'Plant route truth gaps',
     detail: 'Coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness still need confirmation.',
