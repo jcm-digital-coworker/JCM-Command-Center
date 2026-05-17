@@ -232,27 +232,27 @@ export function OrderCard({
         <>
           {hasMaterialIssue && (
             <button type="button" style={resolutionButtonStyle('#38bdf8')} onClick={() => onGoToTab('receiving')}>
-              → RECEIVING
+              Open material issue
             </button>
           )}
           {!hasMaterialIssue && (hasEngineeringHold || primaryBlocker?.type === 'process') && (
             <button type="button" style={resolutionButtonStyle('#818cf8')} onClick={() => onGoToTab('engineering')}>
-              → ENGINEERING
+              Open engineering review
             </button>
           )}
           {!hasMaterialIssue && primaryBlocker?.type === 'quality' && (
             <button type="button" style={resolutionButtonStyle('#f59e0b')} onClick={() => onGoToTab('qa')}>
-              → QA
+              Open QA hold
             </button>
           )}
           {!hasMaterialIssue && primaryBlocker?.type === 'machine' && (
             <button type="button" style={resolutionButtonStyle('#ef4444')} onClick={() => onGoToTab('alerts')}>
-              → ALERTS
+              Open equipment alert
             </button>
           )}
           {!hasMaterialIssue && primaryBlocker?.type === 'labor' && (
             <button type="button" style={resolutionButtonStyle('#10b981')} onClick={() => onGoToTab('coverage')}>
-              → COVERAGE
+              Open coverage gap
             </button>
           )}
         </>
