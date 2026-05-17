@@ -1,7 +1,11 @@
 import type { CSSProperties } from 'react';
+import { workCenters } from '../../data/workCenters';
 import type { DynamicTraveler, PlantTraveler } from '../../types/dynamicTraveler';
 import { getOperatorSafeStatusLabel } from '../../logic/orderStatusTruth';
 import { findProductFamilyBySeries, getProductFamilyRouteConfidenceDisplay } from '../../data/productFamilies';
+
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
 
 type PlantTravelerDetailModalProps = {
   plantTraveler: PlantTraveler;
@@ -12,6 +16,25 @@ type PlantTravelerDetailModalProps = {
 export default function PlantTravelerDetailModal({ plantTraveler, theme, onClose }: PlantTravelerDetailModalProps) {
   const order = plantTraveler.order;
   const signalColor = getPlantStatusColor(plantTraveler.overallStatus);
+
+  function openHeldRouteStep(step: DynamicTraveler) {
+    const matchingWorkCenter = workCenters.find((workCenter) => workCenter.department === step.department);
+    if (!matchingWorkCenter) return;
+    localStorage.setItem(
+      REVIEW_TARGET_STORAGE_KEY,
+      JSON.stringify({
+        orderNumber: order.orderNumber,
+        department: step.department,
+        travelerId: step.id,
+        source: 'plant-traveler-step-hold-navigation',
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('wc', matchingWorkCenter.id);
+    window.location.assign(nextUrl.toString());
+  }
 
   return (
     <div style={modalOverlayStyle} onClick={onClose}>
@@ -59,7 +82,13 @@ export default function PlantTravelerDetailModal({ plantTraveler, theme, onClose
           <div style={smallLabelStyle(theme)}>Plant Route</div>
           <div style={routeListStyle}>
             {plantTraveler.departmentSteps.map((step, index) => (
-              <DepartmentStepCard key={step.id} step={step} index={index} theme={theme} />
+              <DepartmentStepCard
+                key={step.id}
+                step={step}
+                index={index}
+                theme={theme}
+                onOpenHoldLocation={openHeldRouteStep}
+              />
             ))}
           </div>
         </section>
@@ -87,7 +116,7 @@ function ProductIntelligencePanel({ plantTraveler, theme }: { plantTraveler: Pla
   const classification = plantTraveler.productClassification;
   const reviewReasons = plantTraveler.classificationReviewReasons;
   const matchedLabel = classification.matchedRule?.label ?? 'No matched model rule';
-  const routeLabel = plantTraveler.suggestedRoute.length > 0 ? plantTraveler.suggestedRoute.join(' → ') : 'No suggested route';
+  const routeLabel = plantTraveler.suggestedRoute.length > 0 ? plantTraveler.suggestedRoute.join(' -> ') : 'No suggested route';
   const routeLookupValue = classification.modelSignal ?? plantTraveler.order.partNumber ?? plantTraveler.order.assemblyPartNumber ?? '';
   const productFamily = findProductFamilyBySeries(routeLookupValue);
   const routeConfidence = getProductFamilyRouteConfidenceDisplay(routeLookupValue);
@@ -134,8 +163,20 @@ function ProductIntelligencePanel({ plantTraveler, theme }: { plantTraveler: Pla
   );
 }
 
-function DepartmentStepCard({ step, index, theme }: { step: DynamicTraveler; index: number; theme: 'dark' | 'light' }) {
+function DepartmentStepCard({
+  step,
+  index,
+  theme,
+  onOpenHoldLocation,
+}: {
+  step: DynamicTraveler;
+  index: number;
+  theme: 'dark' | 'light';
+  onOpenHoldLocation: (step: DynamicTraveler) => void;
+}) {
   const color = getStepColor(step.stepStatus);
+  const hasHoldLocation = Boolean(workCenters.find((workCenter) => workCenter.department === step.department));
+  const isHeldStep = step.stepStatus === 'BLOCKED' || step.stepStatus === 'HOLD';
 
   return (
     <article style={stepCardStyle(theme, color)}>
@@ -158,6 +199,12 @@ function DepartmentStepCard({ step, index, theme }: { step: DynamicTraveler; ind
 
       {step.blockers.length > 0 ? (
         <div style={miniBlockerStyle(theme)}>{step.blockers[0].message}</div>
+      ) : null}
+
+      {isHeldStep && hasHoldLocation ? (
+        <button type="button" style={holdLocationButtonStyle(theme)} onClick={() => onOpenHoldLocation(step)}>
+          GO TO HOLD LOCATION
+        </button>
       ) : null}
     </article>
   );
@@ -391,6 +438,22 @@ function stepInstructionStyle(theme: 'dark' | 'light'): CSSProperties {
 
 function statusBadgeStyle(color: string): CSSProperties {
   return { whiteSpace: 'nowrap', color, border: `1px solid ${color}`, background: `${color}1f`, borderRadius: 4, padding: '5px 8px', fontSize: 10, fontWeight: 900 };
+}
+
+function holdLocationButtonStyle(theme: 'dark' | 'light'): CSSProperties {
+  return {
+    marginTop: 10,
+    padding: '7px 10px',
+    borderRadius: 4,
+    border: '1px solid #ef4444',
+    background: theme === 'dark' ? 'rgba(239,68,68,0.14)' : '#fee2e2',
+    color: theme === 'dark' ? '#fca5a5' : '#991b1b',
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: '0.6px',
+    cursor: 'pointer',
+    textTransform: 'uppercase',
+  };
 }
 
 function miniBlockerStyle(theme: 'dark' | 'light'): CSSProperties {
