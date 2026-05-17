@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { AppTab } from '../../types/app';
+import { workCenters } from '../../data/workCenters';
 import type { DynamicTraveler, TravelerAction, TravelerActionType, TravelerResource } from '../../types/dynamicTraveler';
 import { generatePlantTraveler } from '../../logic/dynamicTraveler';
 import { applyWorkflowRuntimeAction, getWorkflowRuntimeState } from '../../logic/workflowRuntimeState';
@@ -8,22 +8,8 @@ import { addWorkflowAction, getWorkflowActionLog } from '../../logic/workflowAct
 import PlantTravelerDetailModal from './PlantTravelerDetailModal';
 import type { Department } from '../../types/machine';
 
-const JCM_NAVIGATE_EVENT = 'jcm:navigate';
-
-const DEPARTMENT_TAB_BY_DEPARTMENT: Partial<Record<Department, AppTab>> = {
-  Sales: 'sales',
-  Engineering: 'engineering',
-  Receiving: 'receiving',
-  'Machine Shop': 'machineShop',
-  'Material Handling': 'materialHandling',
-  Fab: 'fab',
-  Coating: 'coating',
-  Assembly: 'assembly',
-  'Saddles Dept': 'saddles',
-  QA: 'qa',
-  Shipping: 'shipping',
-  Maintenance: 'maintenance',
-};
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
 
 type TravelerDetailModalProps = {
   traveler: DynamicTraveler;
@@ -37,15 +23,27 @@ export default function TravelerDetailModal({ traveler, theme, onClose, onOpenOr
   const [showPlantTraveler, setShowPlantTraveler] = useState(false);
   const [lastFired, setLastFired] = useState<TravelerActionType | null>(null);
   const order = traveler.order;
-  const owningDepartmentTab = DEPARTMENT_TAB_BY_DEPARTMENT[traveler.department];
+  const holdTargetWorkCenter = workCenters.find((workCenter) => workCenter.department === traveler.department);
   const canOpenOwningDepartment = Boolean(
-    owningDepartmentTab && (traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD' || traveler.stepStatus === 'BLOCKED' || traveler.stepStatus === 'HOLD'),
+    holdTargetWorkCenter && (traveler.visualSignal === 'BLOCKED' || traveler.visualSignal === 'HOLD' || traveler.stepStatus === 'BLOCKED' || traveler.stepStatus === 'HOLD'),
   );
 
   function openOwningDepartment() {
-    if (!owningDepartmentTab) return;
-    window.dispatchEvent(new CustomEvent(JCM_NAVIGATE_EVENT, { detail: { tab: owningDepartmentTab } }));
-    onClose();
+    if (!holdTargetWorkCenter) return;
+    localStorage.setItem(
+      REVIEW_TARGET_STORAGE_KEY,
+      JSON.stringify({
+        orderNumber: order.orderNumber,
+        department: traveler.department,
+        travelerId: traveler.id,
+        source: 'traveler-hold-navigation',
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+    window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('wc', holdTargetWorkCenter.id);
+    window.location.assign(nextUrl.toString());
   }
 
   function handleAction(type: TravelerActionType) {
