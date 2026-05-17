@@ -9,15 +9,15 @@ Last updated: 2026-05-17
 Main is GREEN and deployed.
 
 ```text
-Latest merged work: AI worker guardrails and patch relay workflow
-Main commit: 41f8ef4bfecbd253514458d21385457113a8ed28
-Main run: 26000843221
+Latest merged work: PR #76 demo polish pass
+Main commit: b6a1bfa39ccd8e6808d355fcc7922620b5ffc2d5
+Main run: 26002472352
 Branch: main
 Workflow: Build
 Status: GREEN
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-17T19:44:40Z
+Updated: 2026-05-17T20:55:47Z
 ```
 
 Verified main steps:
@@ -33,6 +33,29 @@ Verified main steps:
 - Complete jobs
 
 ## Last Completed Missions
+
+### PR #76 - Demo polish pass
+
+Demo polish is merged and deployed.
+
+What changed:
+
+- Seeded sales-wave demo order ship dates were refreshed.
+- Progress drawer route language now says plant-truth validation instead of unfinished wiring.
+- Floating DEV controls were renamed to Pilot Tools with demo/validation wording.
+- Saddles handoff wording no longer implies every ready handoff goes to Coating.
+- Progress checklist drawer status logic was aligned with `plant-truth-review`.
+
+Verified:
+
+```text
+PR source run: 26002451177
+PR source commit: 0442c5b44c2be2a4eb4bce8d9808db5a73082710
+Post-merge main run: 26002472352
+Main commit: b6a1bfa39ccd8e6808d355fcc7922620b5ffc2d5
+Typecheck and build: success
+GitHub Pages deploy: success
+```
 
 ### PR #69 - LV4500 cycle-time display precision
 
@@ -53,28 +76,17 @@ User smoke test confirmed: Sim is working good.
 
 ### PR #70 - Progress checklist refresh
 
-Progress / Not Yet Live drawer no longer lists completed LV4500 smoke-test or precision work as unfinished.
+Progress drawer no longer lists completed LV4500 smoke-test or precision work as unfinished.
 
-Remaining checklist item:
+Remaining validation item:
 
 ```text
-Plant route truth gaps: coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness still need confirmation.
+Plant route validation: coating lanes, couplings, clamps, patch clamps, 412/432/452, QA conditions, and shipping readiness are being validated before routing guidance is expanded.
 ```
 
 ### PR #71-#73 - Operator action copy cleanup
 
 Dashboard quick actions, department order-card navigation labels, and the skill-gap coverage action now use behavior-truth wording.
-
-Examples:
-
-```text
-Call Maintenance -> Open Maintenance Requests
-Request Queue -> Open Request Queue
-→ QA -> Open QA hold
-→ ALERTS -> Open equipment alert
-→ COVERAGE -> Open coverage gap
-→ OPEN COVERAGE -> Open coverage plan
-```
 
 Guardrail preserved:
 
@@ -100,12 +112,55 @@ Purpose:
 AI helpers must use feature branches, avoid direct main pushes, push branches when local container tests fail for environment/pre-existing reasons, and return exact patches when push/auth/proxy blocks them.
 ```
 
+## Demo Prep State
+
+The app is ready for a guided demo path after local browser reset.
+
+Recommended path:
+
+```text
+Dashboard / Command Center
+Maintenance Requests
+Orders
+LV4500 Simulator
+Saddles Dept
+Progress / Validation only if explaining roadmap
+```
+
+Pre-demo local reset:
+
+```text
+Open the deployed app in the demo browser.
+Reset Maintenance Requests.
+Reset plant simulation from Pilot Tools.
+Set role to Management or Department Lead.
+Enable desired Pilot Tools feature flags.
+Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
+```
+
+Avoid deep-demoing as finalized routing:
+
+- Coating sub-flow.
+- Couplings.
+- Clamps.
+- Patch clamps.
+- 412 / 432 / 452 routing rules.
+- QA automation.
+- Shipping readiness automation.
+
 ## Current Decision
 
 ```text
 GitHub Actions is the source of truth for merge readiness.
 Codex/Claude/Cursor-style helpers may generate patches, but main remains protected by PR review and CI.
 If a helper cannot push, it must return `git show --patch --no-ext-diff HEAD` for patch relay.
+Product classification is a mapmaker, not dispatch authority.
+Product route confidence is not dispatch authority.
+RequiredDepartments still override classifier route hints.
+No confidence increase without confirmed plant facts.
+Shipping is always last; readiness to ship is not automatic.
+QA is conditional, not universal.
+Demo polish must not imply dispatch automation is complete.
 ```
 
 ## Active Risks / Next Audit Targets
@@ -123,11 +178,11 @@ Continue preserving uncertainty for:
 - QA conditions.
 - Shipping readiness.
 
-These should remain visible in the Progress / Not Yet Live drawer until confirmed.
+These should remain visible as validation until confirmed.
 
-### Current context drift risk
+### Demo local-state risk
 
-Memory docs had become stale after several green PRs. Keep repo memory short and current after mission completions.
+The app uses localStorage for pilot/demo state. Use one clean browser profile or reset Maintenance Requests, plant simulation, and feature flags before presenting.
 
 ### Large-file edit risk
 
@@ -185,11 +240,6 @@ Memory docs had become stale after several green PRs. Keep repo memory short and
 
 ## Next Recommended Move
 
-Start the plant-truth integration pass from the remaining Progress / Not Yet Live item.
+Prepare the live demo reset and script.
 
-Best first target:
-
-```text
-Audit product classification and route rules for couplings, clamps, patch clamps, 412, 432, 452, QA conditions, and shipping readiness.
-Keep uncertain routes conservative. Do not convert classifier hints into dispatch authority without confirmed plant truth.
-```
+After demo prep, resume plant-truth route audit before changing behavior.
