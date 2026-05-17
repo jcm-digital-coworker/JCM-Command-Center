@@ -7,29 +7,29 @@ Build: npm run build
 
 ## Current Build State
 
-Latest verified deployed main run is GREEN.
+Main is GREEN and deployed.
 
 ```text
-Latest verified deployed work: demo readiness docs and polish through PR #78
-Verified commit: b5d831c7ecbbd2d228860b4e7d59813b8ca60b94
-Verified run: 26003448229
+Latest verified deployed work: PR #82 exact held-traveler navigation
+Verified commit: 1c6f427e7692c0e944b2f305f134c05d74622efb
+Verified run: 26004203662
 Workflow: Build
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-17T21:39:33Z
+Updated: 2026-05-17T22:13:27Z
 ```
-
-Note: this context refresh branch was started from current `main` after that verified breadcrumb. Verify this docs-only refresh by PR Actions before merging.
 
 ## Current Truth
 
-The app is in a guided demo-ready polish state.
+The app is in a guided demo-ready state with one important traveler-navigation fix now deployed.
 
 Completed demo readiness work:
 
 - PR #76 refreshed demo order dates, softened route-validation wording, renamed DEV controls to Pilot Tools, and corrected Saddles handoff wording.
 - PR #77 collapsed the dashboard Classification Review Queue into a calmer Plant Route Review summary while preserving review badges and expanded review details.
 - PR #78 added `docs/DEMO_RUNBOOK.md` with pre-demo reset steps, guided demo path, talk tracks, caution areas, and success criteria.
+- PR #80 refreshed current context/build-state docs after demo runbook work.
+- PR #82 added blocked/held traveler navigation: traveler details can now store an exact target and open the owning work center, where the matching traveler opens automatically.
 - `docs/GITHUB_OPERATIONS_PLAYBOOK.md` defines the repo workflow, risk tracks, pull/merge protocols, and large-file protocol.
 
 Current demo story:
@@ -52,6 +52,35 @@ It preserves uncertainty where plant truth is still being validated.
 - PR #76: Demo polish pass merged and deployed.
 - PR #77: Plant Route Review accordion merged and deployed.
 - PR #78: Guided demo runbook merged and deployed.
+- PR #80: Demo context docs refreshed and deployed.
+- PR #82: Exact held-traveler navigation merged and deployed.
+
+## PR #82 Behavior Truth
+
+For a Dynamic Traveler with `BLOCKED` or `HOLD` signal/status:
+
+```text
+GO TO HOLD DEPARTMENT - <department>
+```
+
+This action:
+
+```text
+stores orderNumber, department, travelerId, source, and timestamp
+opens the owning work center through the existing station route
+opens the matching traveler modal in the destination workflow panel
+```
+
+It does not:
+
+```text
+clear blockers
+advance departments
+change route logic
+change classifier confidence
+mutate workflow runtime state
+change dispatch behavior
+```
 
 ## Best Demo Path
 
@@ -72,6 +101,7 @@ Strong demo surfaces:
 
 - Maintenance request visibility and status flow.
 - Orders/traveler visibility.
+- Dynamic Traveler hold navigation to exact owning department/order.
 - Department views.
 - LV4500 read-only simulator.
 - Pilot Tools for controlled role/feature/simulation setup.
@@ -87,7 +117,7 @@ It preserves uncertainty where plant truth is still being validated.
 
 ## Current Mission
 
-Prepare for polished guided demo, then continue plant-truth integration only after demo-safe state is verified.
+Run the live demo reset and dry run, with special attention to the PR #82 hold-navigation flow.
 
 Use `docs/DEMO_RUNBOOK.md` as the live demo playbook.
 
@@ -124,6 +154,7 @@ Demo polish must not imply dispatch automation is complete.
 - Shipping readiness needs explicit completion/inspection/material conditions.
 - Large files must not be full-rewritten from truncated connector output.
 - Demo still needs a clean browser/localStorage reset before showing live.
+- PR #82 needs live browser smoke validation, because CI proves compile/deploy but not full click-flow behavior.
 
 ## Guardrails
 
@@ -174,6 +205,10 @@ Reset plant simulation from Pilot Tools.
 Set role to Management or Department Lead.
 Enable desired Pilot Tools feature flags.
 Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
+Find or create a blocked/held Dynamic Traveler.
+Open traveler detail.
+Click GO TO HOLD DEPARTMENT.
+Confirm the owning work center opens and the exact traveler/order opens automatically.
 Keep Plant Route Review collapsed unless explaining route validation.
 Do not deep-demo Coating/clamps/412/432/452 as finalized routing.
 ```
