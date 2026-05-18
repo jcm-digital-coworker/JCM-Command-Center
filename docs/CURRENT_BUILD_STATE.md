@@ -2,22 +2,22 @@
 
 Purpose: preserve the smallest useful operating context for the JCM Command Center build so future work continues from the current clean repository state without dragging full chat history forward.
 
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 ## Current Build Status
 
 Main is GREEN and deployed.
 
 ```text
-Latest verified deployed work: PR #89 plant signal hold-location navigation
-Verified commit: a38e8406b05c3471979f6a139f327f637b18b1c4
-Verified run: 26005568860
+Latest verified deployed work: PR #91 dashboard QA hold-location navigation
+Verified commit: b9b4542e78dc600385cce54b182f66822b972a0e
+Verified run: 26007116165
 Branch: main
 Workflow: Build
 Status: GREEN
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-17T23:16:16Z
+Updated: 2026-05-18T00:26:11Z
 ```
 
 Verified deployed steps:
@@ -34,15 +34,41 @@ Verified deployed steps:
 
 ## Last Completed Missions
 
-### PR #89 - Plant Signal hold-location navigation
+### PR #91 - Dashboard QA hold-location navigation
 
-Plant Signal cards now carry optional exact hold-location target data and open the owning work center when a hold target is available.
+Dashboard QA hold rows now show `GO TO HOLD LOCATION - <department>` when a mapped blocked/held traveler step exists.
 
 What changed:
 
-- `plantSignals.ts` adds optional hold-target data to Plant Signals.
-- `PlantSignalsPanel` stores exact target context when a signal has a hold target.
-- Signals without a hold target keep existing broad tab navigation.
+- `DashboardPage` reuses the existing dashboard hold-location helper from blocked-order rows.
+- The action only appears when `getDashboardHoldStep(order)` finds a mapped blocked or held traveler step.
+- No blocker, route, runtime, or dispatch state is changed.
+
+Verified:
+
+```text
+PR source run: 26006323164
+PR source commit: 737bcaf919ef1178f79642ad8fe22ac0ab4eae7d
+Post-merge main run: 26007116165
+Main commit: b9b4542e78dc600385cce54b182f66822b972a0e
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #90 - Context docs refresh after PR #88/#89
+
+Verified:
+
+```text
+Run: 26006170393
+Main commit: 6ab700c17dc13fce29e30d0fca1fc10ed24992fc
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #89 - Plant Signal hold-location navigation
+
+Plant Signal cards now carry optional exact hold-location target data and open the owning work center when a hold target is available.
 
 Verified:
 
@@ -59,12 +85,6 @@ GitHub Pages deploy: success
 
 Dashboard blocked-order rows now show `GO TO HOLD LOCATION - <department>` when a blocked/held traveler step can be derived.
 
-What changed:
-
-- `DashboardPage` derives the active blocked or held traveler step from the order.
-- The action stores exact target context and opens the owning work center.
-- No blocker, route, runtime, or dispatch state is changed.
-
 Verified:
 
 ```text
@@ -72,17 +92,6 @@ PR source run: 26005203259
 PR source commit: 1e4f789e81e42024161e316c09cfe22020894ba5
 Post-merge main run: 26005217470
 Main commit: fb55495152436a5097e6994e8c3a830c8e8bf43d
-Typecheck and build: success
-GitHub Pages deploy: success
-```
-
-### PR #87 - Context docs refresh after PR #85/#86
-
-Verified:
-
-```text
-Run: 26004965265
-Main commit: ee37c34eb95125424afca8eef934ce3d413d6f2c
 Typecheck and build: success
 GitHub Pages deploy: success
 ```
@@ -113,17 +122,6 @@ PR source run: 26004643834
 PR source commit: 10f27098bb9a395d71095a4360e00a6cb07e30f8
 Post-merge main run: 26004662063
 Main commit: e823eaefc8e30139e379484124304fe57040faa6
-Typecheck and build: success
-GitHub Pages deploy: success
-```
-
-### PR #84 - Context docs refresh after PR #82
-
-Verified:
-
-```text
-Run: 26004371731
-Main commit: bc85a60a0c6efd5ecf32829a026eaed7a762622d
 Typecheck and build: success
 GitHub Pages deploy: success
 ```
@@ -168,9 +166,10 @@ Orders detail route steps
 Full Plant Traveler route steps
 Dashboard blocked-order rows
 Plant Signal cards
+Dashboard QA hold rows
 ```
 
-All five store exact target context and open the owning work center without clearing or mutating the hold.
+All six store exact target context and open the owning work center without clearing or mutating the hold.
 
 Guardrails preserved:
 
@@ -210,6 +209,7 @@ Set role to Management or Department Lead.
 Enable desired Pilot Tools feature flags.
 Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
 Test Dashboard blocked-order GO TO HOLD LOCATION.
+Test Dashboard QA hold GO TO HOLD LOCATION.
 Test Plant Signals hold-location navigation.
 Test Dynamic Traveler detail GO TO HOLD DEPARTMENT.
 Test Orders route-step GO TO HOLD LOCATION.
@@ -250,11 +250,10 @@ Demo polish must not imply dispatch automation is complete.
 
 ### Remaining blocker doorway audit
 
-Audit whether support signal rows and department cards can open exact work locations instead of broad tabs.
+Audit whether department cards can open exact work locations instead of broad tabs.
 
 Likely next files/surfaces:
 
-- Dashboard QA / Safety / Maintenance signal rows.
 - Department order cards with broad blocker buttons.
 - Maintenance / equipment alert paths.
 - Receiving material issue paths.
@@ -338,4 +337,4 @@ CI proves compile/deploy, not full click-flow behavior. Live browser validation 
 
 Run the live demo reset and dry run.
 
-After demo prep, audit QA / Safety / Maintenance signal rows and department order-card blocker buttons before changing route behavior.
+After demo prep, audit department order-card blocker buttons before changing route behavior.
