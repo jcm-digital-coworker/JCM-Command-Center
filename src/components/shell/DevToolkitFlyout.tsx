@@ -5,6 +5,7 @@ import type { WorkCenter } from '../../types/plant';
 import { FLAG_LABELS, getAllFeatureFlags, setFeatureFlag } from '../../logic/featureFlags';
 import type { FeatureFlag } from '../../logic/featureFlags';
 import { getThemeColors } from '../../theme/theme';
+import { resetDemoSessionState } from '../../logic/demoSessionReset';
 import ClockworkPlantSimulation from '../simulation/ClockworkPlantSimulation';
 import {
   PLANT_SIMULATION_UPDATED_EVENT,
@@ -84,6 +85,15 @@ export default function DevToolkitFlyout({
     window.dispatchEvent(new CustomEvent(JCM_NAVIGATE_EVENT, { detail: { tab: 'orders', orderNumber } }));
   }
 
+  function runDemoSessionReset() {
+    resetDemoSessionState();
+    setRoleView('Management');
+    setDepartmentFilter('All');
+    setFlags(getAllFeatureFlags());
+    setSimulation(getPlantSimulationSnapshot());
+    window.dispatchEvent(new CustomEvent(JCM_NAVIGATE_EVENT, { detail: { tab: 'dashboard' } }));
+  }
+
   function runSimulationStart() {
     setSimulation(startPlantSimulation());
   }
@@ -118,6 +128,10 @@ export default function DevToolkitFlyout({
           <p style={descriptionStyle(theme)}>
             Pilot controls for feature flags, role/dept views, plant simulation, and war room context during demo validation.
           </p>
+
+          <button type="button" onClick={runDemoSessionReset} style={dangerButtonStyle(theme)}>
+            RESET DEMO SESSION
+          </button>
 
           <button
             type="button"
@@ -454,6 +468,7 @@ function devTabStyle(theme: 'dark' | 'light'): CSSProperties {
     fontWeight: 900,
     cursor: 'pointer',
     letterSpacing: '0.5px',
+    marginTop: 8,
   };
 }
 
