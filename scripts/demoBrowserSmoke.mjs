@@ -4,13 +4,27 @@ import { chromium } from 'playwright';
 const PORT = Number(process.env.DEMO_SMOKE_PORT ?? 4174);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const CI = process.env.CI === 'true';
+const RUN_TIMEOUT_MS = Number(process.env.DEMO_SMOKE_TIMEOUT_MS ?? 60_000);
+
+let browser;
+let serverLog = '';
+let finished = false;
+
+const watchdog = setTimeout(async () => {
+  if (finished) return;
+  console.error(`FAIL browser demo smoke: timed out after ${RUN_TIMEOUT_MS}ms`);
+  if (serverLog.trim()) {
+    console.error('\nVite preview log:');
+    console.error(serverLog.trim());
+  }
+  await cleanup(1);
+}, RUN_TIMEOUT_MS);
 
 const server = spawn('npx', ['vite', 'preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], {
   stdio: ['ignore', 'pipe', 'pipe'],
   shell: process.platform === 'win32',
 });
 
-let serverLog = '';
 server.stdout.on('data', (chunk) => {
   serverLog += chunk.toString();
 });
@@ -20,7 +34,7 @@ server.stderr.on('data', (chunk) => {
 
 try {
   await waitForServer(BASE_URL);
-  const browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
@@ -50,8 +64,8 @@ try {
   await expectVisibleText(page, 'COMMAND');
   await expectVisibleText(page, 'ORDERS');
 
-  await browser.close();
   console.log('PASS browser demo smoke: reset, triage, sticky mission bar, and nav controls are visible and clickable.');
+  await cleanup(0);
 } catch (error) {
   console.error('FAIL browser demo smoke');
   console.error(error instanceof Error ? error.message : String(error));
@@ -59,9 +73,24 @@ try {
     console.error('\nVite preview log:');
     console.error(serverLog.trim());
   }
-  process.exitCode = 1;
-} finally {
-  server.kill('SIGTERM');
+  await cleanup(1);
+}
+
+async function cleanup(exitCode) {
+  if (finished) return;
+  finished = true;
+  clearTimeout(watchdog);
+  try {
+    if (browser) await browser.close();
+  } catch {
+    // ignore cleanup failure
+  }
+  try {
+    if (!server.killed) server.kill('SIGTERM');
+  } catch {
+    // ignore cleanup failure
+  }
+  setTimeout(() => process.exit(exitCode), 250).unref();
 }
 
 async function waitForServer(url, timeoutMs = 30_000) {
