@@ -2,7 +2,9 @@ import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
 
 const PORT = Number(process.env.DEMO_SMOKE_PORT ?? 4174);
-const BASE_URL = `http://127.0.0.1:${PORT}`;
+const BASE_ORIGIN = `http://127.0.0.1:${PORT}`;
+const BASE_PATH = process.env.GITHUB_PAGES === 'true' ? '/JCM-Command-Center/' : '/';
+const BASE_URL = `${BASE_ORIGIN}${BASE_PATH}`;
 const CI = process.env.CI === 'true';
 const RUN_TIMEOUT_MS = Number(process.env.DEMO_SMOKE_TIMEOUT_MS ?? 60_000);
 
