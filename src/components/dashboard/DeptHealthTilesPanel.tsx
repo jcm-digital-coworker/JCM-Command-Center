@@ -8,6 +8,9 @@ import { WORKFLOW_RUNTIME_UPDATED_EVENT } from '../../logic/workflowRuntimeState
 import { isBlockedProductionOrder, isClosedProductionStatus } from '../../logic/orderStatusTruth';
 import { seedCoverage } from '../../data/coverage';
 import { COVERAGE_STORAGE_KEY } from '../../logic/coverage';
+import { getDashboardRuntimeTruth } from '../../logic/dashboardRuntimeSelectors';
+import { getDashboardAccountabilitySignals } from '../../logic/accountabilitySignals';
+import RoleAccountabilityPanel from './RoleAccountabilityPanel';
 
 type DashboardTheme = 'dark' | 'light';
 
@@ -64,6 +67,14 @@ export default function DeptHealthTilesPanel({ onNavigate, theme, roleView }: De
   void tick;
 
   const orders = getRuntimeProductionOrders();
+  const runtimeTruth = getDashboardRuntimeTruth(0);
+  const accountabilitySignals = getDashboardAccountabilitySignals({
+    blockedOrders: runtimeTruth.blockedOrders,
+    materialIssues: runtimeTruth.materialIssues,
+    qaHolds: runtimeTruth.qaHolds,
+    dueSoonOrders: runtimeTruth.dueSoonOrders,
+    roleView,
+  });
   const coverage = loadCoverage().filter((p) => p.status !== 'OFFLINE');
   const isLeadership = roleView === 'Department Lead' || roleView === 'Department Supervisor' || roleView === 'Management';
   const totalBlocked = orders.filter(isBlockedProductionOrder).length;
@@ -71,6 +82,12 @@ export default function DeptHealthTilesPanel({ onNavigate, theme, roleView }: De
 
   return (
     <section style={sectionStyle}>
+      <RoleAccountabilityPanel
+        roleView={roleView}
+        signals={accountabilitySignals}
+        theme={theme}
+        onNavigate={onNavigate}
+      />
       <div style={headerStyle(theme)}>
         <span style={labelStyle}>DEPARTMENT HEALTH</span>
         <span style={hintStyle}>Tap a department to open it</span>
