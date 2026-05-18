@@ -117,12 +117,6 @@ export default function WorkCenterWorkflowPanelV2({
     setReviewDraft(defaultReviewDraft);
   }
 
-  function clearReviewTarget() {
-    localStorage.removeItem(REVIEW_TARGET_STORAGE_KEY);
-    setReviewTargetVersion((version) => version + 1);
-    window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
-  }
-
   function runAction(actionId: WorkflowButtonAction, label: string, orderNumber: string) {
     const notice = act(actionId, label, orderNumber, workCenter.department, {
       onOpenReceiving,
@@ -198,7 +192,6 @@ export default function WorkCenterWorkflowPanelV2({
         }}
         onDraftChange={setReviewDraft}
         onSave={saveReviewCapture}
-        onClearTarget={clearReviewTarget}
       />
 
       <section style={subPanelStyle(theme)}>
@@ -383,7 +376,6 @@ function ClassificationReviewSummary({
   onSelectTraveler,
   onDraftChange,
   onSave,
-  onClearTarget,
 }: {
   travelers: DynamicTraveler[];
   confirmations: ClassificationReviewConfirmation[];
