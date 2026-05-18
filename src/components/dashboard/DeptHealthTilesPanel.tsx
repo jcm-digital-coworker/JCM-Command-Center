@@ -10,7 +10,9 @@ import { seedCoverage } from '../../data/coverage';
 import { COVERAGE_STORAGE_KEY } from '../../logic/coverage';
 import { getDashboardRuntimeTruth } from '../../logic/dashboardRuntimeSelectors';
 import { getDashboardAccountabilitySignals } from '../../logic/accountabilitySignals';
+import { getRoleDashboardBuckets } from '../../logic/roleDashboardBuckets';
 import RoleAccountabilityPanel from './RoleAccountabilityPanel';
+import RoleDashboardBucketsPanel from './RoleDashboardBucketsPanel';
 
 type DashboardTheme = 'dark' | 'light';
 
@@ -75,6 +77,7 @@ export default function DeptHealthTilesPanel({ onNavigate, theme, roleView }: De
     dueSoonOrders: runtimeTruth.dueSoonOrders,
     roleView,
   });
+  const roleBuckets = getRoleDashboardBuckets(roleView, runtimeTruth);
   const coverage = loadCoverage().filter((p) => p.status !== 'OFFLINE');
   const isLeadership = roleView === 'Department Lead' || roleView === 'Department Supervisor' || roleView === 'Management';
   const totalBlocked = orders.filter(isBlockedProductionOrder).length;
@@ -85,6 +88,12 @@ export default function DeptHealthTilesPanel({ onNavigate, theme, roleView }: De
       <RoleAccountabilityPanel
         roleView={roleView}
         signals={accountabilitySignals}
+        theme={theme}
+        onNavigate={onNavigate}
+      />
+      <RoleDashboardBucketsPanel
+        roleView={roleView}
+        buckets={roleBuckets}
         theme={theme}
         onNavigate={onNavigate}
       />
