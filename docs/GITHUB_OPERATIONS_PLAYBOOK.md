@@ -401,6 +401,64 @@ If only truncated content is available, do not update the large file.
 Use patch relay, GitHub UI, Codespace, or a smaller extracted seam.
 ```
 
+## Mobile-First Operations Rule
+
+The user may be steering from a phone. Do not make routine repo work depend on the user typing terminal commands in Codespaces.
+
+Default lane:
+
+```text
+ChatGPT + GitHub connector handles normal branch, PR, verification, merge, and context work.
+```
+
+Use Codespace or shell only as a fallback when:
+
+```text
+- a giant file cannot be safely edited through full-blob replacement;
+- local reproduction is required for a build/runtime failure;
+- a patch must be generated with normal git diff tooling;
+- the GitHub connector cannot safely perform the edit.
+```
+
+When Codespace or shell is needed, minimize user typing:
+
+```text
+1. Provide copy/paste command blocks.
+2. Keep each block short and reversible.
+3. Ask for only essential outputs: git status, git diff, npm run build result, git log, or patch packet.
+4. Prefer branch push or patch relay over long interactive terminal sessions.
+```
+
+Long-term mobile efficiency rule:
+
+```text
+If a file becomes repeatedly painful to edit through the connector, extract the unstable seam into a smaller component, selector, or data file instead of normalizing giant-file surgery.
+```
+
+Priority extraction targets:
+
+```text
+src/pages/departments/DepartmentPageTools.tsx
+src/components/shell/AppDrawer.tsx
+src/components/shell/DevToolkitFlyout.tsx
+```
+
+Possible extraction destinations:
+
+```text
+src/components/departments/OrderCard.tsx
+src/components/departments/LiveCrewSection.tsx
+src/components/departments/CrewGuidancePanel.tsx
+src/logic/departmentActionLabels.ts
+src/logic/departmentNavigationTargets.ts
+```
+
+Definition of done for mobile-first process changes:
+
+```text
+The normal workflow remains operable from chat without requiring phone-terminal work, and shell/Codespace is documented as fallback rather than the primary lane.
+```
+
 ## Pull It Protocol
 
 Use when the user says `pull it`.
