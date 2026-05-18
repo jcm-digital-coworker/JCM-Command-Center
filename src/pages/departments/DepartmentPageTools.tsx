@@ -5,6 +5,7 @@ import DeptEscalationPanel from '../../components/DeptEscalationPanel';
 import { workers } from '../../data/workers';
 import { seedCoverage } from '../../data/coverage';
 import { productionOrders } from '../../data/productionOrders';
+import { workCenters } from '../../data/workCenters';
 import { COVERAGE_STORAGE_KEY } from '../../logic/coverage';
 import { getCrewGuidanceForDepartment } from '../../logic/crewGuidance';
 import { getSkillGapAlerts } from '../../logic/skillGapAlerts';
@@ -19,7 +20,11 @@ import type { Department } from '../../types/machine';
 import type { CoveragePerson } from '../../types/coverage';
 import type { PlantAsset, PlantAssetKind } from '../../types/plantAsset';
 import type { ProductionOrder } from '../../types/productionOrder';
+import type { DynamicTraveler } from '../../types/dynamicTraveler';
 import type { AppTab } from '../../types/app';
+
+const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
+const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
 
 export type DepartmentPageProps = {
   theme?: 'dark' | 'light';
@@ -178,6 +183,7 @@ export function OrderCard({
   const primaryBlocker = isBlocked
     ? (traveler.blockers ?? []).find((b) => b.type !== 'unknown') ?? (traveler.blockers ?? [])[0] ?? null
     : null;
+  const holdLocationStep = getDepartmentOrderHoldLocationStep(traveler);
   const hasEngineeringHold = order.engineeringRequired && order.engineeringStatus === 'PENDING';
   const activeDepartment = traveler.activeDepartment ?? order.currentDepartment;
   const nextDepartment = traveler.nextDepartment ?? order.nextDepartment;
@@ -227,6 +233,11 @@ export function OrderCard({
           <div style={travelerRouteLabelStyle(theme)}>TRAVELER ROUTE</div>
           <div style={travelerRouteStyle(theme)}>{traveler.route.join(' → ')}</div>
         </div>
+      )}
+      {holdLocationStep && (
+        <button type="button" style={resolutionButtonStyle('#dc2626')} onClick={() => openDepartmentOrderHoldLocation(order, holdLocationStep)}>
+          GO TO HOLD LOCATION - {holdLocationStep.department}
+        </button>
       )}
       {onGoToTab && (
         <>
@@ -486,6 +497,32 @@ export function getHandoffReadyOrders(orders: ProductionOrder[]): ProductionOrde
 
 export function getUpstreamWaitingOrders(orders: ProductionOrder[], reasons: string[]): ProductionOrder[] {
   return orders.filter((o) => reasons.includes(o.blockedReason ?? ''));
+}
+
+function getDepartmentOrderHoldLocationStep(traveler: ReturnType<typeof generatePlantTraveler>): DynamicTraveler | null {
+  return traveler.departmentSteps.find((step) => {
+    if (step.stepStatus !== 'BLOCKED' && step.stepStatus !== 'HOLD') return false;
+    return workCenters.some((workCenter) => workCenter.department === step.department);
+  }) ?? null;
+}
+
+function openDepartmentOrderHoldLocation(order: ProductionOrder, step: DynamicTraveler) {
+  const matchingWorkCenter = workCenters.find((workCenter) => workCenter.department === step.department);
+  if (!matchingWorkCenter) return;
+  localStorage.setItem(
+    REVIEW_TARGET_STORAGE_KEY,
+    JSON.stringify({
+      orderNumber: order.orderNumber,
+      department: step.department,
+      travelerId: step.id,
+      source: 'department-order-card-hold-navigation',
+      updatedAt: new Date().toISOString(),
+    }),
+  );
+  window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('wc', matchingWorkCenter.id);
+  window.location.assign(nextUrl.toString());
 }
 
 function shellStyle(): CSSProperties {
@@ -815,6 +852,7 @@ function urgencyBadgeStyle(color: string): CSSProperties {
 function resolutionButtonStyle(color: string): CSSProperties {
   return {
     marginTop: 8,
+    marginRight: 6,
     padding: '6px 10px',
     borderRadius: 4,
     border: `1px solid ${color}`,
