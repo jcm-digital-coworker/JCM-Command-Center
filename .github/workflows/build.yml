@@ -37,8 +37,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install Playwright browser
+        run: npx playwright install chromium --with-deps
+
       - name: Build
         run: GITHUB_PAGES=true npm run build
+
+      - name: Browser demo smoke
+        run: npm run test:demo-browser
 
       - name: Upload demo build
         uses: actions/upload-artifact@v4
