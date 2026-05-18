@@ -10,18 +10,18 @@ Build: npm run build
 Main is GREEN and deployed.
 
 ```text
-Latest verified deployed work: PR #91 dashboard QA hold-location navigation
-Verified commit: b9b4542e78dc600385cce54b182f66822b972a0e
-Verified run: 26007116165
+Latest verified deployed work: PR #94 department order-card hold-location navigation
+Verified commit: 52c59fcc0a1dff6e56ed2b591662e7b3266404d8
+Verified run: 26008024404
 Workflow: Build
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-18T00:26:11Z
+Updated: 2026-05-18T01:02:34Z
 ```
 
 ## Current Truth
 
-The app is in a guided demo-ready state with exact hold-location navigation available from the main blocker surfaces we have touched:
+The app is in a guided demo-ready state with exact hold-location navigation available from the main blocker surfaces we touched:
 
 - PR #82: Dynamic Traveler detail can open the owning hold department and exact traveler.
 - PR #85: Orders detail route steps show `GO TO HOLD LOCATION` for blocked/held steps.
@@ -29,8 +29,9 @@ The app is in a guided demo-ready state with exact hold-location navigation avai
 - PR #88: Dashboard blocked-order rows show `GO TO HOLD LOCATION - <department>` when a held/blocked traveler step can be derived.
 - PR #89: Plant Signal cards carry exact hold target data and open the owning work center when a target exists.
 - PR #91: Dashboard QA hold rows show `GO TO HOLD LOCATION - <department>` when a mapped held/blocked traveler step exists.
+- PR #94: Department order cards show `GO TO HOLD LOCATION - <department>` when a mapped blocked/held traveler step exists, while preserving existing blocker-type buttons.
 
-All six use the same safe pattern:
+All seven use the same safe pattern:
 
 ```text
 store orderNumber, department, travelerId, source, updatedAt
@@ -64,6 +65,8 @@ change dispatch behavior
 - PR #89: Plant Signal exact hold-location navigation merged and deployed.
 - PR #90: Context docs refreshed after PR #88/#89 and deployed.
 - PR #91: Dashboard QA hold `GO TO HOLD LOCATION` merged and deployed.
+- PR #92: Context docs refreshed after PR #91 and deployed.
+- PR #94: Department order-card `GO TO HOLD LOCATION` merged and deployed.
 
 ## Best Demo Path
 
@@ -90,6 +93,7 @@ Strong demo surfaces:
 - Dynamic Traveler hold navigation to exact owning department/order.
 - Orders route-step hold-location navigation.
 - Full Plant Traveler route-step hold-location navigation.
+- Department order-card hold-location navigation.
 - Department views.
 - LV4500 read-only simulator.
 - Pilot Tools for controlled role/feature/simulation setup.
@@ -105,7 +109,9 @@ It preserves uncertainty where plant truth is still being validated.
 
 ## Current Mission
 
-Run the live demo reset and dry run, with special attention to exact hold-location navigation from:
+Run the live demo reset and dry run. CI proves compile/deploy, not that each click lands perfectly.
+
+Smoke-test exact hold-location navigation from:
 
 ```text
 Dashboard blocked-order rows
@@ -114,24 +120,21 @@ Plant Signal cards
 Dynamic Traveler detail
 Orders detail route steps
 Full Plant Traveler route steps
+Department order cards
 ```
 
 Use `docs/DEMO_RUNBOOK.md` as the live demo playbook.
 
 ## Next Source Audit Target
 
-Audit department order-card blocker buttons for the same pattern:
+Do not add more doorway patches before a live click-flow smoke pass unless a visible dead-end is found during the dry run.
+
+Possible later audits after demo smoke:
 
 ```text
-If a blocker, hold, material issue, QA hold, equipment alert, or coverage gap is visible, can the operator open the exact work location without implying the blocker is cleared?
-```
-
-Likely areas to inspect next:
-
-```text
-Department order cards with broad blocker buttons
 Maintenance / equipment alert paths
 Receiving material issue paths
+Route truth for Coating, clamps, 412, 432, 452
 ```
 
 ## Current Decision
@@ -160,7 +163,7 @@ Demo polish must not imply dispatch automation is complete.
 - QA conditions need explicit rules.
 - Shipping readiness needs explicit completion/inspection/material conditions.
 - Demo still needs clean browser/localStorage reset before showing live.
-- PR #82/#85/#86/#88/#89/#91 need live browser click-flow smoke validation; CI proves compile/deploy, not operator path.
+- PR #82/#85/#86/#88/#89/#91/#94 need live browser click-flow smoke validation; CI proves compile/deploy, not operator path.
 - Large files must not be full-rewritten from truncated connector output.
 
 ## Guardrails
@@ -218,9 +221,8 @@ Test Plant Signals hold-location navigation.
 Test Dynamic Traveler detail GO TO HOLD DEPARTMENT.
 Test Orders route-step GO TO HOLD LOCATION.
 Test Full Plant Traveler route-step GO TO HOLD LOCATION.
+Test Department order-card GO TO HOLD LOCATION.
 Confirm each path opens the owning work center and exact traveler/order.
 Keep Plant Route Review collapsed unless explaining route validation.
 Do not deep-demo Coating/clamps/412/432/452 as finalized routing.
 ```
-
-After demo prep, audit department order-card blocker buttons before changing route behavior.
