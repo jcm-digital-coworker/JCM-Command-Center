@@ -7,7 +7,7 @@
     "dev": "vite",
     "test:order-truth": "node --experimental-strip-types scripts/orderStatusTruth.regression.mjs",
     "test:demo-smoke": "node scripts/demoSmoke.regression.mjs",
-    "test:demo-browser": "node scripts/demoBrowserSmokeV3.mjs",
+    "test:demo-browser": "node scripts/demoBrowserSmokeV4.mjs",
     "build": "npm run test:order-truth && npm run test:demo-smoke && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
