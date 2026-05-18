@@ -24,6 +24,13 @@ type Props = {
 
 type ActionDeps = Pick<Props, 'onOpenReceiving' | 'onOpenEngineering' | 'onOpenMaintenance'>;
 
+type ReviewTarget = {
+  orderNumber: string;
+  department: WorkCenter['department'];
+  travelerId?: string;
+  updatedAt?: string;
+};
+
 const REVIEW_TARGET_STORAGE_KEY = 'jcm-classification-review-target-v1';
 const REVIEW_TARGET_EVENT = 'jcm-classification-review-target-updated';
 
@@ -43,6 +50,7 @@ export default function WorkCenterWorkflowPanelV2({
   const [runtimeVersion, setRuntimeVersion] = useState(0);
   const [selectedTraveler, setSelectedTraveler] = useState<DynamicTraveler | null>(null);
   const [selectedReviewTraveler, setSelectedReviewTraveler] = useState<DynamicTraveler | null>(null);
+  const [landingFocusTraveler, setLandingFocusTraveler] = useState<DynamicTraveler | null>(null);
   const [reviewTargetVersion, setReviewTargetVersion] = useState(0);
   const [reviewDraft, setReviewDraft] = useState<ClassificationReviewDraft>(defaultReviewDraft);
   const [reviewConfirmations, setReviewConfirmations] = useState<ClassificationReviewConfirmation[]>(() => loadClassificationReviewConfirmations());
@@ -94,6 +102,7 @@ export default function WorkCenterWorkflowPanelV2({
       traveler.id === reviewTarget.travelerId || traveler.order.orderNumber === reviewTarget.orderNumber
     ));
     if (!targetedTraveler) return;
+    setLandingFocusTraveler(targetedTraveler);
     setSelectedTraveler(targetedTraveler);
     if (needsClassificationReview(targetedTraveler)) setSelectedReviewTraveler(targetedTraveler);
     localStorage.removeItem(REVIEW_TARGET_STORAGE_KEY);
@@ -134,6 +143,16 @@ export default function WorkCenterWorkflowPanelV2({
       </div>
 
       {actionNotice ? <div style={noticeStyle(theme)}>{actionNotice}</div> : null}
+
+      {landingFocusTraveler ? (
+        <LandingFocusPanel
+          traveler={landingFocusTraveler}
+          workCenter={workCenter}
+          theme={theme}
+          onOpen={() => setSelectedTraveler(landingFocusTraveler)}
+          onDismiss={() => setLandingFocusTraveler(null)}
+        />
+      ) : null}
 
       {deptCrew.length > 0 ? (
         <section style={subPanelStyle(theme)}>
@@ -225,6 +244,47 @@ export default function WorkCenterWorkflowPanelV2({
       {selectedTraveler ? (
         <TravelerDetailModal traveler={selectedTraveler} theme={theme} onClose={() => setSelectedTraveler(null)} />
       ) : null}
+    </section>
+  );
+}
+
+function LandingFocusPanel({
+  traveler,
+  workCenter,
+  theme,
+  onOpen,
+  onDismiss,
+}: {
+  traveler: DynamicTraveler;
+  workCenter: WorkCenter;
+  theme: 'dark' | 'light';
+  onOpen: () => void;
+  onDismiss: () => void;
+}) {
+  const signalColor = getTravelerSignalColor(traveler.visualSignal);
+  return (
+    <section style={landingFocusStyle(theme, signalColor)}>
+      <div style={headerRowStyle}>
+        <div>
+          <div style={eyebrowStyle}>FOCUS MODE - OPENED FROM HOLD LOCATION</div>
+          <strong style={largeStrongTextStyle(theme)}>Order {traveler.order.orderNumber} - {traveler.order.productFamily}</strong>
+          <div style={bodyTextStyle(theme)}>{traveler.currentInstruction}</div>
+        </div>
+        <span style={badge(signalColor)}>{traveler.visualSignal}</span>
+      </div>
+      <div style={infoGridStyle}>
+        <Info label="Work center" value={workCenter.name} theme={theme} />
+        <Info label="Owner now" value={workCenter.department} theme={theme} />
+        <Info label="Next handoff" value={String(traveler.nextHandoff ?? 'Not assigned')} theme={theme} />
+        <Info label="Material" value={formatToken(String(traveler.materialStatus))} theme={theme} />
+      </div>
+      <div style={noticeStyle(theme)}>
+        You came here for this order. Review the owner, blocker, and next safe action before changing state. This focus panel does not clear holds, approve routes, or dispatch work.
+      </div>
+      <div style={wrapRowStyle}>
+        <button type="button" style={buttonStyle(signalColor)} onClick={onOpen}>Open traveler detail</button>
+        <button type="button" style={buttonStyle('#64748b')} onClick={onDismiss}>Dismiss focus panel</button>
+      </div>
     </section>
   );
 }
@@ -334,7 +394,6 @@ function ClassificationReviewSummary({
   onSelectTraveler: (traveler: DynamicTraveler) => void;
   onDraftChange: (draft: ClassificationReviewDraft) => void;
   onSave: () => void;
-  onClearTarget: () => void;
 }) {
   if (travelers.length === 0) {
     return (
@@ -359,7 +418,6 @@ function ClassificationReviewSummary({
           {targetOrderNumber ? (
             <div style={noticeStyle(theme)}>
               Opened from global queue for order {targetOrderNumber}. This traveler is preselected below.
-              <button type="button" style={buttonStyle('#f97316')} onClick={onClearTarget}>Clear Target</button>
             </div>
           ) : null}
         </div>
@@ -457,7 +515,7 @@ function loadCoverage(): CoveragePerson[] {
   }
 }
 
-function loadReviewTarget(): { orderNumber: string; department: WorkCenter['department']; travelerId?: string; updatedAt?: string } | null {
+function loadReviewTarget(): ReviewTarget | null {
   try {
     const stored = localStorage.getItem(REVIEW_TARGET_STORAGE_KEY);
     if (!stored) return null;
@@ -504,6 +562,7 @@ function badge(color: string): CSSProperties {
 function panelStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 16, borderRadius: 8, background: theme === 'dark' ? '#1e293b' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0', display: 'grid', gap: 16 }; }
 function subPanelStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#ffffff', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function blockerFocusStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 12, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#fff7ed', border: '1px solid rgba(239,68,68,0.55)', borderLeft: '5px solid #ef4444', display: 'grid', gap: 10 }; }
+function landingFocusStyle(theme: 'dark' | 'light', color: string): CSSProperties { return { padding: 14, borderRadius: 8, background: theme === 'dark' ? '#0f172a' : '#fff7ed', border: `1px solid ${color}88`, borderLeft: `6px solid ${color}`, display: 'grid', gap: 10, boxShadow: theme === 'dark' ? '0 10px 24px rgba(0,0,0,0.22)' : '0 8px 18px rgba(15,23,42,0.08)' }; }
 function groupStyle(theme: 'dark' | 'light'): CSSProperties { return { padding: 14, borderRadius: 8, background: theme === 'dark' ? '#111827' : '#f8fafc', border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0' }; }
 function workflowCardStyle(theme: 'dark' | 'light', color: string): CSSProperties { return { padding: 14, borderRadius: 8, border: `1px solid ${color}`, borderLeft: `5px solid ${color}`, background: theme === 'dark' ? '#0f172a' : '#f8fafc' }; }
 function travelerCardStyle(theme: 'dark' | 'light', color: string): CSSProperties { return { width: '100%', textAlign: 'left', padding: 13, borderRadius: 8, background: theme === 'dark' ? '#0f172a' : '#f8fafc', border: `1px solid ${color}66`, borderLeft: `5px solid ${color}`, cursor: 'pointer' }; }
@@ -516,6 +575,7 @@ function noticeStyle(theme: 'dark' | 'light'): CSSProperties { return { padding:
 function emptyStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', padding: 12, borderRadius: 6, border: theme === 'dark' ? '1px dashed #334155' : '1px dashed #cbd5e1', fontSize: 13, fontWeight: 700 }; }
 function buttonStyle(color: string): CSSProperties { return { padding: '8px 10px', borderRadius: 4, border: `1px solid ${color}`, background: `${color}18`, color, fontSize: 11, fontWeight: 900, letterSpacing: '0.6px', cursor: 'pointer', textTransform: 'uppercase' }; }
 function strongTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 13, fontWeight: 900 }; }
+function largeStrongTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#f8fafc' : '#0f172a', fontSize: 16, fontWeight: 900 }; }
 function bodyTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#cbd5e1' : '#475569', fontSize: 12, fontWeight: 750, lineHeight: 1.45, marginTop: 8 }; }
 function mutedTextStyle(theme: 'dark' | 'light'): CSSProperties { return { color: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12, fontWeight: 700, lineHeight: 1.35 }; }
 function titleStyle(theme: 'dark' | 'light'): CSSProperties { return { margin: 0, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }; }
