@@ -197,9 +197,18 @@ export default function DashboardPage({
           <div style={dashboardListStyle}>
             {qaHolds.slice(0, 2).map((order) => {
               const qaStatusLabel = getOperatorSafeStatusLabel(order.qaStatus);
+              const holdStep = getDashboardHoldStep(order);
               return (
                 <div key={order.orderNumber} style={getDashboardItemStyle(theme)}>
-                  <div><div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} quality hold</div><div style={dashboardMutedTextStyle}>{order.assemblyPartNumber} - {qaStatusLabel}</div></div>
+                  <div>
+                    <div style={getDashboardItemTitleStyle(theme)}>{order.orderNumber} quality hold</div>
+                    <div style={dashboardMutedTextStyle}>{order.assemblyPartNumber} - {qaStatusLabel}</div>
+                    {holdStep ? (
+                      <button type="button" style={dashboardHoldLocationButtonStyle(theme)} onClick={() => openDashboardHoldLocation(order, holdStep)}>
+                        GO TO HOLD LOCATION - {holdStep.department}
+                      </button>
+                    ) : null}
+                  </div>
                   <span style={getPriorityBadge(order.qaStatus ?? 'UNKNOWN')}>{qaStatusLabel}</span>
                 </div>
               );
