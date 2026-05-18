@@ -9,15 +9,15 @@ Last updated: 2026-05-18
 Main is GREEN and deployed.
 
 ```text
-Latest verified deployed work: PR #91 dashboard QA hold-location navigation
-Verified commit: b9b4542e78dc600385cce54b182f66822b972a0e
-Verified run: 26007116165
+Latest verified deployed work: PR #94 department order-card hold-location navigation
+Verified commit: 52c59fcc0a1dff6e56ed2b591662e7b3266404d8
+Verified run: 26008024404
 Branch: main
 Workflow: Build
 Status: GREEN
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-18T00:26:11Z
+Updated: 2026-05-18T01:02:34Z
 ```
 
 Verified deployed steps:
@@ -34,15 +34,42 @@ Verified deployed steps:
 
 ## Last Completed Missions
 
-### PR #91 - Dashboard QA hold-location navigation
+### PR #94 - Department order-card hold-location navigation
 
-Dashboard QA hold rows now show `GO TO HOLD LOCATION - <department>` when a mapped blocked/held traveler step exists.
+Department order cards now show `GO TO HOLD LOCATION - <department>` when a mapped blocked/held traveler step exists.
 
 What changed:
 
-- `DashboardPage` reuses the existing dashboard hold-location helper from blocked-order rows.
-- The action only appears when `getDashboardHoldStep(order)` finds a mapped blocked or held traveler step.
+- `DepartmentPageTools.OrderCard` adds a companion hold-location button for mapped blocked/held steps.
+- Existing blocker-type buttons remain intact for material, engineering, QA, equipment, and coverage context.
+- The action stores exact target context and opens the owning work center.
 - No blocker, route, runtime, or dispatch state is changed.
+
+Verified:
+
+```text
+PR source run: 26007995011
+PR source commit: b84606b0eb0dae44b632353fc98aa6446016824f
+Post-merge main run: 26008024404
+Main commit: 52c59fcc0a1dff6e56ed2b591662e7b3266404d8
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #92 - Context docs refresh after PR #91
+
+Verified:
+
+```text
+Run: 26007286435
+Main commit: c2a652d2bca37a4f347b4596d2a65a67e69737af
+Typecheck and build: success
+GitHub Pages deploy: success
+```
+
+### PR #91 - Dashboard QA hold-location navigation
+
+Dashboard QA hold rows now show `GO TO HOLD LOCATION - <department>` when a mapped blocked/held traveler step exists.
 
 Verified:
 
@@ -167,9 +194,10 @@ Full Plant Traveler route steps
 Dashboard blocked-order rows
 Plant Signal cards
 Dashboard QA hold rows
+Department order cards
 ```
 
-All six store exact target context and open the owning work center without clearing or mutating the hold.
+All seven store exact target context and open the owning work center without clearing or mutating the hold.
 
 Guardrails preserved:
 
@@ -214,6 +242,7 @@ Test Plant Signals hold-location navigation.
 Test Dynamic Traveler detail GO TO HOLD DEPARTMENT.
 Test Orders route-step GO TO HOLD LOCATION.
 Test Full Plant Traveler route-step GO TO HOLD LOCATION.
+Test Department order-card GO TO HOLD LOCATION.
 Confirm each opens the owning work center and exact traveler/order.
 Keep Plant Route Review collapsed unless explaining route validation.
 ```
@@ -248,15 +277,17 @@ Demo polish must not imply dispatch automation is complete.
 
 ## Active Risks / Next Audit Targets
 
-### Remaining blocker doorway audit
+### Live smoke-test risk
 
-Audit whether department cards can open exact work locations instead of broad tabs.
+CI proves compile/deploy, not full click-flow behavior. Live browser validation still needs to confirm that hold-location actions land in the owning work center and open the exact traveler/order.
 
-Likely next files/surfaces:
+Do not add more doorway patches before a live click-flow smoke pass unless a visible dead-end is found during the dry run.
 
-- Department order cards with broad blocker buttons.
+### Possible later audits
+
 - Maintenance / equipment alert paths.
 - Receiving material issue paths.
+- Route truth for Coating, clamps, 412, 432, 452.
 
 ### Plant-truth gaps remain
 
@@ -274,10 +305,6 @@ Continue preserving uncertainty for:
 ### Demo local-state risk
 
 The app uses localStorage for pilot/demo state. Use one clean browser profile or reset Maintenance Requests, plant simulation, and feature flags before presenting.
-
-### Live smoke-test risk
-
-CI proves compile/deploy, not full click-flow behavior. Live browser validation still needs to confirm that hold-location actions land in the owning work center and open the exact traveler/order.
 
 ### Large-file edit risk
 
@@ -337,4 +364,4 @@ CI proves compile/deploy, not full click-flow behavior. Live browser validation 
 
 Run the live demo reset and dry run.
 
-After demo prep, audit department order-card blocker buttons before changing route behavior.
+After the smoke pass, only patch newly observed dead-ends or demo-breaking issues.
