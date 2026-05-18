@@ -18,6 +18,7 @@ import AppHeader from './components/shell/AppHeader';
 import AppDrawer from './components/shell/AppDrawer';
 import CommandNavigationBar from './components/shell/CommandNavigationBar';
 import DevToolkitFlyout from './components/shell/DevToolkitFlyout';
+import StickyMissionBar from './components/shell/StickyMissionBar';
 import { getHomeTabForRole } from './logic/navigationAccess';
 import type { Language } from './i18n/language';
 import { getStoredLanguage, setStoredLanguage } from './i18n/language';
@@ -158,6 +159,14 @@ export default function App() {
     if (nextTab === tab) return;
     setTabHistory((prev) => [...prev, tab]);
     setTab(nextTab);
+  }
+
+  function goCommandCenter() {
+    setSelected(null);
+    setSimulatorMachine(null);
+    setSelectedWorkCenter(null);
+    setTabHistory([]);
+    setTab('dashboard');
   }
 
   function goHome() {
@@ -338,6 +347,22 @@ export default function App() {
   if (selectedWorkCenter) {
     return (
       <div style={pageStyle}>
+        <StickyMissionBar
+          roleView={roleView}
+          activeTab={tab}
+          currentLabel={tabLabel(tab, language)}
+          departmentFilter={departmentFilter}
+          selectedWorkCenter={selectedWorkCenter}
+          canGoBack
+          theme={theme}
+          onCommandCenter={goCommandCenter}
+          onOrders={() => {
+            setSelectedWorkCenter(null);
+            navigateTo('orders');
+          }}
+          onBack={() => setSelectedWorkCenter(null)}
+          onOpenMenu={() => setMenuOpen(true)}
+        />
         <WorkCenterDetailPage
           workCenter={selectedWorkCenter}
           machines={selectedWorkCenter.department === 'Maintenance' ? machinesNeedingService : sortedMachines}
@@ -445,6 +470,20 @@ export default function App() {
         theme={theme}
         onNavigate={navigateTo}
         lang={language}
+      />
+
+      <StickyMissionBar
+        roleView={roleView}
+        activeTab={tab}
+        currentLabel={tabLabel(tab, language)}
+        departmentFilter={departmentFilter}
+        selectedWorkCenter={null}
+        canGoBack={tabHistory.length > 0}
+        theme={theme}
+        onCommandCenter={goCommandCenter}
+        onOrders={() => navigateTo('orders')}
+        onBack={goBack}
+        onOpenMenu={() => setMenuOpen(true)}
       />
 
       <DevToolkitFlyout
