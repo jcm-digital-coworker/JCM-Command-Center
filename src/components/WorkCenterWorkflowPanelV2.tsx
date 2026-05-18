@@ -96,6 +96,9 @@ export default function WorkCenterWorkflowPanelV2({
     if (!targetedTraveler) return;
     setSelectedTraveler(targetedTraveler);
     if (needsClassificationReview(targetedTraveler)) setSelectedReviewTraveler(targetedTraveler);
+    localStorage.removeItem(REVIEW_TARGET_STORAGE_KEY);
+    setReviewTargetVersion((version) => version + 1);
+    window.dispatchEvent(new Event(REVIEW_TARGET_EVENT));
   }, [reviewTarget, travelers, workCenter.department]);
 
   function saveReviewCapture() {
