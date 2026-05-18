@@ -53,11 +53,29 @@ try {
   }
 
   await visible(page, 'ACCOUNTABILITY TRIAGE');
+  await visible(page, 'ROLE TRIAGE BUCKETS');
+  await visible(page, 'Management first-read');
+  await visible(page, 'Plant Bottlenecks');
+  await visible(page, 'Decision Needed');
   await visible(page, 'DEPARTMENT HEALTH');
   await button(page, 'COMMAND').waitFor({ state: 'visible', timeout });
   await button(page, 'ORDERS').waitFor({ state: 'visible', timeout });
   await button(page, 'MENU').waitFor({ state: 'visible', timeout });
   await button(page, 'BACK').waitFor({ state: 'visible', timeout });
+
+  await button(page, 'PILOT').click();
+  await selectRole(page, 'Production');
+  await closePilot(page);
+  await button(page, 'COMMAND').click();
+  await visible(page, 'Operator first-read');
+  await visible(page, 'Do Now');
+  await visible(page, 'Ask Lead');
+
+  await button(page, 'PILOT').click();
+  await selectRole(page, 'Management');
+  await closePilot(page);
+  await button(page, 'COMMAND').click();
+  await visible(page, 'Management first-read');
 
   await button(page, 'ORDERS').click();
   await page.waitForTimeout(300);
@@ -65,13 +83,14 @@ try {
 
   await button(page, 'COMMAND').click();
   await visible(page, 'ACCOUNTABILITY TRIAGE');
+  await visible(page, 'ROLE TRIAGE BUCKETS');
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await page.waitForTimeout(150);
   await button(page, 'COMMAND').waitFor({ state: 'visible', timeout });
   await button(page, 'ORDERS').waitFor({ state: 'visible', timeout });
 
-  console.log('PASS browser demo smoke: reset, triage, sticky mission bar, and navigation controls work in Chromium.');
+  console.log('PASS browser demo smoke: reset, role buckets, triage, sticky mission bar, and navigation controls work in Chromium.');
   await close(0);
 } catch (error) {
   console.error('FAIL browser demo smoke');
@@ -86,6 +105,20 @@ function button(page, name) {
 
 async function visible(page, text) {
   await page.getByText(text, { exact: false }).first().waitFor({ state: 'visible', timeout });
+}
+
+async function selectRole(page, roleName) {
+  const roleSelect = page.getByLabel('ROLE').first();
+  await roleSelect.waitFor({ state: 'visible', timeout });
+  await roleSelect.selectOption(roleName);
+  await page.waitForTimeout(300);
+}
+
+async function closePilot(page) {
+  const closeButton = page.getByRole('button', { name: /^X$/ }).first();
+  await closeButton.waitFor({ state: 'visible', timeout });
+  await closeButton.click();
+  await page.waitForTimeout(300);
 }
 
 async function printBodySnippet(page) {
