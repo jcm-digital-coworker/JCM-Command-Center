@@ -50,7 +50,7 @@ const checks = [
   {
     name: 'Focus Mode exists for targeted hold-location landings',
     file: 'src/components/WorkCenterWorkflowPanelV2.tsx',
-    includes: ['FOCUS MODE', 'Opened from hold-location navigation', 'This focus view does not clear the blocker']
+    includes: ['FOCUS MODE - OPENED FROM HOLD LOCATION', 'landingFocusTraveler', 'This focus panel does not clear holds']
   }
 ];
 
