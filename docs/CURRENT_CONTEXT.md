@@ -10,34 +10,40 @@ Build: npm run build
 Main is GREEN and deployed.
 
 ```text
-Latest verified deployed work: PR #94 department order-card hold-location navigation
-Verified commit: 52c59fcc0a1dff6e56ed2b591662e7b3266404d8
-Verified run: 26008024404
+Latest verified deployed work: PR #100 demo-session drift reset
+Verified commit: ec41d52a6acbe54702e3a50b90c101e7409dd90d
+Verified run: 26049772432
 Workflow: Build
 Typecheck and build: success
 GitHub Pages deploy: success
-Updated: 2026-05-18T01:02:34Z
+Updated: 2026-05-18T17:35:12Z
 ```
 
 ## Current Truth
 
-The app is in a guided demo-ready state with exact hold-location navigation available from the main blocker surfaces we touched:
+The app has moved from pure hold-location doorway work into role-based accountability and stress-navigation polish.
 
-- PR #82: Dynamic Traveler detail can open the owning hold department and exact traveler.
-- PR #85: Orders detail route steps show `GO TO HOLD LOCATION` for blocked/held steps.
-- PR #86: Full Plant Traveler route steps show `GO TO HOLD LOCATION` for blocked/held steps.
-- PR #88: Dashboard blocked-order rows show `GO TO HOLD LOCATION - <department>` when a held/blocked traveler step can be derived.
-- PR #89: Plant Signal cards carry exact hold target data and open the owning work center when a target exists.
-- PR #91: Dashboard QA hold rows show `GO TO HOLD LOCATION - <department>` when a mapped held/blocked traveler step exists.
-- PR #94: Department order cards show `GO TO HOLD LOCATION - <department>` when a mapped blocked/held traveler step exists, while preserving existing blocker-type buttons.
+Current deployed behavior includes:
 
-All seven use the same safe pattern:
+- PR #96: Dashboard accountability triage panel shows role-aware ownership cards before the long dashboard sections.
+- PR #97: Sticky Mission Bar stays visible while scrolling and provides Command, Orders, Menu, and Back controls.
+- Focus Mode commit b10afa11: Hold-location landings now show a Focus Mode panel for the targeted traveler/order.
+- PR #98: Work-center review targets are consumed after opening the traveler so refresh does not repeatedly pop the same Fab/department traveler.
+- PR #100: Pilot Tools now includes `RESET DEMO SESSION` to clear drift-prone local browser state and return to Management / All / Dashboard.
+
+The app still preserves prior exact hold-location navigation from:
 
 ```text
-store orderNumber, department, travelerId, source, updatedAt
-open the owning work center through the existing station route
-let WorkCenterWorkflowPanelV2 open the matching traveler/order
+Dynamic Traveler detail
+Orders detail route steps
+Full Plant Traveler route steps
+Dashboard blocked-order rows
+Plant Signal cards
+Dashboard QA hold rows
+Department order cards
 ```
+
+These safe navigation paths store exact target context, open the owning work center, and let the work-center panel open the matching traveler/order.
 
 They do not:
 
@@ -52,21 +58,41 @@ change dispatch behavior
 
 ## Recently Completed Work
 
-- PR #76: Demo polish pass merged and deployed.
-- PR #77: Plant Route Review accordion merged and deployed.
-- PR #78: Guided demo runbook merged and deployed.
-- PR #80: Demo context docs refreshed and deployed.
-- PR #82: Exact held-traveler navigation merged and deployed.
-- PR #84: Context docs refreshed after PR #82 and deployed.
-- PR #85: Orders route-step `GO TO HOLD LOCATION` merged and deployed.
-- PR #86: Full Plant Traveler route-step `GO TO HOLD LOCATION` merged and deployed.
-- PR #87: Context docs refreshed after PR #85/#86 and deployed.
-- PR #88: Dashboard blocked-order `GO TO HOLD LOCATION` merged and deployed.
-- PR #89: Plant Signal exact hold-location navigation merged and deployed.
-- PR #90: Context docs refreshed after PR #88/#89 and deployed.
-- PR #91: Dashboard QA hold `GO TO HOLD LOCATION` merged and deployed.
-- PR #92: Context docs refreshed after PR #91 and deployed.
 - PR #94: Department order-card `GO TO HOLD LOCATION` merged and deployed.
+- PR #95: Context docs refreshed after PR #94 and deployed.
+- PR #96: Role-based accountability triage panel merged and deployed.
+- PR #97: Sticky Mission Bar merged and deployed.
+- PR #98: Work-center review target consumption fix merged and deployed.
+- Commit b10afa11: Focus Mode for hold-location landings merged and deployed.
+- PR #100: Demo-session reset / drift cleanup merged and deployed.
+
+## Current Product Direction
+
+The app should not behave like a long report. It should help under-stress operators, department leads, support teams, and bosses answer:
+
+```text
+What needs attention?
+Who owns the next move?
+What is safe to do next?
+What proof/context exists?
+How do I get back?
+```
+
+Role-specific priorities:
+
+```text
+Operator: Do now, blocked, waiting, ask lead.
+Department Lead: We own, waiting on us, waiting on others, ready work, aging/escalate.
+Support: Requests for us, needs more info, aging requests, recently cleared.
+Management: Plant bottlenecks, aging holds, no response, due-soon risk, decision needed.
+```
+
+Accountability language must reduce blame without hiding ownership:
+
+```text
+Good: Next action owner: Receiving. Fab is waiting on material verification. Last request sent 48 minutes ago.
+Bad: Receiving is holding this up.
+```
 
 ## Best Demo Path
 
@@ -76,8 +102,11 @@ Recommended path:
 
 ```text
 Dashboard / Command Center
+Pilot Tools -> RESET DEMO SESSION
+Accountability Triage panel
 Maintenance Requests
 Orders
+Hold-location landing / Focus Mode
 LV4500 Simulator
 Saddles Dept
 Progress / Validation only if explaining roadmap
@@ -85,18 +114,20 @@ Progress / Validation only if explaining roadmap
 
 Strong demo surfaces:
 
+- Role-based accountability triage.
+- Sticky Mission Bar / quick return rail.
+- Focus Mode after hold-location navigation.
 - Maintenance request visibility and status flow.
 - Dashboard blocked-order hold-location navigation.
 - Dashboard QA hold-location navigation.
 - Plant Signal hold-location navigation.
 - Orders/traveler visibility.
-- Dynamic Traveler hold navigation to exact owning department/order.
 - Orders route-step hold-location navigation.
 - Full Plant Traveler route-step hold-location navigation.
 - Department order-card hold-location navigation.
 - Department views.
 - LV4500 read-only simulator.
-- Pilot Tools for controlled role/feature/simulation setup.
+- Pilot Tools reset for clean demo state.
 - Plant Route Review collapsed summary for transparent route validation.
 
 Demo language:
@@ -105,31 +136,48 @@ Demo language:
 The app gives guidance and visibility.
 It does not replace supervisors.
 It preserves uncertainty where plant truth is still being validated.
+It shows ownership without turning accountability into blame.
 ```
 
 ## Current Mission
 
-Run the live demo reset and dry run. CI proves compile/deploy, not that each click lands perfectly.
+Run a live browser smoke pass against the deployed app after using Pilot Tools -> RESET DEMO SESSION.
 
-Smoke-test exact hold-location navigation from:
+Smoke-test:
 
 ```text
-Dashboard blocked-order rows
-Dashboard QA hold rows
-Plant Signal cards
-Dynamic Traveler detail
-Orders detail route steps
-Full Plant Traveler route steps
-Department order cards
+RESET DEMO SESSION returns to Management / All / Dashboard.
+Sticky Mission Bar stays visible while scrolling.
+Command / Orders / Menu / Back buttons work without scrolling to the top.
+Accountability Triage panel appears before Department Health.
+Hold-location navigation opens Focus Mode for the targeted traveler/order.
+Refreshing after a hold-location landing does not repeatedly reopen the old Fab traveler.
+Dashboard blocked-order GO TO HOLD LOCATION.
+Dashboard QA hold GO TO HOLD LOCATION.
+Plant Signals hold-location navigation.
+Dynamic Traveler detail GO TO HOLD DEPARTMENT.
+Orders route-step GO TO HOLD LOCATION.
+Full Plant Traveler route-step GO TO HOLD LOCATION.
+Department order-card GO TO HOLD LOCATION.
 ```
 
-Use `docs/DEMO_RUNBOOK.md` as the live demo playbook.
+Use `docs/DEMO_RUNBOOK.md` as the live demo playbook, but remember that newer PR #96/#97/#98/#100 behavior is now part of the demo.
 
 ## Next Source Audit Target
 
-Do not add more doorway patches before a live click-flow smoke pass unless a visible dead-end is found during the dry run.
+Do not add more data or doorways until the live UX smoke pass confirms the new accountability/reset/navigation work.
 
-Possible later audits after demo smoke:
+Possible next product slice after smoke:
+
+```text
+Role-specific dashboard buckets:
+  Management: Plant Bottlenecks / Aging Holds / Due Soon Risk / Decision Needed
+  Lead: We Own / Waiting On Us / Waiting On Others / Ready Work
+  Operator: Do Now / Blocked / Ask Lead
+  Support: Requests For Us / Aging Requests / Needs More Info
+```
+
+Possible later audits:
 
 ```text
 Maintenance / equipment alert paths
@@ -152,18 +200,19 @@ No confidence increase without confirmed plant facts.
 Shipping is always last, but readiness to ship is not automatic.
 QA is conditional, not universal.
 Demo polish must not imply dispatch automation is complete.
+The app should reduce blame by showing ownership, age, last action, and next safe move.
 ```
 
 ## Known Risk Areas
 
+- CI proves compile/deploy, not full click-flow behavior.
+- Swapping app/webpage contexts can still expose browser cache or service-worker weirdness; use `RESET DEMO SESSION` first.
 - Coating is complex and must not be modeled as one bucket.
 - Fab has lanes, not one generic bucket.
 - Assembly is lane/product specific.
 - Couplings, clamps, patch clamps, 412, 432, and 452 need route truth confirmation.
 - QA conditions need explicit rules.
 - Shipping readiness needs explicit completion/inspection/material conditions.
-- Demo still needs clean browser/localStorage reset before showing live.
-- PR #82/#85/#86/#88/#89/#91/#94 need live browser click-flow smoke validation; CI proves compile/deploy, not operator path.
 - Large files must not be full-rewritten from truncated connector output.
 
 ## Guardrails
@@ -181,6 +230,7 @@ Demo polish must not imply dispatch automation is complete.
 - Review copy must not imply automatic resolution.
 - View/no-op actions must not mutate runtime state.
 - LV4500 simulator is read-only and must not create real machine command behavior.
+- Reset/demo controls may clear local demo state only when explicitly clicked.
 - Use the GitHub Operations Playbook risk tracks before repo edits.
 
 ## Durable Plant Truth
@@ -204,25 +254,19 @@ Demo polish must not imply dispatch automation is complete.
 
 ## Next Recommended Move
 
-Run the live demo reset and dry run.
+Run the live browser smoke pass from a reset state.
 
 Checklist:
 
 ```text
-Open the deployed app in the demo browser.
-Reset Maintenance Requests.
-Reset plant simulation from Pilot Tools.
-Set role to Management or Department Lead.
-Enable desired Pilot Tools feature flags.
-Smoke path: Maintenance Requests -> Orders -> LV4500 Simulator -> Saddles Dept.
-Test Dashboard blocked-order GO TO HOLD LOCATION.
-Test Dashboard QA hold GO TO HOLD LOCATION.
-Test Plant Signals hold-location navigation.
-Test Dynamic Traveler detail GO TO HOLD DEPARTMENT.
-Test Orders route-step GO TO HOLD LOCATION.
-Test Full Plant Traveler route-step GO TO HOLD LOCATION.
-Test Department order-card GO TO HOLD LOCATION.
-Confirm each path opens the owning work center and exact traveler/order.
-Keep Plant Route Review collapsed unless explaining route validation.
-Do not deep-demo Coating/clamps/412/432/452 as finalized routing.
+Open deployed app.
+Pilot Tools -> RESET DEMO SESSION.
+Confirm Dashboard / Management / All.
+Confirm Accountability Triage appears before Department Health.
+Scroll a long page and confirm Sticky Mission Bar stays visible.
+Use Command / Orders / Menu / Back without scrolling to top.
+Click a hold-location action and confirm Focus Mode appears.
+Refresh and confirm the old Fab traveler does not reopen repeatedly.
+Run the seven hold-location doorway checks.
+Only patch newly observed dead-ends or demo-breaking confusion.
 ```
