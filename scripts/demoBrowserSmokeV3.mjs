@@ -46,6 +46,8 @@ try {
   await visible(page, 'RESET DEMO SESSION');
   await click(page, 'RESET DEMO SESSION');
   await page.waitForTimeout(250);
+  await click(page, 'PILOT');
+  await page.waitForTimeout(250);
 
   await visible(page, 'ACCOUNTABILITY TRIAGE');
   await visible(page, 'DEPARTMENT HEALTH');
