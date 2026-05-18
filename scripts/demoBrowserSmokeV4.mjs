@@ -66,6 +66,7 @@ try {
   await button(page, 'PILOT').click();
   await selectRole(page, 'Production');
   await closePilot(page);
+  await button(page, 'COMMAND').click();
   await visible(page, 'Operator first-read');
   await visible(page, 'Do Now');
   await visible(page, 'Ask Lead');
@@ -73,6 +74,7 @@ try {
   await button(page, 'PILOT').click();
   await selectRole(page, 'Management');
   await closePilot(page);
+  await button(page, 'COMMAND').click();
   await visible(page, 'Management first-read');
 
   await button(page, 'ORDERS').click();
